@@ -1,5 +1,6 @@
 #!/bin/sh
 
+# Check battery charge periodically to notify low and full charge
 bat_perc=$(acpi -b | cut -d , -f 2 | cut -f 1 -d %)
 bat_time=$(acpi -b | cut -d " " -f 5)
 
