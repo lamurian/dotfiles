@@ -1,5 +1,7 @@
 #!/bin/sh
 
+# Notify volume changes with dunstify
+
 vol=$(amixer get Master | grep '%' | head -n 1 | cut -d '[' -f 2 | cut -d '%' -f 1)
 
 # Decide whether the volume is muted or not
