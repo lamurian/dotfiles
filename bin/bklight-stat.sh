@@ -1,5 +1,7 @@
 #!/bin/sh
 
+# Send notification when changing backlight level
+
 lglevel=$(xbacklight -get | cut -d '.' -f 1)
 icon=" "
 
