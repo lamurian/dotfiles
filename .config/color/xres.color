@@ -1,0 +1,52 @@
+rofi.color-enabled:	True
+
+! state:		bg	 fg	  bgalt	   hlbg	    hlfg
+rofi.color-normal:	$bg-col, $fg-col, $bg-col, $col-06, $bg-col
+rofi.color-urgent:	$col-01, $bg-col, $bg-col, $col-06, $bg-col
+rofi.color-active:	$bg-col, $col-09, $bg-col, $col-06, $bg-col
+
+! other:		bg	 border	  separator
+rofi.color-window:	$bg-col, $col-07, $bg-col
+
+! general config:
+*font: xft:Inconsolata:size=9
+*internalBorder: 0
+*BorderWidth: 0
+URxvt.scrollBar: false
+
+! special
+*.foreground:   $fg-col
+*.background:   $bg-col
+*.cursorColor:  $fg-col
+
+! black
+*.color0:       $col-00
+*.color8:       $col-08
+
+! red
+*.color1:       $col-01
+*.color9:       $col-09
+
+! green
+*.color2:       $col-02
+*.color10:      $col-10
+
+! yellow
+*.color3:       $col-03
+*.color11:      $col-11
+
+! blue
+*.color4:       $col-04
+*.color12:      $col-12
+
+! magenta
+*.color5:       $col-05
+*.color13:      $col-13
+
+! cyan
+*.color6:       $col-06
+*.color14:      $col-14
+
+! white
+*.color7:       $col-07
+*.color15:      $fg-col

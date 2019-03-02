@@ -1,0 +1,11 @@
+# set color
+set $br		color7
+set $ibr	color8
+set $bg		background
+set $inbg	color0 
+set $ibg	color0
+set $ubg	color9
+set $fg		foreground
+set $ifg	color7
+set $id		color5
+

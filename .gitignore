@@ -1,0 +1,39 @@
+# Credits: https://jasonstitt.com/gitignore-whitelisting-patterns
+# Blacklist everything in this directory
+*
+
+# Whitelist content of folders, to be specified in the next whitelisting
+!*/
+
+# Whitelisting files
+!.bashrc
+!.gitignore
+!README.md
+!.tmux.conf
+!.vimrc
+!.xinitrc
+!.Xresources
+
+# Whitelisting folders
+!/bin/**
+!/.pandoc/**
+!/.vim/skeleton/**
+
+# Whitelisting sub in .config folder
+!/.config/color/**
+!/.config/dunst/**
+!/.config/i3/**
+!/.config/mp*./**
+!/.config/n*/**
+!/.config/ranger/*.py
+!/.config/ranger/*.conf
+!/.config/systemd/**
+!/.config/termite/**
+!/.config/z*/**
+
+# Blacklist unnecessary files
+.config/chromium
+.local
+R
+.vim/plugged
+.config/i3/start.log

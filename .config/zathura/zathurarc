@@ -1,0 +1,21 @@
+set selection-clipboard 	clipboard
+set adjust-open 		width
+
+set recolor 			true
+set recolor-keephue 		true
+set recolor-darkcolor		#dcdccc
+set recolor-lightcolor 		#3f3f3f
+
+set default-bg 			#3f3f3f
+set default-fg 			#dcdccc
+set statusbar-bg 		#3f3f3f
+set statusbar-fg 		#dcdccc
+set notification-bg		#3f3f3f
+set notification-fg		#7cbf9e
+set notification-error-bg	#3f3f3f
+set notification-error-fg	#ef5847
+set notification-warning-bg	#3f3f3f
+set notification-warning-fg	#beb090
+
+set render-loading-bg 		#3f3f3f
+set render-loading-fg 		#dcdccc

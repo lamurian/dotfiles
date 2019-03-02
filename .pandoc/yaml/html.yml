@@ -1,0 +1,14 @@
+author: <++>
+title: <++>
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    collapsed: false
+    smooth_scroll: true
+    df_print: paged
+  slidy_presentation:
+    highlight: tango
+bibliography: ref.bib
+csl: /home/lam/.pandoc/vancouver-superscript.csl

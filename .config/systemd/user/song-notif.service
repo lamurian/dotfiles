@@ -1,0 +1,9 @@
+[Unit]
+Description=Run mpd and song-notif.sh
+
+[Service]
+ExecStart=/usr/bin/sh -c '/home/lam/bin/song-notif.sh'
+Restart=always
+
+[Install]
+WantedBy=default.target
