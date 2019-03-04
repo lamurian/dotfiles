@@ -8,7 +8,8 @@ set -o vi
 [[ $- != *i* ]] && return
 
 alias ls='ls --color=auto'
-PS1='\[\033[1;34m\]--\[\033[0m\] '
+#PS1='\[\033[1;34m\]--\[\033[0m\] '
+PS1='\[\033[1;34m\] ——\[\033[0m\] '
 
 force_color_prompt=yes
 
