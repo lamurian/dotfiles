@@ -324,7 +324,8 @@ visualizer_color = 2, 4, 5, 5, 5, 5, 5
 ## Note: You can specify third character which will be used to build 'empty'
 ## part of progressbar.
 ##
-#progressbar_look = =>
+#progressbar_look = ▒▓░
+progressbar_look = ———
 #
 ## Available values: database, playlist.
 ##
@@ -515,7 +516,7 @@ visualizer_color = 2, 4, 5, 5, 5, 5, 5
 ## are used there is a possibility that you'll be able to use only colors with
 ## transparent background.
 #
-#colors_enabled = yes
+colors_enabled = yes
 #
 #empty_tag_color = cyan
 #
@@ -534,8 +535,10 @@ visualizer_color = 2, 4, 5, 5, 5, 5, 5
 #color2 = green
 #
 #progressbar_color = black:b
+progressbar_color = 6_8
 #
 #progressbar_elapsed_color = green:b
+progressbar_elapsed_color = 4_8
 #
 #statusbar_color = default
 #
