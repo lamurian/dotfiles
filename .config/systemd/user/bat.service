@@ -3,4 +3,4 @@ Description=Run bat-stat.sh
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/sh -c '$HOME/bin/bat-stat.sh'
+ExecStart=/bin/sh -c /home/lam/bin/bat-stat.sh
