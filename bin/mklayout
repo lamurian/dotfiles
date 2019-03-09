@@ -1,0 +1,35 @@
+#!/bin/bash
+# Script to set-up tmux layout
+
+SES="def"
+
+tmux has-session -t $SES &> /dev/null
+
+if [ $? == 0 ]; then
+
+	# man, pane 0 and 1
+	tmux split-window -t $SES:0.0 -v -p 8	# Split 10%
+	tmux send-key -t $SES:0.0 "atop" ENTER
+	tmux send-key -t $SES:0.1 \
+		"echo Manual and General Purposes | toilet --rainbow -f smblock" ENTER
+	tmux select-pane -t 2
+
+	# uni, pane 2
+	tmux split-window -t $SES:1.2 -v -p 92	# Split 92%
+	tmux send-key -t $SES:1.2 "echo Assignment and Stuffs | toilet --rainbow -f smblock" ENTER
+	tmux select-pane -t 1
+	
+	# mus
+	tmux split-window -t $SES:9 -v -p 13
+	tmux send-key -t $SES:9.3 "ncmpcpp" ENTER
+	tmux send-key -t $SES:9.4 "echo Play and Listen | toilet --rainbow -f smblock" ENTER
+	tmux select-pane -t 2
+
+	# Move to man
+	tmux select-window -t $SES:0
+
+else
+				
+	echo "Please make session first"
+
+fi

@@ -1,0 +1,43 @@
+#!/bin/bash
+# Script to set-up tmux layout
+
+SES="def"
+
+tmux has-session -t $SES &> /dev/null
+
+if [ $? != 0 ]; then
+
+	## Make new session called $SES
+	tmux new-session -d -s $SES -n man
+	
+	## Configure "man" window
+	tmux split-window -t $SES:0 -h -p 70	# 3:7 H
+	tmux split-window -t $SES:0 -h -p 50 	# 3.5:3.5 H
+	
+	## Make the next window
+	tmux new-window -t $SES -n uni
+	
+	## Configure "uni" window
+	tmux split-window -t $SES:1 -h -p 70	# 3:7 H
+	tmux split-window -t $SES:1 -h -p 50 	# 3.5:3.5 H
+	
+	# Open ranger and echo things on pane 1 and 2
+	tmux send-key -t $SES:1.1 "ranger $ONDR" ENTER
+	
+	# Make new window in #9
+	tmux new-window -t $SES:9 -n mus
+	
+	# Split vertically by 70%
+	tmux split-window -t $SES:9 -v -p 70
+	
+	# Split horizontally by 3:4:3
+	tmux split-window -t $SES:9 -h -p 70
+	tmux split-window -t $SES:9 -h -p 50
+
+	# Select window
+	tmux select-window -t $SES:0
+	tmux select-pane -t 1
+
+fi
+
+tmux a -t $SES
