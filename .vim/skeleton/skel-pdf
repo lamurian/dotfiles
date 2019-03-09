@@ -1,7 +1,7 @@
 ```{r init, echo=F, include=F}
 load('.RData')
 options(digits=2)
-knitr::opts_chunk$set(fig.width=10, fig.height=7, results='asis', echo=F)
+knitr::opts_chunk$set(fig.width=8, fig.height=4, results='asis', echo=F)
 
 write_matex <- function(x) {
   begin <- "\\begin{bmatrix}"
