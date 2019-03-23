@@ -25,6 +25,7 @@
 !/.config/i3/**
 !/.config/mp*./**
 !/.config/n*/**
+!/.config/polybar/config
 !/.config/ranger/*.py
 !/.config/ranger/*.conf
 !/.config/systemd/**
