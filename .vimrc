@@ -130,7 +130,7 @@ nnoremap <C-H> <C-W><C-H>
 "	NEW BUFFER
 " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " "
 
-autocmd BufNewFile *.Rmd 0r $HOME/.vim/skel-rmd
+autocmd BufNewFile *.Rmd 0r $HOME/.vim/skeleton/skel-rmd
 
 au BufNewFile,BufRead *.Rmd set textwidth=79
 
