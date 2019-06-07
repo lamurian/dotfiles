@@ -40,4 +40,9 @@ if [ $? != 0 ]; then
 
 fi
 
-tmux a -t $SES
+if [[ -n $DISPLAY ]];
+then
+	tmux -f ~/.tmux.xorg.conf -2 a -t $SES
+else
+	tmux -f ~/.tmux.tty.conf a -t $SES
+fi
