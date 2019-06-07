@@ -144,7 +144,7 @@ au BufNewFile,BufRead *.py,*.R,*.m
     \ set fileformat=unix 
 
 " Set other indentation
-au BufNewFile,BufRead *.js,*.html,*.css
+au BufNewFile,BufRead *.js,*.html,*.css,*.sty,*.tex
     \ set tabstop=2 |
     \ set softtabstop=2 |
     \ set shiftwidth=2 
