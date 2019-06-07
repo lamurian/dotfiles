@@ -10,6 +10,8 @@
 !.gitignore
 !README.md
 !.tmux.conf
+!.tmux.tty.conf
+!.tmux.xorg.conf
 !.vimrc
 !.xinitrc
 !.Xresources
