@@ -56,8 +56,8 @@ case $vol in
 		;;
 esac
 
-#notify-send -u low -t 800 "$icon $vol% $level"
-dunstify -r 1 -u low -t 800 \
-	"<span font='Font Awesome 10'>$icon</span>\
-	<span font='Inconsolata 10'>$vol </span>\
-	<span font='Font Awesome 7'>$level</span>"
+#notify-send -u low -t 800 " " "$icon $vol% $level"
+dunstify -r 1 -u low -t 800 "Volume" \
+"<span font='Font Awesome 10'>$icon</span> \
+<span font='Inconsolata 10'>$vol</span> \
+<span font='Font Awesome 7'>$level</span>"

@@ -3,7 +3,7 @@
 # Send notification when changing backlight level
 
 lglevel=$(xbacklight -get | cut -d '.' -f 1)
-icon=" "
+icon="🌓 "
 
 md1o="<span foreground='#999999'><b>"	# Open tag for markdown formatting
 md1c="</b></span>"			# Close tag for markdown formatting
@@ -77,7 +77,7 @@ case $lglevel in
 		;;
 esac
 
-dunstify -r 1 -u low \
-	"<span font='Font Awesome 9'>$icon</span>\
-	<span font='Inconsolata 10'>$lglevel </span>\
-	<span font='Font Awesome 7'>$stat</span>"
+dunstify -r 1 -u low "Backlight" \
+"<span font='Font Awesome 8'>$icon</span> \
+<span font='Inconsolata 10'>$lglevel</span> \
+<span font='Font Awesome 7'>$stat</span>"
