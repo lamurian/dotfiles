@@ -325,7 +325,8 @@ visualizer_color = 2, 4, 5, 5, 5, 5, 5
 ## part of progressbar.
 ##
 #progressbar_look = ▒▓░
-progressbar_look = —●—
+#progressbar_look = —●—
+progressbar_look = ─●─
 #
 ## Available values: database, playlist.
 ##
