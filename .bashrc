@@ -8,13 +8,13 @@ set -o vi
 [[ $- != *i* ]] && return
 
 alias ls='ls --color=auto'
-#PS1='\[\033[1;34m\]--\[\033[0m\] '
 PS1='\[\033[1;34m\] ——\[\033[0m\] '
+#PS1='\033[1;34m\]┌──\033[0m\] \u in \w\n\033[1;34m\]└─\033[0m\] '
 
 force_color_prompt=yes
 
 export ONDR=/mnt/data/OneDrive
-export PATH=$PATH:/home/lam/.local/bin:/home/lam/bin
+export PATH=$PATH:$(pyenv root)/shims:/home/lam/.local/bin:/home/lam/bin
 export XDG_CACHE_HOME=/mnt/data/.cache/
 export LC_ALL=en_US.UTF-8
 export LANG=en_US.UTF-8
@@ -41,3 +41,5 @@ if [ "$TERM" = "linux" ]; then
     echo -en "\e]PFc5c8c6" #white
     clear #for background artifacting
 fi
+
+eval "$(pyenv init -)"
