@@ -15,8 +15,8 @@ if [ $? == 0 ]; then
 	tmux select-pane -t 2
 
 	# uni, pane 2
-	tmux split-window -t $SES:1.2 -v -p 91	# Split 91%
-	tmux send-key -t $SES:1.2 "echo Assignment and Stuffs | toilet --rainbow -f smblock" ENTER
+	tmux split-window -t $SES:1.2 -v -p 8	# Split 8%
+	tmux send-key -t $SES:1.3 "echo Assignment and Stuffs | toilet --rainbow -f smblock" ENTER
 	tmux select-pane -t 1
 	
 	# mus

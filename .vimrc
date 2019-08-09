@@ -17,7 +17,8 @@ Plug 'vim-syntastic/syntastic' 		" File syntax
 Plug 'vim-airline/vim-airline' 		" Airline..
 Plug 'vim-airline/vim-airline-themes' 	" ..and its theme
 Plug 'Valloric/YouCompleteMe' 		" Powerful autocompletion
-Plug 'jpalardy/vim-slime'		" Slime plug in to interpret code
+Plug 'jpalardy/vim-slime'		" Slime plug-in to interpret code
+Plug 'neo4j-contrib/cypher-vim-syntax'	" Syntax highlight for cypher
 call plug#end()
 
 
@@ -30,12 +31,21 @@ colorscheme elflord
 set number relativenumber
 set mouse=a clipboard^=unnamed
 set hls is smartcase ignorecase
+set splitbelow splitright
 set spelllang=en,id
 set encoding=utf-8
 set cursorline cursorcolumn
 set t_Co=256
 hi CursorLine cterm=None ctermbg=Black ctermfg=White
-hi CursorColumn cterm=None ctermbg=Black ctermfg=White
+hi CursorColumn ctermbg=Black ctermfg=White
+
+
+
+" " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " "
+"	OMNI-COMPLETION
+" " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " "
+filetype plugin on
+set omnifunc=syntaxcomplete#complete
 
 
 

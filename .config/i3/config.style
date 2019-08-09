@@ -163,7 +163,8 @@ bindsym Mod1+Shift+c reload
 # restart polybar & i3 inplace (preserves the layout/session)
 bindsym Mod1+Shift+r exec "polybar-msg cmd restart && i3-msg restart"
 # exit i3 (logs you out of your X session)
-bindsym Mod1+Shift+q exec "i3-nagbar -t warning -m 'You pressed the exit shortcut. Do you really want to exit i3? This will end your X session.' -b 'Yes, exit i3' 'i3-msg exit'"
+#bindsym Mod1+Shift+q exec "i3-nagbar -t warning -m 'You pressed the exit shortcut. Do you really want to exit i3? This will end your X session.' -b 'Yes, exit i3' 'i3-msg exit'"
+bindsym Mod1+Shift+q exec "i3-msg exit"
 
 # resize window (you can also use the mouse for that)
 mode "resize" {

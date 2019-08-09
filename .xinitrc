@@ -13,4 +13,7 @@ compton 2>&1 &
 xrdb -merge ~/.Xresources &
 start-pulseaudio-x11 &
 date >> bat-stat.txt && sudo tlp-stat -b >> bat-stat.txt &
+
+source ~/.bashrc &
+
 exec i3 -V >> ~/.config/i3/start.log 

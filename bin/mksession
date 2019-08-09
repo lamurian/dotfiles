@@ -1,28 +1,31 @@
 #!/bin/bash
 # Script to set-up tmux layout
 
-SES="def"
+# Use def as default session name if no argument is given
+[ -z $1 ] && SES="def" || SES=$1
 
+# Check if session is already running
 tmux has-session -t $SES &> /dev/null
 
+# Condition when session is not running
 if [ $? != 0 ]; then
 
-	## Make new session called $SES
+	# Make new session and detach it
 	tmux new-session -d -s $SES -n man
-	
-	## Configure "man" window
+
+	# Configure "man" window
 	tmux split-window -t $SES:0 -h -p 70	# 3:7 H
 	tmux split-window -t $SES:0 -h -p 50 	# 3.5:3.5 H
 	
-	## Make the next window
+	# Make the next window
 	tmux new-window -t $SES -n uni
 	
-	## Configure "uni" window
+	# Configure "uni" window
 	tmux split-window -t $SES:1 -h -p 70	# 3:7 H
 	tmux split-window -t $SES:1 -h -p 50 	# 3.5:3.5 H
 	
 	# Open ranger and echo things on pane 1 and 2
-	tmux send-key -t $SES:1.1 "ranger $ONDR" ENTER
+	tmux send-key -t $SES:1.2 "ranger $ONDR" ENTER
 	
 	# Make new window in #9
 	tmux new-window -t $SES:9 -n mus
@@ -40,9 +43,9 @@ if [ $? != 0 ]; then
 
 fi
 
-if [[ -n $DISPLAY ]];
-then
-	tmux -f ~/.tmux.xorg.conf -2 a -t $SES
-else
-	tmux -f ~/.tmux.tty.conf a -t $SES
-fi
+# Check if $DISPLAY is null -> use tty conf
+[ -z $DISPLAY ] && \
+	tmux source .tmux.tty.conf || \
+	tmux source .tmux.xorg.conf
+
+tmux a -t $SES

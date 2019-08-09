@@ -1,13 +1,16 @@
-!#/bin/bash
+#!/bin/bash
 
 # Little script to produce screen cast
 
-TIME=${1}
-OUTPUT=${2}
+OUTPUT=${1}
+SIZE=$(xrandr -q --current | grep \* | awk '{print $1}')
+SOUND=$(pactl list sources short | awk '{print $2}' | grep mon)
 
-timeout $TIME ffmpeg \
+ffmpeg -f alsa \
+	-i pulse \
 	-f x11grab \
-	-video_size 1920x1080 \
-	-framerate 20 \
+	-video_size $SIZE \
+	-framerate 25 \
 	-i :0.0 \
+	-c:v libx264 -c:a aac \
 	$OUTPUT

@@ -10,6 +10,7 @@ output:
     smooth_scroll: true
     df_print: paged
   pdf_document:
+    fig_crop: false
     number_sections: true
     df_print: kable
     highlight: tango

@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Check battery charge periodically to notify low and full charge
-bat_perc=$(acpi -b | cut -d , -f 2 | cut -f 1 -d %)
+bat_perc=$(cat /sys/class/power_supply/BAT0/capacity)
 bat_time=$(acpi -b | cut -d " " -f 5)
 
 if acpi -b | grep Charging > /dev/null; then
