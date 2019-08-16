@@ -53,9 +53,10 @@ bindsym Mod1+Shift+Return exec xterm
 # kill focused window
 bindsym Mod4+c kill
 
-# start rofi (a program launcher)
-bindsym Mod1+m exec rofi -show run -font $font -width 500 -lines 5
-bindsym Mod4+m exec rofi -show window -font $font -width 500 -lines 5
+# start a program launcher
+bindsym Mod1+m exec dmenu_run
+#bindsym Mod1+m exec rofi -show run -font $font -width 500 -lines 5
+bindsym Mod4+Tab exec rofi -show window -font $font -width 500 -lines 5
 # There also is the (new) i3-dmenu-desktop which only displays applications
 # shipping a .desktop file. It is a wrapper around dmenu, so you need that
 # installed.

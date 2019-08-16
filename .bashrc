@@ -14,8 +14,10 @@ alias ls='ls --color=auto'
 # Alias for tty only
 if [ -z $DISPLAY ]; then
 	alias mplayer='mplayer -vo fbdev2'
+	alias scrot='fbgrab -i'
 else	# Unset alias outside tty
 	unalias mplayer 2>/dev/null
+	unalias scrot 2>/dev/null
 fi
 
 # PS1 mod
@@ -33,6 +35,7 @@ export EDITOR=vim
 export SYSTEMD_EDITOR=vim
 export XDG_DATA_HOME=/mnt/data/lamuri
 export XDG_CACHE_HOME=/mnt/data/.cache/
+export XDG_CONFIG_HOME=$HOME/.config
 
 # ALWAYS put it last (according to the documentation)
 eval "$(pyenv init -)"
