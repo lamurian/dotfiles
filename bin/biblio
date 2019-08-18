@@ -1,0 +1,42 @@
+#!/bin/bash
+
+func=$1
+object=$2
+id=$3
+
+doi=https://doi.org/$id
+pmid=https://bioinformatics.org/texmed/cgi-bin/list.cgi?PMID=$id
+
+# Function defining the $func
+
+# Help function
+function help {
+	echo "
+parse object identifier into *.bib format
+
+usage: biblio [function] <options> (object)
+
+Functions:
+  help:	print this help page
+
+  fetch: biblio fetch <type> (id),
+	where <type> is the type of your document identifier, as either doi or
+	pmid, and (id) is the actual number
+"
+}
+
+# Fetch bib according to given id
+function fetch {
+	case $object in
+		doi) curl -LH "Accept: application/x-bibtex; charset=utf-8" \
+			$doi && echo && echo ;;
+		pmid) w3m -dump $pmid |
+			sed '1,5d' ;;
+	esac
+}
+
+# Fetch the doi
+case $func in
+	fetch) fetch $object $id ;;
+	*) help ;;
+esac
