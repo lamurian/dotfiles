@@ -15,7 +15,7 @@ function call_bspwm {
 }
 
 # Set background
-feh --bg-fill /mnt/data/lamuri/Pictures/wallpaper/02.png &
+feh --bg-fill /mnt/shared/Pictures/wallpaper/02.png &
 
 exec udiskie &
 unclutter -idle 1 &
