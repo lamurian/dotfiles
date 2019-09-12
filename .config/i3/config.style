@@ -239,7 +239,7 @@ new_window none
 new_float none
 
 # specific window control
-for_window [class="Zathura"] floating enable resize set 1065 800
+for_window [class="Zathura"] floating enable
 for_window [class="Epdfview"] floating enable resize set 800 1060
 for_window [class="electrum"] floating enable resize set 1050 800
 for_window [class="mpv"] floating enable
