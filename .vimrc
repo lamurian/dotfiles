@@ -7,17 +7,9 @@ runtime! archlinux.vim
 " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " "
 
 call plug#begin('~/.vim/plugged')
-Plug 'vim-pandoc/vim-pandoc' 		" Pandoc plugin
-Plug 'vim-pandoc/vim-rmarkdown'		" RMarkdown function through vim
-Plug 'nathangrigg/vim-beancount' 	" Beancount plugin
-Plug 'vim-pandoc/vim-pandoc-syntax' 	" Highlight pandoc syntax
-Plug 'lilydjwg/colorizer' 		" Colorize #RRGGBB etc
-Plug 'vim-syntastic/syntastic' 		" File syntax
 Plug 'vim-airline/vim-airline' 		" Airline..
 Plug 'vim-airline/vim-airline-themes' 	" ..and its theme
-Plug 'Valloric/YouCompleteMe' 		" Powerful autocompletion
 Plug 'jpalardy/vim-slime'		" Slime plug-in to interpret code
-Plug 'neo4j-contrib/cypher-vim-syntax'	" Syntax highlight for cypher
 call plug#end()
 
 
@@ -27,8 +19,9 @@ call plug#end()
 " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " "
 
 colorscheme elflord
+syntax on
 set number relativenumber
-set mouse=a clipboard^=unnamed
+set mouse=a
 set hls is smartcase ignorecase
 set splitbelow splitright
 set spelllang=en,id
@@ -56,27 +49,6 @@ set omnifunc=syntaxcomplete#complete
 "	SPECIFIC CONFIG
 " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " "
 
-" Beancount config
-let g:beancount_account_completion = 'chunks'
-let g:table_mode_corner = '|'
-
-" Pandoc config
-"let g:pandoc#folding#level = '1'	" Use either this..
-let g:pandoc#folding#mode = 'stacked'	" ..or this
-let g:pandoc#folding#fold_yaml = '1'
-let g:pandoc#folding#fold_fenced_codeblocks = '1'
-let g:pandoc#folding#fastfolds = '1'
-
-" Syntastic config
-set statusline+=%#warningmsg#
-set statusline+=%{SyntasticStatuslineFlag()}
-set statusline+=%*
-let g:syntastic_always_populate_loc_list = 1
-let g:syntastic_auto_loc_list = 1
-let g:syntastic_check_on_open = 1
-let g:syntastic_check_on_wq = 0
-let g:syntastic_python_checkers = ['python3']
-
 " Airline config
 let g:airline_powerline_fonts = 0
 let g:airline_theme = 'peaksea'
@@ -96,9 +68,6 @@ let g:netrw_banner = 0
 "	KEYMAP
 " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " "
 
-"inoremap sclm <ESC>
-"vnoremap sclm <ESC>
-
 " Tab management
 nnoremap tn :tabnew<Space>
 nnoremap tk :tabprev<CR>
@@ -108,24 +77,6 @@ nnoremap tl :tablast<CR>
 
 " Easy folding toggle
 nnoremap <space> za
-
-" Copy to system clipboard
-" Use in accordance with set clipboard=unnamed
-nnoremap y "+y
-nnoremap Y "+Y
-nnoremap p "+p
-nnoremap P "+P
-nnoremap d "+d
-nnoremap D "+D
-vnoremap y "+y
-vnoremap Y "+Y
-vnoremap p "+p
-vnoremap P "+P
-vnoremap d "+d
-vnoremap D "+D
-
-" Fast navigation
-inoremap <Leader><TAB> <ESC>/<++><return>da>a
 
 " Split navigations
 nnoremap <C-J> <C-W><C-J>
@@ -138,10 +89,6 @@ nnoremap <C-H> <C-W><C-H>
 " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " "
 "	NEW BUFFER
 " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " "
-
-autocmd BufNewFile *.Rmd 0r $HOME/.vim/skeleton/skel-rmd
-
-au BufNewFile,BufRead *.Rmd set textwidth=79
 
 au BufNewFile,BufRead *.py,*.R,*.m
     \ set tabstop=4 |
