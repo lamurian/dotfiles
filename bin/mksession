@@ -16,30 +16,25 @@ if [ $? != 0 ]; then
 	# Configure "man" window
 	tmux split-window -t $SES:0 -h -p 70	# 3:7 H
 	tmux split-window -t $SES:0 -h -p 50 	# 3.5:3.5 H
+	tmux split-window -t $SES:0 -v -p 50	# 1:1 V
+	tmux select-pane -t 0
+	tmux split-window -t $SES:0 -v -p 30	# 1:1 V
+
+	# Launch programs
+	tmux send-key -t $SES:0.1 "atop" ENTER
+	tmux send-key -t $SES:0.4 "ranger $ONDR" ENTER
 	
 	# Make the next window
-	tmux new-window -t $SES -n uni
+	tmux new-window -t $SES -n net
 	
-	# Configure "uni" window
+	# Configure "net" window
 	tmux split-window -t $SES:1 -h -p 70	# 3:7 H
 	tmux split-window -t $SES:1 -h -p 50 	# 3.5:3.5 H
-	
-	# Open ranger and echo things on pane 1 and 2
-	tmux send-key -t $SES:1.2 "ranger $ONDR" ENTER
-	
-	# Make new window in #9
-	tmux new-window -t $SES:9 -n mus
-	
-	# Split vertically by 70%
-	tmux split-window -t $SES:9 -v -p 70
-	
-	# Split horizontally by 3:4:3
-	tmux split-window -t $SES:9 -h -p 70
-	tmux split-window -t $SES:9 -h -p 50
+	tmux split-window -t $SES:1 -v -p 50	# 1:1 V
 
-	# Select window
+	# Move to default window and pane
 	tmux select-window -t $SES:0
-	tmux select-pane -t 1
+	tmux select-pane -t 0
 
 fi
 
