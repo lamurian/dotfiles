@@ -8,9 +8,8 @@ runtime! archlinux.vim
 
 call plug#begin('~/.vim/plugged')
 Plug 'vim-pandoc/vim-pandoc' 		" Pandoc plugin
-Plug 'nathangrigg/vim-beancount' 	" Beancount plugin
-Plug 'dhruvasagar/vim-table-mode' 	" Easy markdown table with \tm
 Plug 'vim-pandoc/vim-rmarkdown'		" RMarkdown function through vim
+Plug 'nathangrigg/vim-beancount' 	" Beancount plugin
 Plug 'vim-pandoc/vim-pandoc-syntax' 	" Highlight pandoc syntax
 Plug 'lilydjwg/colorizer' 		" Colorize #RRGGBB etc
 Plug 'vim-syntastic/syntastic' 		" File syntax
@@ -36,8 +35,12 @@ set spelllang=en,id
 set encoding=utf-8
 set cursorline cursorcolumn
 set t_Co=256
-hi CursorLine cterm=None ctermbg=Black ctermfg=White
-hi CursorColumn ctermbg=Black ctermfg=White
+hi CursorLine cterm=None ctermbg=Black
+hi CursorColumn cterm=None ctermbg=Black
+hi Folded ctermbg=Black
+hi FoldColumn ctermbg=Black
+hi Conceal ctermbg=Black
+hi SpellBad ctermbg=Black ctermfg=Red
 
 
 
@@ -55,12 +58,14 @@ set omnifunc=syntaxcomplete#complete
 
 " Beancount config
 let g:beancount_account_completion = 'chunks'
-let g:table_mode_corner='|'
+let g:table_mode_corner = '|'
 
 " Pandoc config
-let g:pandoc#folding#level = '1'
-" let g:pandoc#command#autoexec_on_writes = '1'
-" let g:pandoc#command#autoexec_command = 'Pandoc pdf'
+"let g:pandoc#folding#level = '1'	" Use either this..
+let g:pandoc#folding#mode = 'stacked'	" ..or this
+let g:pandoc#folding#fold_yaml = '1'
+let g:pandoc#folding#fold_fenced_codeblocks = '1'
+let g:pandoc#folding#fastfolds = '1'
 
 " Syntastic config
 set statusline+=%#warningmsg#
@@ -101,9 +106,6 @@ nnoremap tj :tabnext<CR>
 nnoremap th :tabfirst<CR>
 nnoremap tl :tablast<CR>
 
-" $LaTeX$ syntax to beautify pandoc
-inoremap --> $\to$
-
 " Easy folding toggle
 nnoremap <space> za
 
@@ -122,10 +124,7 @@ vnoremap P "+P
 vnoremap d "+d
 vnoremap D "+D
 
-" Autocomplete bracket
-inoremap ( ()<ESC>i
-inoremap { {}<ESC>i
-inoremap [ []<ESC>i
+" Fast navigation
 inoremap <Leader><TAB> <ESC>/<++><return>da>a
 
 " Split navigations
