@@ -10,7 +10,7 @@ pmid=https://bioinformatics.org/texmed/cgi-bin/list.cgi?PMID=$id
 # Function defining the $func
 
 # Help function
-function help {
+function helper {
 	echo "
 parse object identifier into *.bib format
 
@@ -38,5 +38,5 @@ function fetch {
 # Fetch the doi
 case $func in
 	fetch) fetch $object $id ;;
-	*) help ;;
+	*) clear && helper ;;
 esac
