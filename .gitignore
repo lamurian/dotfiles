@@ -12,31 +12,18 @@
 !/.newsboat/config
 !/.newsboat/urls
 !.tmux.conf
-!.tmux.tty.conf
-!.tmux.xorg.conf
 !.vimrc
 !/.w3m/config
 !/.w3m/keymap
-!.xinitrc
-!.Xresources
 
 # Whitelisting folders
 !/bin/**
-!/.pandoc/**
-!/.vim/skeleton/**
 
 # Whitelisting sub in .config folder
-!/.config/color/**
-!/.config/dunst/**
-!/.config/i3/**
 !/.config/mp*./**
 !/.config/n*/**
-!/.config/polybar/config
 !/.config/ranger/*.py
 !/.config/ranger/*.conf
-!/.config/systemd/**
-!/.config/termite/**
-!/.config/z*/**
 
 # Blacklist unnecessary files
 .config/chromium
