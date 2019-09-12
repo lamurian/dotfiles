@@ -1,6 +1,10 @@
+# Zathura behaviour
 set selection-clipboard 	clipboard
 set adjust-open 		width
+set window-height		800
+set window-width		1050
 
+# Colour configuration
 set recolor 			true
 set recolor-keephue 		true
 set recolor-darkcolor		#c5c8c6
