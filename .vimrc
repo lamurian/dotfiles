@@ -124,9 +124,6 @@ vnoremap P "+P
 vnoremap d "+d
 vnoremap D "+D
 
-" Fast navigation
-inoremap <Leader><TAB> <ESC>/<++><return>da>a
-
 " Split navigations
 nnoremap <C-J> <C-W><C-J>
 nnoremap <C-K> <C-W><C-K>
