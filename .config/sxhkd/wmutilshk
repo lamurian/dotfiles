@@ -1,0 +1,24 @@
+#
+# for minimal window management with wmutils
+#
+
+alt + {h,j,k,l}
+	$HOME/bin/wmscripts/closest.sh {left,down,up,right}
+
+super + c
+	killw $(pfw)
+
+super + t
+	$HOME/bin/wmscripts/tile.sh
+
+super + f
+	$HOME/bin/wmscripts/fullscreen.sh
+
+ctrl + super + {h,l}
+	$HOME/bin/wmscripts/workspace.sh {-p,-n}
+
+super + {1,2,3,4,5,6,7,8,9}
+	$HOME/bin/wmscripts/workspace.sh -g {1,2,3,4,5,6,7,8,9}
+
+shift + super + {1,2,3,4,5,6,7,8,9}
+	$HOME/bin/wmscripts/workspace.sh -m {1,2,3,4,5,6,7,8,9}
