@@ -1,42 +1,12 @@
 ---
-author: <++>
-title: <++>
+author:
+title:
 output:
-  html_document:
-    toc: true
-    toc_float: true
-    toc_depth: 3
-    collapsed: false
-    smooth_scroll: true
-    df_print: paged
   pdf_document:
     fig_crop: false
     number_sections: true
     df_print: kable
     highlight: tango
-  slidy_presentation:
-    highlight: tango
 bibliography: ref.bib
 csl: /home/lam/.pandoc/vancouver-superscript.csl
 ---
-
-```{r init, echo=F, include=F}
-load('.RData')
-options(digits=2)
-knitr::opts_chunk$set(fig.width=10, fig.height=7, results='asis', echo=F)
-
-write_matex <- function(x) {
-  begin <- "\\begin{bmatrix}"
-  end <- "\\end{bmatrix}"
-  X <-
-    apply(x, 1, function(x) {
-      paste(
-        paste(x, collapse = "&"),
-        "\\\\"
-      )
-    })
-  paste(c(begin, X, end), collapse = "")
-}
-```
-
-<++>
