@@ -26,6 +26,7 @@
 !/.vim/skeleton/**
 
 # Whitelisting sub in .config folder
+!/.config/bspwm/**
 !/.config/color/**
 !/.config/dunst/**
 !/.config/i3/**
@@ -35,6 +36,7 @@
 !/.config/ranger/*.py
 !/.config/ranger/*.conf
 !/.config/systemd/**
+!/.config/sxhkd/**
 !/.config/termite/**
 !/.config/z*/**
 
