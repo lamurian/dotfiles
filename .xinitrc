@@ -1,33 +1,32 @@
 # Function to call wm
 function call_i3 {
-	polybar bar &
 	exec i3
 }
 
-function call_dwm {
-	exec dwm
-}
-
 function call_bspwm {
-	sxhkd &
-	polybar bar &
 	exec bspwm
 }
 
+function call_dwm {
+	feh --bg-fill /mnt/shared/Pictures/wallpaper/02.png &
+	exec dwm
+}
+
+function call_min {
+	workspace -i &
+	sxhkd -c $XDG_CONFIG_HOME/sxhkd/{sxhkdrc,wmutilshk} &
+	termite
+}
+
 # Set background
-feh --bg-fill /mnt/shared/Pictures/wallpaper/02.png &
 
 exec udiskie &
 unclutter -idle 1 &
 
 systemctl --user import-environment DISPLAY &
 
-compton 2>&1 &
 xrdb -merge ~/.Xresources &
-#start-pulseaudio-x11 &
 date >> bat-stat.txt && sudo tlp-stat -b >> bat-stat.txt &
-
-source ~/.bashrc &
 
 # Call the wm
 call_i3
