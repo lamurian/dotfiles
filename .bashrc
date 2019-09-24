@@ -22,12 +22,12 @@ fi
 
 # PS1 mod
 #PS1='\[\033[1;34m\] ——\[\033[0m\] '
-PS1='\033[1;34m\]┌──\033[1;31m\] \u in \w\n\033[1;34m\]└─\033[0m\] '
+PS1='\033[1;34m\]┌──\033[1;32m\] \u in \w\n\033[1;34m\]└─\033[0m\] '
 
 force_color_prompt=yes
 
 export ONDR=/mnt/data/OneDrive
-export PATH=$PATH:/home/lam/.local/bin:/home/lam/bin
+export PATH=$PATH:/home/lam/.local/bin:/home/lam/bin:/mnt/data/programs/unix
 export LC_ALL=en_US.UTF-8
 export LANG=en_US.UTF-8
 export LANGUAGE=en_US.UTF-8
