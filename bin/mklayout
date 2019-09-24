@@ -8,9 +8,9 @@ tmux has-session -t $SES &> /dev/null
 if [ $? == 0 ]; then
 
 	# man
-	tmux send-key -t $SES:0.0 "ncmpcpp" ENTER
-	tmux send-key -t $SES:0.1 "atop" ENTER
-	tmux send-key -t $SES:0.4 "ranger $ONDR" ENTER
+	tmux send-key -t $SES:0.3 "ncmpcpp" ENTER
+	tmux send-key -t $SES:0.1 "ranger $ONDR" ENTER
+	tmux send-key -t $SES:0.4 "atop" ENTER
 
 	# net
 	tmux send-key -t $SES:1.0 "w3m duck.com"

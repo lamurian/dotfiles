@@ -20,10 +20,6 @@ if [ $? != 0 ]; then
 	tmux select-pane -t 0
 	tmux split-window -t $SES:0 -v -p 30	# 1:1 V
 
-	# Launch programs
-	tmux send-key -t $SES:0.1 "atop" ENTER
-	tmux send-key -t $SES:0.4 "ranger $ONDR" ENTER
-	
 	# Make the next window
 	tmux new-window -t $SES -n net
 	
