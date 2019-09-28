@@ -9,6 +9,7 @@ function call_bspwm {
 
 function call_dwm {
 	feh --bg-fill /mnt/shared/Pictures/wallpaper/02.png &
+	sxhkd &
 	exec dwm
 }
 
@@ -20,13 +21,13 @@ function call_min {
 
 # Set background
 
-exec udiskie &
+#exec udiskie &
 unclutter -idle 1 &
 
 systemctl --user import-environment DISPLAY &
 
 xrdb -merge ~/.Xresources &
-date >> bat-stat.txt && sudo tlp-stat -b >> bat-stat.txt &
+#date >> bat-stat.txt && sudo tlp-stat -b >> bat-stat.txt &
 
 # Call the wm
-call_i3
+call_dwm

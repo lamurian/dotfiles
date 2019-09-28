@@ -2,14 +2,6 @@
 # wm independent hotkeys
 #
 
-# terminal emulator
-alt + Return
-	termite
-
-# program launcher
-alt + m
-	dmenu_run
-
 # XF86 Keys
 XF86AudioMute
 	amixer set Master toggle & ~/bin/vol-stat.sh
