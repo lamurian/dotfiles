@@ -17,10 +17,4 @@ In `.config/` folder, I keep configuration file for music daemon, window
 manager, compositor, pdf reader, file manager, as well as color theme generator
 (adapted from [terminal.sexy](http://terminal.sexy)).
 
-Depicted below is tmux + surf:
-
-!["tmux 1"](https://i.imgur.com/SSQtrJG.png)
-
-Floating more, transparency and notification:
-
-!["scrot 1"](https://i.imgur.com/xdWv3wW.png)
+!["Desktop"](https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/aca28a1b-1468-4d82-ab27-7cd5b0e4e1b2/ddh5bah-60587df9-8e50-4cf0-a85e-07957d9382f3.png?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7InBhdGgiOiJcL2ZcL2FjYTI4YTFiLTE0NjgtNGQ4Mi1hYjI3LTdjZDViMGU0ZTFiMlwvZGRoNWJhaC02MDU4N2RmOS04ZTUwLTRjZjAtYTg1ZS0wNzk1N2Q5MzgyZjMucG5nIn1dXSwiYXVkIjpbInVybjpzZXJ2aWNlOmZpbGUuZG93bmxvYWQiXX0.EZP2SWqFyrpRX0tJRy2IZgxEVoKbiuIRjrylgAVUdl8)
