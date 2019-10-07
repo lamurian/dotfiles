@@ -100,11 +100,11 @@ let g:netrw_banner = 0
 "vnoremap sclm <ESC>
 
 " Tab management
-nnoremap tn :tabnew<Space>
-nnoremap tk :tabprev<CR>
-nnoremap tj :tabnext<CR>
-nnoremap th :tabfirst<CR>
-nnoremap tl :tablast<CR>
+nnoremap tn :edit<Space>
+nnoremap tk :bprev<CR>
+nnoremap tj :bnext<CR>
+nnoremap th :bfirst<CR>
+nnoremap tl :blast<CR>
 
 " Easy folding toggle
 nnoremap <space> za
