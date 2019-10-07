@@ -8,7 +8,7 @@ function call_bspwm {
 }
 
 function call_dwm {
-	feh --bg-fill /mnt/shared/Pictures/wallpaper/02.png &
+	feh --bg-fill /mnt/shared/Pictures/wallpaper/min-fox-forest.jpg &
 	sxhkd &
 	exec dwm
 }
