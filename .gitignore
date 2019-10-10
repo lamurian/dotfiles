@@ -8,9 +8,10 @@
 # Whitelisting files
 !.bashrc
 !.gitignore
-!README.md
 !/.newsboat/config
 !/.newsboat/urls
+!README.md
+!.Rprofile
 !.tmux.conf
 !.tmux.tty.conf
 !.tmux.xorg.conf
