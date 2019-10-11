@@ -23,6 +23,7 @@
 
 # Whitelisting folders
 !/bin/**
+!.irssi/**
 !/.pandoc/**
 !/.vim/skeleton/**
 
