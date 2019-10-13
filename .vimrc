@@ -57,17 +57,6 @@ set omnifunc=syntaxcomplete#complete
 "	SPECIFIC CONFIG
 " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " "
 
-" Beancount config
-let g:beancount_account_completion = 'chunks'
-let g:table_mode_corner = '|'
-
-" Pandoc config
-"let g:pandoc#folding#level = '1'	" Use either this..
-let g:pandoc#folding#mode = 'stacked'	" ..or this
-let g:pandoc#folding#fold_yaml = '1'
-let g:pandoc#folding#fold_fenced_codeblocks = '1'
-let g:pandoc#folding#fastfolds = '1'
-
 " Syntastic config
 set statusline+=%#warningmsg#
 set statusline+=%{SyntasticStatuslineFlag()}
@@ -97,15 +86,13 @@ let g:netrw_banner = 0
 "	KEYMAP
 " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " "
 
-"inoremap sclm <ESC>
-"vnoremap sclm <ESC>
-
-" Tab management
+" Tab management (use buffer)
 nnoremap tn :edit<Space>
 nnoremap tk :bprev<CR>
 nnoremap tj :bnext<CR>
 nnoremap th :bfirst<CR>
 nnoremap tl :blast<CR>
+nnoremap tq :bdelete<CR>
 
 " Easy folding toggle
 nnoremap <space> za
