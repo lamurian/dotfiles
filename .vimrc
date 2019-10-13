@@ -27,6 +27,7 @@ call plug#end()
 " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " "
 
 colorscheme elflord
+filetype plugin on
 set number relativenumber
 set mouse=a clipboard^=unnamed
 set hls is smartcase ignorecase
@@ -137,20 +138,3 @@ nnoremap <C-H> <C-W><C-H>
 " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " "
 
 autocmd BufNewFile *.Rmd 0r $HOME/.vim/skeleton/skel-rmd
-
-au BufNewFile,BufRead *.Rmd set textwidth=79
-
-au BufNewFile,BufRead *.py,*.R,*.m
-    \ set tabstop=4 |
-    \ set softtabstop=4 |
-    \ set shiftwidth=4 |
-    \ set textwidth=79 |
-    \ set expandtab |
-    \ set autoindent |
-    \ set fileformat=unix 
-
-" Set other indentation
-au BufNewFile,BufRead *.js,*.html,*.css,*.sty,*.tex
-    \ set tabstop=2 |
-    \ set softtabstop=2 |
-    \ set shiftwidth=2 

@@ -25,6 +25,7 @@
 !/bin/**
 !.irssi/**
 !/.pandoc/**
+!/.vim/after/**
 !/.vim/skeleton/**
 
 # Whitelisting sub in .config folder
