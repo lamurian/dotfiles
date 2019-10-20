@@ -1,5 +1,5 @@
 # Function to calculate wattage consumption
-function watt {
+watt() {
 	echo - | awk "{printf \"%.1f\", \
 	$(( \
 	  $(cat /sys/class/power_supply/BAT0/current_now) * \
@@ -8,22 +8,22 @@ function watt {
 }
 
 # Function to call wm
-function call_i3 {
+call_i3() {
 	exec i3
 }
 
-function call_bspwm {
+call_bspwm() {
 	exec bspwm
 }
 
-function call_dwm {
+call_dwm() {
 	feh --bg-fill /mnt/shared/Pictures/wallpaper/min-fox-forest.jpg &
 	sxhkd &
 	while true; do xsetroot -name " `watt` "; sleep 5s; done &
 	exec dwm
 }
 
-function call_min {
+call_min() {
 	workspace -i &
 	sxhkd -c $XDG_CONFIG_HOME/sxhkd/{sxhkdrc,wmutilshk} &
 	termite

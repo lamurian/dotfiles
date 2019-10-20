@@ -25,12 +25,12 @@ PS1='\[\033[1;34m\] ——\[\033[0m\] '
 #PS1='\033[1;34m\]┌──\033[0m\] \u in \w\n\033[1;34m\]└─\033[0m\] '
 
 # Nifty function
-function ac {
+ac() {
 	# Open markdown stored in OneDrive using vim
-	vim $(find $ONDR -type f -regex '.*md' -o -iname '*.bib' | fzf -m)
+	cd $(find $ONDR -type d | fzf)
 }
 
-function conf {
+conf() {
 	# Open config file using vim
 	vim $(find $HOME/.config/* -type f | fzf -m)
 }
