@@ -24,7 +24,7 @@ ignore_null_img_alt 1
 view_unseenobject 0
 display_image 1
 pseudo_inlines 1
-auto_image 0
+auto_image 1
 max_load_image 4
 ext_image_viewer 1
 image_scale 100
@@ -78,9 +78,9 @@ urimethodmap ~/.w3m/urimethodmap, /usr/etc/w3m/urimethodmap
 editor /usr/bin/vim
 mailto_options 1
 mailer /usr/bin/mail
-extbrowser /usr/bin/chromium
+extbrowser /usr/bin/firefox
 extbrowser2 /usr/bin/surf
-extbrowser3 /usr/bin/firefox
+extbrowser3 /usr/bin/chromium
 extbrowser4 
 extbrowser5 
 extbrowser6 

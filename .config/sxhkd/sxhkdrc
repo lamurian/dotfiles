@@ -1,3 +1,5 @@
+alt + m
+	dmenu_run
 #
 # wm independent hotkeys
 #

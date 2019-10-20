@@ -1,10 +1,10 @@
+<<<<<<< HEAD
 # Function to calculate wattage consumption
-watt() {
+watt () {
 	echo - | awk "{printf \"%.1f\", \
 	$(( \
-	  $(cat /sys/class/power_supply/BAT0/current_now) * \
-	  $(cat /sys/class/power_supply/BAT0/voltage_now) \
-	)) / 1000000000000 }" ; echo " W "
+	  $(cat /sys/class/power_supply/BAT0/power_now) \
+	)) / 1000000 }" ; echo " W "
 }
 
 # Function to call wm
@@ -29,15 +29,11 @@ call_min() {
 	termite
 }
 
-# Set background
-
-#exec udiskie &
+# Set background process
 unclutter -idle 1 &
 
 systemctl --user import-environment DISPLAY &
 
 xrdb -merge ~/.Xresources &
-#date >> bat-stat.txt && sudo tlp-stat -b >> bat-stat.txt &
-
 # Call the wm
 call_dwm
