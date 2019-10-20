@@ -1,5 +1,5 @@
 # Function to calculate wattage consumption
-watt () {
+watt() {
 	echo - | awk "{printf \"%.1f\", \
 	$(( \
 	  $(cat /sys/class/power_supply/BAT0/power_now) \
@@ -30,8 +30,6 @@ call_min() {
 
 # Set background process
 unclutter -idle 1 &
-
-systemctl --user import-environment DISPLAY &
 
 xrdb -merge ~/.Xresources &
 # Call the wm
