@@ -9,15 +9,12 @@ runtime! archlinux.vim
 call plug#begin('~/.vim/plugged')
 Plug 'vim-pandoc/vim-pandoc' 		" Pandoc plugin
 Plug 'vim-pandoc/vim-rmarkdown'		" RMarkdown function through vim
-Plug 'nathangrigg/vim-beancount' 	" Beancount plugin
 Plug 'vim-pandoc/vim-pandoc-syntax' 	" Highlight pandoc syntax
 Plug 'lilydjwg/colorizer' 		" Colorize #RRGGBB etc
 Plug 'vim-syntastic/syntastic' 		" File syntax
 Plug 'vim-airline/vim-airline' 		" Airline..
 Plug 'vim-airline/vim-airline-themes' 	" ..and its theme
-Plug 'Valloric/YouCompleteMe' 		" Powerful autocompletion
 Plug 'jpalardy/vim-slime'		" Slime plug-in to interpret code
-Plug 'neo4j-contrib/cypher-vim-syntax'	" Syntax highlight for cypher
 call plug#end()
 
 
@@ -28,6 +25,7 @@ call plug#end()
 
 colorscheme elflord
 filetype plugin on
+set visualbell
 set number relativenumber
 set mouse=a clipboard^=unnamed
 set hls is smartcase ignorecase
