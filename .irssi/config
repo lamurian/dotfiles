@@ -303,5 +303,5 @@ statusbar = {
 settings = {
   core = { real_name = "Unknown"; user_name = "lam"; nick = "lamurian"; };
   "fe-text" = { actlist_sort = "refnum"; };
-  "fe-common/core" = { theme = "initrd"; };
+  "fe-common/core" = { theme = "initrd "; };
 };
