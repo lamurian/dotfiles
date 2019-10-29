@@ -16,7 +16,7 @@ if [ $? != 0 ]; then
 	# Configure "man" window
 	tmux split-window -t $SES:0 -h -p 70	# 3:7 H
 	tmux select-pane -t 0
-	tmux split-window -t $SES:0 -v -p 45	# 1:1 V
+	tmux split-window -t $SES:0 -v -p 40	# 1:1 V
 	tmux split-window -t $SES:0 -v -p 50	# 1:1 V
 
 	# Move to default window and pane
