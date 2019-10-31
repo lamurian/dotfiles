@@ -25,6 +25,8 @@ call plug#end()
 
 colorscheme elflord
 filetype plugin on
+set directory=/mnt/data/.cache/vim/swapfiles//	" Dir for swapfiles
+set backupdir=/mnt/data/.cache/vim/backup//	" Dir for backup
 set visualbell
 set number relativenumber
 set mouse=a clipboard^=unnamed
