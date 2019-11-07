@@ -78,5 +78,4 @@ esac
 
 dunstify -r 1 -u low "Backlight" \
 "<span font='Font Awesome 8'>$icon</span> \
-<span font='Inconsolata 10'>$lglevel</span> \
-<span font='Font Awesome 5'>$stat</span>"
+<span font='Inconsolata 10'>$lglevel $stat</span> \

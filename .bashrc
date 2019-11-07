@@ -21,7 +21,7 @@ else	# Unset alias outside tty
 fi
 
 # PS1 mod
-PS1='\[\033[1;34m\] -- \[\033[0m\] '
+PS1='\[\033[1;34m\]── \[\033[0m\] '
 #PS1='\033[1;34m\]┌──\033[0m\] \u in \w\n\033[1;34m\]└─\033[0m\] '
 
 # Nifty function
