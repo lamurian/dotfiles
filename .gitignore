@@ -13,8 +13,6 @@
 !README.md
 !.Rprofile
 !.tmux.conf
-!.tmux.tty.conf
-!.tmux.xorg.conf
 !.vimrc
 !/.w3m/config
 !/.w3m/keymap

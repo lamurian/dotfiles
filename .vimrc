@@ -98,7 +98,6 @@ nnoremap <C-L> <C-W><C-L>
 nnoremap <C-H> <C-W><C-H>
 
 "	BUFFER OPTIONS
-
 autocmd BufEnter *rc loadview
 autocmd BufEnter *conf loadview
 autocmd BufNewFile *.Rmd 0r $HOME/.vim/skeleton/skel-rmd
