@@ -2,9 +2,9 @@
 watt() {
 	echo - | awk "{printf \"%.1f\", \
 	$(( \
-	  $(cat /sys/class/power_supply/BAT0/current_now) * \
-	  $(cat /sys/class/power_supply/BAT0/voltage_now) \
-	)) / 1000000000000 }" ; echo " W "
+	  ($(cat /sys/class/power_supply/BAT0/power_now) \
+	   + $(cat /sys/class/power_supply/BAT1/power_now)) \
+	)) / 1000000 }" ; echo " W "
 }
 
 # Function to call wm

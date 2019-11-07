@@ -15,7 +15,6 @@ Plug 'lilydjwg/colorizer' 		" Colorize #RRGGBB etc
 Plug 'vim-syntastic/syntastic' 		" File syntax
 Plug 'vim-airline/vim-airline' 		" Airline..
 Plug 'vim-airline/vim-airline-themes' 	" ..and its theme
-Plug 'Valloric/YouCompleteMe' 		" Powerful autocompletion
 Plug 'jpalardy/vim-slime'		" Slime plug-in to interpret code
 Plug 'neo4j-contrib/cypher-vim-syntax'	" Syntax highlight for cypher
 call plug#end()
@@ -28,6 +27,8 @@ call plug#end()
 
 colorscheme elflord
 filetype plugin on
+set directory=/mnt/data/.cache/vim/swap
+set backupdir=/mnt/data/.cache/vim/bak
 set number relativenumber
 set mouse=a clipboard^=unnamed
 set hls is smartcase ignorecase

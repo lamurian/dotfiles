@@ -301,7 +301,12 @@ statusbar = {
   };
 };
 settings = {
-  core = { real_name = "Unknown"; user_name = "lam"; nick = "lamurian"; };
+  core = {
+    real_name = "Unknown";
+    user_name = "lam";
+    nick = "lamurian";
+    recode_transliterate = "no";
+  };
   "fe-text" = { actlist_sort = "refnum"; };
   "fe-common/core" = { theme = "initrd"; };
 };

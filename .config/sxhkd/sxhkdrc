@@ -4,7 +4,7 @@
 
 # XF86 Keys
 XF86AudioMute
-	amixer set Master toggle & ~/bin/vol-stat.sh
+	pulsemixer --toggle-mute & ~/bin/vol-stat.sh
 
 XF86Audio{RaiseVolume,LowerVolume}
 	pulsemixer --change-volume {+5,-5} --unmute && ~/bin/vol-stat.sh
