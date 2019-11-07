@@ -17,7 +17,7 @@ call_bspwm() {
 }
 
 call_dwm() {
-	feh --bg-fill /mnt/shared/Pictures/wallpaper/min-fox-forest.jpg &
+	feh --bg-fill $ONDR/Pictures/wallpaper/min-fox-forest.jpg &
 	sxhkd &
 	while true; do xsetroot -name " `watt` "; sleep 5s; done &
 	exec dwm
