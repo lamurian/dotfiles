@@ -17,41 +17,42 @@ md2c="</span>"
 # Make volume slider
 case $vol in
 	0)
-		level="$md2o--------------------$md2c"
+		level="$md2o────────────────────$md2c"
 		;;
 	[1-9])
-		level="$md1o--$md1c$md2o------------------$md2c"
+		level="$md1o──$md1c$md2o──────────────────$md2c"
 		;;
 	1[0-9])
-		level="$md1o----$md1c$md2o----------------$md2c"
+		level="$md1o────$md1c$md2o────────────────$md2c"
 		;;
 	2[0-9])
-		level="$md1o------$md1c$md2o--------------$md2c"
+		level="$md1o──────$md1c$md2o──────────────$md2c"
 		;;
 	3[0-9])
-		level="$md1o--------$md1c$md2o------------$md2c"
+		level="$md1o────────$md1c$md2o────────────$md2c"
 		;;
 	4[0-9])
-		level="$md1o----------$md1c$md2o----------$md2c"
+		level="$md1o──────────$md1c$md2o──────────$md2c"
 		;;
 	5[0-9])
-		level="$md1o------------$md1c$md2o--------$md2c"
+		level="$md1o────────────$md1c$md2o────────$md2c"
 		;;
 	6[0-9])
-		level="$md1o--------------$md1c$md2o------$md2c"
+		level="$md1o──────────────$md1c$md2o──────$md2c"
 		;;
 	7[0-9])
-		level="$md1o----------------$md1c$md2o----$md2c"
+		level="$md1o────────────────$md1c$md2o────$md2c"
 		;;
 	8[0-9])
-		level="$md1o------------------$md1c$md2o--$md2c"
+		level="$md1o──────────────────$md1c$md2o──$md2c"
 		;;
 	*)
-		level="$md1o--------------------$md1c"
+		level="$md1o────────────────────$md1c"
 		;;
 esac
 
 #notify-send -u low -t 800 " " "$icon $vol% $level"
 dunstify -r 1 -u low -t 800 "Volume" \
 "<span font='Font Awesome 10'>$icon</span> \
-<span font='Inconsolata 10'>$vol $level</span>"
+<span font='Inconsolata 10'>$vol</span> \
+<span font='Font Awesome 5'>$level</span>"
