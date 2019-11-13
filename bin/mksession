@@ -22,7 +22,7 @@ if [ $? != 0 ]; then
 
 	# Make the next window
 	tmux new-window -t $SES -n net
-	
+
 	# Configure "net" window
 	tmux split-window -t $SES:1 -h -p 70	# 3:7 H
 	tmux split-window -t $SES:1 -h -p 50 	# 3.5:3.5 H
