@@ -13,7 +13,7 @@ alias ls='ls --color=auto'
 
 # Alias for tty only
 if [ -z $DISPLAY ]; then
-	alias mplayer='mplayer -vo fbdev2'
+	alias mpv='mplayer -vo fbdev2'
 	alias scrot='fbgrab -i'
 else	# Unset alias outside tty
 	unalias mplayer 2>/dev/null
