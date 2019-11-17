@@ -18,7 +18,7 @@ if [ $? != 0 ]; then
 	tmux split-window -t $SES:0 -h -p 50 	# 3.5:3.5 H
 	tmux split-window -t $SES:0 -v -p 50	# 1:1 V
 	tmux select-pane -t 0
-	tmux split-window -t $SES:0 -v -p 30	# 1:1 V
+	tmux split-window -t $SES:0 -v -p 50	# 1:1 V
 
 	# Make the next window
 	tmux new-window -t $SES -n net
