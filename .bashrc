@@ -38,7 +38,7 @@ conf() {
 force_color_prompt=yes
 
 export ONDR=/mnt/data/OneDrive
-export PATH=$PATH:/shims:/home/lam/.local/bin:/home/lam/bin:/home/lam/bin/wmscripts
+export PATH=$PATH:/shims:/home/lam/.local/bin:/home/lam/bin
 export LC_ALL=en_US.UTF-8
 export LANG=en_US.UTF-8
 export LANGUAGE=en_US.UTF-8
