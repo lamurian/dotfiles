@@ -21,15 +21,7 @@ call_min() {
 	termite
 }
 
-# Set background
-
-#exec udiskie &
 unclutter -idle 1 &
-
-systemctl --user import-environment DISPLAY &
-
-xrdb -merge ~/.Xresources &
-#date >> bat-stat.txt && sudo tlp-stat -b >> bat-stat.txt &
 
 # Call the wm
 call_dwm
