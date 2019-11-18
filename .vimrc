@@ -13,6 +13,7 @@ Plug 'nathangrigg/vim-beancount' 	" Beancount plugin
 Plug 'vim-pandoc/vim-pandoc-syntax' 	" Highlight pandoc syntax
 Plug 'lilydjwg/colorizer' 		" Colorize #RRGGBB etc
 Plug 'vim-syntastic/syntastic' 		" File syntax
+Plug 'valloric/youcompleteme'		" Autocompletion
 Plug 'vim-airline/vim-airline' 		" Airline..
 Plug 'vim-airline/vim-airline-themes' 	" ..and its theme
 Plug 'jpalardy/vim-slime'		" Slime plug-in to interpret code
