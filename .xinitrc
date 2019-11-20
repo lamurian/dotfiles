@@ -22,6 +22,7 @@ call_min() {
 }
 
 unclutter -idle 1 &
+song-notif.sh 2>&1 > /dev/null &
 
 # Call the wm
 call_dwm
