@@ -2,7 +2,7 @@
 
 # Notify volume changes with dunstify
 
-vol=$(amixer get Master | grep '%' | head -n 1 | cut -d '[' -f 2 | cut -d '%' -f 1)
+vol=$(pulsemixer --get-volume | awk '{print $1}')
 
 # Decide whether the volume is muted or not
 amixer get Master | tail -n 1 | grep off 2>&1 > /dev/null && \
