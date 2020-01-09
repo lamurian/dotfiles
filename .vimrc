@@ -7,7 +7,6 @@ runtime! archlinux.vim
 " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " "
 
 call plug#begin('~/.vim/plugged')
-Plug 'vim-pandoc/vim-pandoc' 		" Pandoc plugin
 Plug 'vim-pandoc/vim-rmarkdown'		" RMarkdown function through vim
 Plug 'nathangrigg/vim-beancount' 	" Beancount plugin
 Plug 'vim-pandoc/vim-pandoc-syntax' 	" Highlight pandoc syntax
