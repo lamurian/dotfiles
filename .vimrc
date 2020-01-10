@@ -67,7 +67,7 @@ let g:netrw_banner = 0
 "	KEYMAP
 
 " Buffer management
-nnoremap tn :find<Space>
+nnoremap tn :edit<Space>
 nnoremap tk :bprev<CR>
 nnoremap tj :bnext<CR>
 nnoremap th :bfirst<CR>
