@@ -13,9 +13,17 @@ Plug 'jpalardy/vim-slime'		" Slime plug-in to interpret code
 Plug 'neo4j-contrib/cypher-vim-syntax'	" Syntax highlight for cypher
 call plug#end()
 
+" Lilypond integration
+let $lilypath = glob("`readlink -f /usr/**/lilypond/**/vim`")
+if isdirectory($lilypath)   " Check if dir exists
+        filetype off
+        set runtimepath+=$lilypath
+        filetype on
+        syntax on
+endif
+
 "	GENERAL CONFIG
 colorscheme elflord
-filetype plugin on
 set directory=/mnt/data/.cache/vim/swap
 set backupdir=/mnt/data/.cache/vim/bak
 set path+=**    " Enable find in current pwd
@@ -67,7 +75,7 @@ let g:netrw_banner = 0
 "	KEYMAP
 
 " Buffer management
-nnoremap tn :find<Space>
+nnoremap tn :edit<Space>
 nnoremap tk :bprev<CR>
 nnoremap tj :bnext<CR>
 nnoremap th :bfirst<CR>
