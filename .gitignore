@@ -27,6 +27,7 @@
 !/.pandoc/**
 !/.vim/after/**
 !/.vim/skeleton/**
+!/.vim/view/**
 
 # Whitelisting sub in .config folder
 !/.config/bspwm/**
