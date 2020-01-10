@@ -13,9 +13,14 @@ Plug 'jpalardy/vim-slime'		" Slime plug-in to interpret code
 Plug 'neo4j-contrib/cypher-vim-syntax'	" Syntax highlight for cypher
 call plug#end()
 
+" Lilypond integration
+filetype off
+set runtimepath+=/usr/share/lilypond/2.19.83/vim
+filetype on
+syntax on
+
 "	GENERAL CONFIG
 colorscheme elflord
-filetype plugin on
 set directory=/mnt/data/.cache/vim/swap
 set backupdir=/mnt/data/.cache/vim/bak
 set path+=**    " Enable find in current pwd
