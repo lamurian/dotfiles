@@ -1,1 +1,1 @@
-/home/lam/dotfiles/.vim/after/ftplugin/javascript.vim
+javascript.vim

@@ -1,4 +1,4 @@
-set tabstop=4 softtabstop=4 shiftwidth=4 expandtab autoindent
+setlocal tabstop=4 softtabstop=4 shiftwidth=4 expandtab autoindent
 
 
 " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " "
@@ -18,5 +18,5 @@ abbreviate starling Assets:UK:STRL:Checking
 " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " " "
 
 " Beancount config
-let g:beancount_account_completion = 'chunks'
-let g:table_mode_corner = '|'
+let beancount_account_completion = 'chunks'
+let table_mode_corner = '|'
