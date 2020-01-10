@@ -14,10 +14,13 @@ Plug 'neo4j-contrib/cypher-vim-syntax'	" Syntax highlight for cypher
 call plug#end()
 
 " Lilypond integration
-filetype off
-set runtimepath+=/usr/share/lilypond/2.19.83/vim
-filetype on
-syntax on
+let $lilypath = glob("`readlink -f /usr/**/lilypond/**/vim`")
+if isdirectory($lilypath)   " Check if dir exists
+        filetype off
+        set runtimepath+=$lilypath
+        filetype on
+        syntax on
+endif
 
 "	GENERAL CONFIG
 colorscheme elflord

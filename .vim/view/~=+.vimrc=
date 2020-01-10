@@ -54,7 +54,7 @@ setlocal foldcolumn=0
 setlocal foldenable
 setlocal foldexpr=0
 setlocal foldignore=#
-setlocal foldlevel=2
+setlocal foldlevel=0
 setlocal foldmarker={{{,}}}
 setlocal foldmethod=manual
 setlocal foldminlines=1
@@ -108,7 +108,7 @@ setlocal nospell
 setlocal spellcapcheck=[.?!]\\_[\\])'\"\	\ ]\\+
 setlocal spellfile=
 setlocal spelllang=en,id
-setlocal statusline=
+setlocal statusline=%!airline#statusline(1)
 setlocal suffixesadd=
 setlocal swapfile
 setlocal synmaxcol=3000
@@ -134,75 +134,29 @@ setlocal nowinfixwidth
 setlocal wrap
 setlocal wrapmargin=0
 silent! normal! zE
-16,20fold
-3,21fold
-22,41fold
-42,45fold
-50,57fold
-48,57fold
-60,62fold
-58,62fold
-65,67fold
-63,67fold
-68,70fold
-46,71fold
-74,81fold
-82,84fold
-95,98fold
-85,98fold
-99,103fold
-72,104fold
-105,109fold
-3
-normal! zo
-16
-normal! zc
-3
-normal! zc
-22
-normal! zc
-42
-normal! zc
-46
-normal! zo
-48
-normal! zo
-48
-normal! zc
-58
-normal! zo
-58
-normal! zc
-63
-normal! zo
-63
-normal! zc
-68
-normal! zc
-46
-normal! zc
-72
-normal! zo
-74
-normal! zc
-82
-normal! zc
-85
-normal! zo
-85
-normal! zc
-99
-normal! zc
-72
-normal! zc
-105
-normal! zc
-let s:l = 105 - ((104 * winheight(0) + 27) / 54)
+16,23fold
+3,24fold
+25,44fold
+45,48fold
+51,60fold
+61,65fold
+66,70fold
+71,73fold
+49,74fold
+77,84fold
+85,87fold
+98,101fold
+88,101fold
+102,106fold
+75,107fold
+108,112fold
+let s:l = 25 - ((24 * winheight(0) + 27) / 54)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-105
+25
 normal! 0
 let &so = s:so_save | let &siso = s:siso_save
+nohlsearch
 doautoall SessionLoadPost
 " vim: set ft=vim :
