@@ -69,7 +69,7 @@ case $lglevel in
 		stat="$md1o──────────────────$md1c$md2o──$md2c"
 		;;
 	9[5-9])
-		stat="$md1o───────────────────$md1c$md20─$md2c"
+		stat="$md1o───────────────────$md1c$md2o─$md2c"
 		;;
 	*)
 		stat="$md1o────────────────────$md1c"

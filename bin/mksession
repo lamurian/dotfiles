@@ -25,9 +25,4 @@ if [ $? != 0 ]; then
 
 fi
 
-# Check if $DISPLAY is null -> use tty conf
-[ -z $DISPLAY ] && \
-	tmux source .tmux.tty.conf || \
-	tmux source .tmux.xorg.conf
-
 tmux a -t $SES

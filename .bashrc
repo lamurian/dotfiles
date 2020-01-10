@@ -13,7 +13,7 @@ alias ls='ls --color=auto'
 
 # Alias for tty only
 if [ -z $DISPLAY ]; then
-	alias mplayer='mplayer -vo fbdev2'
+	alias mpv='mplayer -vo fbdev2'
 	alias scrot='fbgrab -i'
 else	# Unset alias outside tty
 	unalias mplayer 2>/dev/null
@@ -38,7 +38,7 @@ conf() {
 force_color_prompt=yes
 
 export ONDR=/mnt/data/OneDrive
-export PATH=$PATH:/home/lam/.local/bin:/home/lam/bin:/home/lam/bin/wmscripts
+export PATH=$PATH:/shims:/home/lam/.local/bin:/home/lam/bin
 export LC_ALL=en_US.UTF-8
 export LANG=en_US.UTF-8
 export LANGUAGE=en_US.UTF-8

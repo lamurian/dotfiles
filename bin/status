@@ -1,0 +1,26 @@
+#!/bin/sh
+
+bat() {
+	cat /sys/class/power_supply/BAT0/capacity \
+		/sys/class/power_supply/BAT1/capacity | \
+		tr '\n' ' ' | \
+		awk '{printf "%.0f%\n", ($1 + $2) / 2}'
+}
+
+pwr() {
+	cat /sys/class/power_supply/BAT0/power_now \
+		/sys/class/power_supply/BAT1/power_now | \
+		tr '\n' ' ' | \
+		awk '{printf "%.1f W", ($1 + $2) / 1000000}'
+}
+
+con() {
+	cat /sys/class/net/wlp3s0/operstate
+}
+
+case $1 in
+	bat) bat ;;
+	pwr) pwr ;;
+	con) con ;;
+	*) echo "battery: $(status bat) \\nwattage: $(status pwr) \\nconnect: $(status con)" ;;
+esac
