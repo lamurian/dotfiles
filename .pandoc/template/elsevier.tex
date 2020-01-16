@@ -1,8 +1,4 @@
-% Options for packages loaded elsewhere
-\PassOptionsToPackage{unicode$for(hyperrefoptions)$,$hyperrefoptions$$endfor$}{hyperref}
-\PassOptionsToPackage{hyphens}{url}
-%
-\documentclass[
+\documentclass[%
 $if(fontsize)$
   $fontsize$,
 $endif$
@@ -17,22 +13,12 @@ $if(aspectratio)$
 $endif$
 $for(classoption)$
   $classoption$$sep$,
-$endfor$
+$endfor$ %
 ]{$documentclass$}
 
-$if(linestretch)$
-\usepackage{setspace}
-$endif$
-
-$if(sansfont)$
-  \setsansfont[$for(sansfontoptions)$$sansfontoptions$$sep$,$endfor$]{$sansfont$}
-$endif$
-$if(monofont)$
-  \setmonofont[$for(monofontoptions)$$monofontoptions$$sep$,$endfor$]{$monofont$}
-$endif$
-$for(fontfamilies)$
-  \newfontfamily{$fontfamilies.name$}[$for(fontfamilies.options)$$fontfamilies.options$$sep$,$endfor$]{$fontfamilies.font$}
-$endfor$
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode$for(hyperrefoptions)$,$hyperrefoptions$$endfor$}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
 
 \IfFileExists{bookmark.sty}{\usepackage{bookmark}}{\usepackage{hyperref}}
 \hypersetup{
@@ -77,7 +63,6 @@ $endif$
 \makeatother
 
 \usepackage{amsmath,lmodern}
-\usepackage[T1]{fontenc} % Correctly printing symbol like < and >
 \usepackage{booktabs}
 \providecommand{\tightlist}{%
   \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
@@ -85,9 +70,11 @@ $endif$
 % Table environment
 \usepackage{threeparttable,threeparttablex,tabu}
 
+% Use with xelatex / lualatex for better unicode support
 $if(natbib)$
-\usepackage[$natbiboptions$]{natbib}
+\usepackage[]{natbib}
 \bibliographystyle{$if(biblio-style)$$biblio-style$$else$plainnat$endif$}
+$if(natbiboptions)$\setcitestyle{$natbiboptions$}$endif$
 $endif$
 $if(biblatex)$
 \usepackage[$if(biblio-style)$style=$biblio-style$,$endif$$for(biblatexoptions)$$biblatexoptions$$sep$,$endfor$]{biblatex}
@@ -113,13 +100,10 @@ $endif$
 $if(author)$
 $for(author)$
 $if(author.name)$
-$if(author.no)$
-\author[$author.no$]{$author.name$ $if(author.corauth)$ \corref{$corauth$} $endif$}
-$else$
-\author{$author.name$ $if(corref)$ \corref{cor} $endif$}
+\author$if(author.no)$[$author.no$]$endif$
+{$author.name$ $if(author.corauth)$ \corref{$corauth$} $endif$}
 $endif$
-$endif$
-$if(author.corauth)$ \cortext[$corauth$]{Corresponding Author} $endif$
+$if(author.corauth)$\cortext[$corauth$]{Corresponding Author} $endif$
 $endfor$
 $endif$
 
@@ -127,16 +111,18 @@ $endif$
 $if(institution)$
 $for(institution)$
 $if(institution.name)$
-$if(institution.authno)$
-\address[$institution.authno$]{$institution.name$}
-$else$
-\address{$institution.name$}
-$endif$
+\address$if(institution.authno)$[$institution.authno$]$endif$
+{$institution.name$}
 $endif$
 $endfor$
 $endif$
 
 \date{}
+
+% Include package from yaml
+$for(header-includes)$
+$header-includes$
+$endfor$
 
 \begin{document}
 $if(has-frontmatter)$
