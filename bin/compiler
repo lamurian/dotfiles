@@ -7,6 +7,8 @@ dir=$(dirname "$file")
 base="${file%.*}"
 ext="$2"
 
+cd "$dir"
+
 case $file in
         *\.md) pandoc "$file" -o "$base"."$ext" ;;
         *\.Rmd) echo "require(rmarkdown); rmarkdown::render('$file', quiet=TRUE)" | R -q --vanilla ;;
