@@ -63,6 +63,7 @@ $endif$
   pdfcreator={LaTeX via pandoc}
 }
 
+% Graphic environment
 \usepackage{graphicx,grffile}
 \makeatletter
 \def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
@@ -75,10 +76,14 @@ $endif$
 \def\fps@figure{htbp}
 \makeatother
 
-\usepackage{amsmath}
+\usepackage{amsmath,lmodern}
+\usepackage[T1]{fontenc} % Correctly printing symbol like < and >
 \usepackage{booktabs}
 \providecommand{\tightlist}{%
   \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+
+% Table environment
+\usepackage{threeparttable,threeparttablex,tabu}
 
 $if(natbib)$
 \usepackage[$natbiboptions$]{natbib}
