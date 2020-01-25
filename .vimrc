@@ -19,10 +19,10 @@ if isdirectory($lilypath)   " Check if dir exists
         filetype off
         set runtimepath+=$lilypath
         filetype on
-        syntax on
 endif
 
 "	GENERAL CONFIG
+syntax on
 colorscheme elflord
 set directory=/mnt/data/.cache/vim/swap
 set backupdir=/mnt/data/.cache/vim/bak
@@ -44,7 +44,7 @@ hi SpellBad ctermbg=Black ctermfg=Red
 
 "	OMNI-COMPLETION
 filetype plugin on
-set omnifunc=syntaxcomplete#complete
+set omnifunc=syntaxcomplete#Complete
 
 "	SPECIFIC CONFIG
 
@@ -109,4 +109,4 @@ nnoremap <C-H> <C-W><C-H>
 
 autocmd BufEnter *rc loadview
 autocmd BufEnter *conf loadview
-autocmd BufNewFile *.Rmd 0r $HOME/.vim/skeleton/skel-rmd
+"autocmd BufNewFile *.Rmd 0r $HOME/.vim/skeleton/skel-rmd
