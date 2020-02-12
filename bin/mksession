@@ -20,18 +20,6 @@ if [ $? != 0 ]; then
 	tmux select-pane -t 0
 	tmux split-window -t $SES:0 -v -p 50	# 1:1 V
 
-	# Make the next window
-	tmux new-window -t $SES -n net
-	
-	# Configure "net" window
-	tmux split-window -t $SES:1 -h -p 70	# 3:7 H
-	tmux split-window -t $SES:1 -h -p 50 	# 3.5:3.5 H
-	tmux split-window -t $SES:1 -v -p 50	# 1:1 V
-
-	# Move to default window and pane
-	tmux select-window -t $SES:0
-	tmux select-pane -t 0
-
 fi
 
 tmux a -t $SES
