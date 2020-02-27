@@ -1,15 +1,14 @@
 #!/bin/sh
 
 bat() {
-	cat /sys/class/power_supply/BAT0/capacity \
-		/sys/class/power_supply/BAT1/capacity | \
+	cat /sys/class/power_supply/BAT*/energy_now \
+		/sys/class/power_supply/BAT*/energy_full | \
 		tr '\n' ' ' | \
-		awk '{printf "%.0f%\n", ($1 + $2) / 2}'
+		awk '{printf "%.0f%\n", $1 / $2 * 100}'
 }
 
 pwr() {
-	cat /sys/class/power_supply/BAT0/power_now \
-		/sys/class/power_supply/BAT1/power_now | \
+	cat /sys/class/power_supply/BAT*/power_now | \
 		tr '\n' ' ' | \
 		awk '{printf "%.1f W", ($1 + $2) / 1000000}'
 }
