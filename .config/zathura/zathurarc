@@ -7,19 +7,19 @@ set window-width		1050
 # Colour configuration
 set recolor 			true
 set recolor-keephue 		true
-set recolor-darkcolor		#c5c8c6
-set recolor-lightcolor 		#1d1f21
+set recolor-darkcolor		#ebdbb2
+set recolor-lightcolor 		#1d2021
 
-set default-bg 			#1d1f21
-set default-fg 			#c5c8c6
-set statusbar-bg 		#1d1f21
-set statusbar-fg 		#c5c8c6
-set notification-bg		#1d1f21
-set notification-fg		#5e8d87
-set notification-error-bg	#1d1f21
-set notification-error-fg	#cc6666
-set notification-warning-bg	#1d1f21
-set notification-warning-fg	#8c9440
+set default-bg 			#1d2021
+set default-fg 			#ebdbb2
+set statusbar-bg 		#1d2021
+set statusbar-fg 		#ebdbb2
+set notification-bg		#1d2021
+set notification-fg		#458588
+set notification-error-bg	#1d2021
+set notification-error-fg	#fb4934
+set notification-warning-bg	#1d2021
+set notification-warning-fg	#98971a
 
-set render-loading-bg 		#1d1f21
-set render-loading-fg 		#c5c8c6
+set render-loading-bg 		#1d2021
+set render-loading-fg 		#ebdbb2
