@@ -1,0 +1,17 @@
+#!/usr/bin/sh
+
+# Reimplemented from: https://github.com/LukeSmithxyz/voidrice/blob/master/.local/bin/compiler
+
+file=$(readlink -f "$1")
+dir=$(dirname "$file")
+base="${file%.*}"
+ext="$2"
+
+cd "$dir"
+
+case $file in
+        *\.md) pandoc "$file" -o "$base"."$ext" ;;
+        *\.Rmd) echo "require(rmarkdown); rmarkdown::render('$file', quiet=TRUE)" | R -q --vanilla ;;
+        *\.tex) pdflatex -interaction=nonstopmode -output-directory="$dir" "$file" ;;
+        *\.ly) lilypond -o "$base" "$file" ;;
+esac
