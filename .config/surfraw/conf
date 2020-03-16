@@ -1,0 +1,3 @@
+SURFRAW_graphical_browser=/bin/chromium
+SURFRAW_text_browser=/bin/w3m
+SURFRAW_graphical=no
