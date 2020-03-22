@@ -7,8 +7,6 @@
 config_version: 2
 settings:
   content.proxy:
-    global: socks://localhost:9050/
+    global: system
   content.user_stylesheets:
     global: /home/lam/.config/qutebrowser/userstyle/gruvbox.css
-  tabs.select_on_remove:
-    global: next

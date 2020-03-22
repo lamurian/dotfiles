@@ -92,7 +92,7 @@ config.set('content.javascript.enabled', True, 'qute://*/*')
 # Valid values:
 #   - system: Use the system wide proxy.
 #   - none: Don't use any proxy
-c.content.proxy = 'system'
+c.content.proxy = 'socks://localhost:9050/'
 
 # Allow websites to register protocol handlers via
 # `navigator.registerProtocolHandler`.
