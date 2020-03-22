@@ -1,6 +1,8 @@
-* {
+/* ALL */
+*,.bg-gray,.bg-gray-light {
 	background-color: #1d2021 !important;
 	color: #ebdbb2 !important;
+  border: none !important;
 }
 
 ::after,::before {
@@ -9,9 +11,14 @@
 }
 
 h1,h2,h3,h4,h5,h6 {
-	color: #b8bb26 !important;
+	color: #689d6a !important;
 }
 
 a {
 	color: #458588 !important;
+}
+
+/* google and github */
+.tfB0Bf input[type="submit"], .btn {
+  background-image: none;
 }
