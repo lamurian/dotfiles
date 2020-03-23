@@ -20,7 +20,7 @@ call_min() {
 	termite
 }
 
-unclutter -idle 1 &
+unclutter -idle 1 -noevents &
 #song-notif.sh 2>&1 > /dev/null &
 
 # Call the wm
