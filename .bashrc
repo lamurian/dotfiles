@@ -54,3 +54,8 @@ export SYSTEMD_EDITOR=vim
 export XDG_DATA_HOME=/mnt/data/lamuri
 export XDG_CACHE_HOME=/mnt/data/.cache/
 export XDG_CONFIG_HOME=$HOME/.config
+
+# Runtime dir and pulse server for flatpak env
+export XDG_RUNTIME_DIR=/mnt/data/lamuri/runtime
+export PULSE_SERVER=unix:/tmp/pulse-socket
+#export PULSE_SERVER=unix:/tmp/pulse-PKdhtXMmr18n/native
