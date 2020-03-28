@@ -4,6 +4,9 @@
 alt + p
         passmenu
 
+alt + o
+        omnimenu > /dev/null 2>&1 
+
 # XF86 Keys
 XF86AudioMute
 	pulsemixer --toggle-mute & ~/bin/vol-stat.sh

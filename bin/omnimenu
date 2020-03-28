@@ -1,0 +1,60 @@
+#!/bin/bash
+
+MENU="flatpak\nread\nwatch"
+
+# Flatpak menu
+flist () {
+        # List installed package
+        flatpak list | tail -n +1 | awk -F '\t' '/com/{print $2}'
+}
+
+frun() {
+        # Run flatpak via dmenu
+        flatpak run -v $(flist | dmenu -p "flatpak run")
+}
+
+fcurrent() {
+        # List running instances
+        flatpak ps | tail -n +1 | awk -F '\t' '{print $3}'
+}
+
+fkill() {
+        # Kill running instances
+        flatpak kill $(fcurrent | dmenu -p "flatpak kill")
+}
+
+flatmenu() {
+        # Wrapper for flatpak
+        ARGS=$(echo -e "run\nkill" | dmenu -p "Flatpak command:")
+
+        case $ARGS in
+                run) frun ;;
+                kill) fkill ;;
+                *) flatpak -h ;;
+        esac
+}
+
+# Book menu
+bookmenu() {
+        # Call zathura using dmenu
+        BOOKDIR='/mnt/data/OneDrive /mnt/shared/ebook'
+        PDF=$(find $BOOKDIR -type f -iname '*.pdf' | dmenu -l 20 -p "Read:")
+        [ ! -z $PDF ] && zathura $PDF
+}
+
+# Videos menu
+vidmenu() {
+        # Call mpv using dmenu
+        EXT='(*.mp4|*.mpv)'
+        VIDDIR='/mnt/shared/Videos'
+        VID=$(find $VIDDIR -type f -iregex $EXT | dmenu -l 20 -p "Watch:")
+        [ ! -z $VID ] && mpv $VID
+}
+
+# Call omnimenu
+ARGS=$(echo -e $MENU | dmenu -p "Omnimenu:")
+case $ARGS in
+        flatpak) flatmenu ;;
+        read) bookmenu ;;
+        watch) vidmenu ;;
+esac
