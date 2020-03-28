@@ -388,6 +388,9 @@ c.bindings.key_mappings = {'<Ctrl+6>': '<Ctrl+^>', '<Ctrl+Enter>': '<Ctrl+Return
 # Bindings for normal mode
 config.bind('<', ':tab-move -')
 config.bind('>', ':tab-move +')
-config.bind('C+A+d', 'content.user_stylesheets /home/lam/.config/qutebrowser/userstyle/gruvbox.css')
+config.bind('h', 'scroll-px -25 0')
+config.bind('j', 'scroll-px 0 25')
+config.bind('k', 'scroll-px 0 -25')
+config.bind('l', 'scroll-px 25 0')
 config.bind('sD', ":set content.user_stylesheets ''")
 config.bind('sd', ':set content.user_stylesheets /home/lam/.config/qutebrowser/userstyle/gruvbox.css')
