@@ -1,0 +1,84 @@
+#!/bin/sh
+
+# Manipulate full dataset using data field schema as reference
+
+# Set environment variable
+[ -f 'full_dataset.csv' ] && DATA='full_dataset.csv' || \
+	echo "Please locate full_dataset.csv in current dir"
+[ -f 'datafield_schema.tsv' ] && SCHEMA='datafield_schema.tsv' || \
+	echo "Please locate datafield_schema.tsv in current dir"
+FUNCTION=$1
+QUERY=$2
+FIELD=$3
+
+# Define function
+field () {
+	awk '
+	BEGIN {FS="\t"}
+	{if ($2 ~ "'$(echo $1)'") print $1, $2}
+	' $SCHEMA
+}
+
+list () {
+	IMAGING=$(field "[Ff]unc.*res.*NIF" | awk '{print $1}')
+	awk '
+	BEGIN {FS=","}
+	{
+		if (NR == 1)
+		{
+			for (i=1; i<=NF; i++)
+			{
+				if ($i ~ "'$(echo $QUERY)'") field=i
+				else if ($i ~ "'$(echo $IMAGING)'") imaging=i
+			}
+			print $1 "," $field "," $imaging
+		}
+		else
+		{
+			if ($field ~ "'$(echo $FIELD)'" && $imaging ~ "[0-9]") \
+				print $1 "," $field "," $imaging
+		}
+	}
+	' $DATA
+}
+
+fetch () {
+	IMAGING=$(field "[Ff]unc.*res.*NIF" | awk '{print $1}')
+	awk '
+	BEGIN {FS=","}
+	{
+		if (NR == 1)
+		{
+			for (i=1; i<=NF; i++)
+			{
+				if ($i ~ "'$(echo $QUERY)'") field=i
+				else if ($i ~ "'$(echo $IMAGING)'") imaging=i
+			}
+			print $0
+		}
+		else
+		{
+			if ($field ~ "'$(echo $FIELD)'" && $imaging ~ "[0-9]") \
+				print $0
+		}
+	}
+	' $DATA
+}
+
+MSG=\
+'\n\n
+this script intends to easily traverse through subject characteristics data
+frame using data field schema as a reference. It has three methods:
+\n\n
+- field: take regex as an argument to find field number of such patterns\n
+- list: take field number and regex as arguments, where regex shall specify the
+intended to constraint data frame element to include\n
+- fetch: take field number and regex as arguments, return all dataframe
+contents based on a defined regex constraint'
+
+case $FUNCTION in
+	field) field $QUERY ;;
+	list) list $QUERY $FIELD ;;
+	fetch) fetch $QUERY $FIELD ;;
+    *) echo $MSG ;;
+esac
