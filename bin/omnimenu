@@ -1,6 +1,6 @@
 #!/bin/bash
 
-MENU="flatpak\nread\nwatch"
+MENU="flatpak\npass\nread\nwatch"
 
 # Flatpak menu
 flist () {
@@ -38,23 +38,24 @@ flatmenu() {
 bookmenu() {
         # Call zathura using dmenu
         BOOKDIR='/mnt/data/OneDrive /mnt/shared/ebook'
-        PDF=$(find $BOOKDIR -type f -iname '*.pdf' | dmenu -l 20 -p "Read:")
-        [ ! -z $PDF ] && zathura $PDF
+        PDF=$(find $BOOKDIR -type f -iname '*.pdf' | dmenu -i -l 5 -p "Read:")
+        [ ! -z "$PDF" ] && zathura $PDF
 }
 
 # Videos menu
 vidmenu() {
         # Call mpv using dmenu
-        EXT='(*.mp4|*.mpv)'
+        EXT='.*\(mp4\|mpv\)'
         VIDDIR='/mnt/shared/Videos'
-        VID=$(find $VIDDIR -type f -iregex $EXT | dmenu -l 20 -p "Watch:")
-        [ ! -z $VID ] && mpv $VID
+        VID=$(find $VIDDIR -type f -iregex $EXT | dmenu -i -l 5 -p "Watch:")
+        [ ! -z "$VID" ] && mpv $VID
 }
 
 # Call omnimenu
 ARGS=$(echo -e $MENU | dmenu -p "Omnimenu:")
 case $ARGS in
         flatpak) flatmenu ;;
+        pass) passmenu -p "Pass:" ;;
         read) bookmenu ;;
         watch) vidmenu ;;
 esac

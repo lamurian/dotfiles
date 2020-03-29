@@ -1,9 +1,6 @@
 #
 # wm independent hotkeys
 #
-alt + p
-        passmenu
-
 alt + o
         omnimenu > /dev/null 2>&1 
 
