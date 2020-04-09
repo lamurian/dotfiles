@@ -1,6 +1,11 @@
 #
 # wm independent hotkeys
 #
+alt + m
+        dmenu_run
+
+alt + Return
+        st
 
 # XF86 Keys
 XF86AudioMute
