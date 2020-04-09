@@ -376,13 +376,6 @@ c.colors.tabs.selected.even.bg = '#3c3836'
 # Type: QtColor
 c.colors.webpage.bg = '#1d2021'
 
-# Default font size to use. Whenever "default_size" is used in a font
-# setting, it's replaced with the size listed here. Valid values are
-# either a float value with a "pt" suffix, or an integer value with a
-# "px" suffix.
-# Type: String
-c.fonts.default_size = '8pt'
-
 # This setting can be used to map keys to other keys. When the key used
 # as dictionary-key is pressed, the binding for the key used as
 # dictionary-value is invoked instead. This is useful for global
@@ -395,6 +388,9 @@ c.bindings.key_mappings = {'<Ctrl+6>': '<Ctrl+^>', '<Ctrl+Enter>': '<Ctrl+Return
 # Bindings for normal mode
 config.bind('<', ':tab-move -')
 config.bind('>', ':tab-move +')
-config.bind('C+A+d', 'content.user_stylesheets /home/lam/.config/qutebrowser/userstyle/gruvbox.css')
+config.bind('h', 'scroll-px -25 0')
+config.bind('j', 'scroll-px 0 25')
+config.bind('k', 'scroll-px 0 -25')
+config.bind('l', 'scroll-px 25 0')
 config.bind('sD', ":set content.user_stylesheets ''")
 config.bind('sd', ':set content.user_stylesheets /home/lam/.config/qutebrowser/userstyle/gruvbox.css')
