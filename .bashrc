@@ -58,4 +58,3 @@ export XDG_CONFIG_HOME=$HOME/.config
 # Runtime dir and pulse server for flatpak env
 export XDG_RUNTIME_DIR=/mnt/data/lamuri/runtime
 export PULSE_SERVER=unix:/tmp/pulse-socket
-#export PULSE_SERVER=unix:/tmp/pulse-PKdhtXMmr18n/native
