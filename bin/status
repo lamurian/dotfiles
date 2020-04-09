@@ -11,7 +11,7 @@ pwr() {
 	cat /sys/class/power_supply/BAT0/power_now \
 		/sys/class/power_supply/BAT1/power_now | \
 		tr '\n' ' ' | \
-		awk '{printf "%.1f W", ($1 + $2) / 1000000}'
+		awk '{printf "%.1f W\n", ($1 + $2) / 1000000}'
 }
 
 con() {
