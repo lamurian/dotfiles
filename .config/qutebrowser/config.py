@@ -92,7 +92,7 @@ config.set('content.javascript.enabled', True, 'qute://*/*')
 # Valid values:
 #   - system: Use the system wide proxy.
 #   - none: Don't use any proxy
-c.content.proxy = 'socks://localhost:9050/'
+c.content.proxy = 'system'
 
 # Allow websites to register protocol handlers via
 # `navigator.registerProtocolHandler`.
@@ -375,6 +375,13 @@ c.colors.tabs.selected.even.bg = '#3c3836'
 # color).
 # Type: QtColor
 c.colors.webpage.bg = '#1d2021'
+
+# Default font size to use. Whenever "default_size" is used in a font
+# setting, it's replaced with the size listed here. Valid values are
+# either a float value with a "pt" suffix, or an integer value with a
+# "px" suffix.
+# Type: String
+c.fonts.default_size = '8pt'
 
 # This setting can be used to map keys to other keys. When the key used
 # as dictionary-key is pressed, the binding for the key used as
