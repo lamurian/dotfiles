@@ -1,6 +1,11 @@
 #!/bin/bash
 
-MENU="flatpak\npass\nread\nwatch"
+MENU="music flatpak pass power read record run watch"
+
+# Main menu
+menu() {
+        for m in $MENU; do echo -e $m; done | dmenu -p "Omnimenu:" -sb "#3c3836"
+}
 
 # Flatpak menu
 flist () {
@@ -10,7 +15,7 @@ flist () {
 
 frun() {
         # Run flatpak via dmenu
-        flatpak run -v $(flist | dmenu -p "flatpak run")
+        flatpak run -v $(flist | dmenu -i -p "flatpak run")
 }
 
 fcurrent() {
@@ -20,13 +25,12 @@ fcurrent() {
 
 fkill() {
         # Kill running instances
-        flatpak kill $(fcurrent | dmenu -p "flatpak kill")
+        flatpak kill $(fcurrent | dmenu -i -p "flatpak kill")
 }
 
 flatmenu() {
         # Wrapper for flatpak
         ARGS=$(echo -e "run\nkill" | dmenu -p "Flatpak command:")
-
         case $ARGS in
                 run) frun ;;
                 kill) fkill ;;
@@ -37,25 +41,54 @@ flatmenu() {
 # Book menu
 bookmenu() {
         # Call zathura using dmenu
+        EXT='.*\(pdf\|epub\)'
         BOOKDIR='/mnt/data/OneDrive /mnt/shared/ebook'
-        PDF=$(find $BOOKDIR -type f -iname '*.pdf' | dmenu -i -l 5 -p "Read:")
+        PDF=$(find $BOOKDIR -type f -iregex $EXT | dmenu -i -l 5 -p "Read:")
         [ ! -z "$PDF" ] && zathura $PDF
 }
 
 # Videos menu
 vidmenu() {
         # Call mpv using dmenu
-        EXT='.*\(mp4\|mpv\)'
+        EXT='.*\(mp4\|mpv\|mkv\|avi\|webm\|flv\|mov\|wmv\|m4p\|m4v\|3gp\)'
         VIDDIR='/mnt/shared/Videos'
         VID=$(find $VIDDIR -type f -iregex $EXT | dmenu -i -l 5 -p "Watch:")
         [ ! -z "$VID" ] && mpv $VID
 }
 
+# Record menu
+recmenu() {
+        # Start and stop scast.sh
+        ARGS=$(echo -e "start\nstop" | dmenu -p "Recording:")
+        case $ARGS in
+                start) scast.sh & sleep 0.2s && dunstify "Recording" "PID: $(pgrep ffmpeg | tail -n1)" ;;
+                stop) kill $(pgrep ffmpeg | dmenu -p "Stop PID:") ;;
+        esac
+}
+
+# Power menu
+pwrmenu() {
+        # Power-off, reboot and suspend
+        ARGS=$(echo -e "zzz\nreboot\npoweroff" | dmenu -p " " -sb "#fb4934" -sf "#1d2021")
+        [ ! -z $ARGS ] && sudo $ARGS
+}
+
+# Music menu
+mpdmenu() {
+        # Control mpd through mpc
+        ARGS=$(echo -e "toggle\nnext\nprev" | dmenu -p "mpc:" -sb "#8f3f71")
+        [ ! -z $ARGS ] && mpc $ARGS
+}
+
 # Call omnimenu
-ARGS=$(echo -e $MENU | dmenu -p "Omnimenu:")
+[ -z $1 ] && ARGS=$(menu) || ARGS=$1
 case $ARGS in
+        music) mpdmenu ;;
         flatpak) flatmenu ;;
         pass) passmenu -p "Pass:" ;;
+        power) pwrmenu ;;
         read) bookmenu ;;
+        record) recmenu ;;
+        run) dmenu_run -p "Run:" ;;
         watch) vidmenu ;;
 esac
