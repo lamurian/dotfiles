@@ -1,3 +1,5 @@
+alt + m
+	dmenu_run
 #
 # wm independent hotkeys
 #
@@ -16,6 +18,3 @@ XF86Audio{RaiseVolume,LowerVolume}
 
 XF86Audio{Next,Prev,Play}
 	mpc {next,prev,toggle}
-
-XF86Mon{BrightnessUp,BrightnessDown}
-	xbacklight {+3%,-3%} && ~/bin/bklight-stat.sh

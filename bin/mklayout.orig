@@ -1,0 +1,26 @@
+#!/bin/bash
+# Script to set-up tmux layout
+
+SES="def"
+
+tmux has-session -t $SES &> /dev/null
+
+if [ $? == 0 ]; then
+
+	# man
+	tmux send-key -t $SES:0.1 "mpsyt" ENTER
+	tmux send-key -t $SES:0.2 "top" ENTER
+<<<<<<< HEAD
+        tmux select-pane -t 3
+=======
+
+	# Move to man
+	tmux select-window -t $SES:0
+	tmux select-pane -t 3
+>>>>>>> origin/x60s
+
+else
+				
+	echo "Please make session first"
+
+fi
