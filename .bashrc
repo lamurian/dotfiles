@@ -46,11 +46,15 @@ force_color_prompt=yes
 export ONDR=/mnt/data/OneDrive
 export BLOG=/mnt/shared/Documents/blog
 export PATH=$PATH:/shims:/home/lam/.local/bin:/home/lam/bin
+
 export LC_ALL=en_US.UTF-8
 export LANG=en_US.UTF-8
 export LANGUAGE=en_US.UTF-8
+
+export BROWSER=qutebrowser
 export EDITOR=vim
 export SYSTEMD_EDITOR=vim
+
 export XDG_DATA_HOME=/mnt/data/lamuri
 export XDG_CACHE_HOME=/mnt/data/.cache/
 export XDG_CONFIG_HOME=$HOME/.config

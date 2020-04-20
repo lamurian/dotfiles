@@ -4,7 +4,7 @@
 #   qute://help/settings.html
 
 # Uncomment this to still load settings configured via autoconfig.yml
-# config.load_autoconfig()
+#config.load_autoconfig()
 
 # User agent to send.  The following placeholders are defined:  *
 # `{os_info}`: Something like "X11; Linux x86_64". * `{webkit_version}`:
@@ -374,7 +374,7 @@ c.colors.tabs.selected.even.bg = '#3c3836'
 # Background color for webpages if unset (or empty to use the theme's
 # color).
 # Type: QtColor
-c.colors.webpage.bg = '#1d2021'
+#c.colors.webpage.bg =
 
 # This setting can be used to map keys to other keys. When the key used
 # as dictionary-key is pressed, the binding for the key used as
@@ -394,3 +394,5 @@ config.bind('k', 'scroll-px 0 -25')
 config.bind('l', 'scroll-px 25 0')
 config.bind('sD', ":set content.user_stylesheets ''")
 config.bind('sd', ':set content.user_stylesheets /home/lam/.config/qutebrowser/userstyle/gruvbox.css')
+config.bind('tj', 'tab-next')
+config.bind('tk', 'tab-prev')
