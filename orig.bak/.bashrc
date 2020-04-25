@@ -21,14 +21,17 @@ else	# Unset alias outside tty
 fi
 
 # PS1 mod
+<<<<<<< HEAD
 PS1='\[\033[1;34m\]── \[\033[0m\] '
+=======
+PS1='\[\033[1;34m\] -- \[\033[0m\] '
+>>>>>>> d2b3ef88559eea853bdf0a75a863f1b1a69222b3
 #PS1='\033[1;34m\]┌──\033[0m\] \u in \w\n\033[1;34m\]└─\033[0m\] '
 
 # Nifty function
 ac() {
-	# Change into specified dir
-        [ -z $1 ] && cd $(find $ONDR $BLOG -type d | fzf) || \
-                cd $(find $1 -type d | fzf)
+	# Open markdown stored in OneDrive using vim
+	cd $(find $ONDR -type d | fzf)
 }
 
 conf() {
@@ -36,29 +39,15 @@ conf() {
 	vim $(find $HOME/.config/* -type f | fzf -m)
 }
 
-blog() {
-        # Edit blog content
-        vim $(find $BLOG -iregex '.*R?md' | fzf -m)
-}
-
 force_color_prompt=yes
 
 export ONDR=/mnt/data/OneDrive
-export BLOG=/mnt/shared/Documents/blog
 export PATH=$PATH:/shims:/home/lam/.local/bin:/home/lam/bin
-
 export LC_ALL=en_US.UTF-8
 export LANG=en_US.UTF-8
 export LANGUAGE=en_US.UTF-8
-
-export BROWSER=qutebrowser
 export EDITOR=vim
 export SYSTEMD_EDITOR=vim
-
 export XDG_DATA_HOME=/mnt/data/lamuri
 export XDG_CACHE_HOME=/mnt/data/.cache/
 export XDG_CONFIG_HOME=$HOME/.config
-
-# Runtime dir and pulse server for flatpak env
-export XDG_RUNTIME_DIR=/mnt/data/lamuri/runtime
-export PULSE_SERVER=unix:/tmp/pulse-socket

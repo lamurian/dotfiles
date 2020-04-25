@@ -35,8 +35,10 @@
 !/.config/mp*./**
 !/.config/n*/**
 !/.config/polybar/config
+!/.config/qutebrowser/**
 !/.config/ranger/*.py
 !/.config/ranger/*.conf
+!/.config/surfraw/**
 !/.config/systemd/**
 !/.config/sxhkd/**
 !/.config/termite/**

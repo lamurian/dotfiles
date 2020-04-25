@@ -20,6 +20,7 @@ if [ $? != 0 ]; then
 	tmux select-pane -t 0
 	tmux split-window -t $SES:0 -v -p 50	# 1:1 V
 
+<<<<<<< HEAD
 	# Make the next window
 	tmux new-window -t $SES -n net
 
@@ -32,6 +33,8 @@ if [ $? != 0 ]; then
 	tmux select-window -t $SES:0
 	tmux select-pane -t 0
 
+=======
+>>>>>>> t480
 fi
 
 tmux a -t $SES
