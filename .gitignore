@@ -23,6 +23,7 @@
 
 # Whitelisting folders
 !/bin/**
+!/.gnupg/**
 !.irssi/**
 !/.pandoc/**
 !/.vim/after/**
