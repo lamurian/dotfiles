@@ -5,7 +5,7 @@
 file=$(readlink -f "$1")
 dir=$(dirname "$file")
 base="${file%.*}"
-ext="$2"
+[ ! -z $2 ] && ext="$2" || ext="pdf"
 
 cd "$dir"
 
