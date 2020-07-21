@@ -4,7 +4,7 @@
 #   qute://help/settings.html
 
 # Uncomment this to still load settings configured via autoconfig.yml
-#config.load_autoconfig()
+# config.load_autoconfig()
 
 # User agent to send.  The following placeholders are defined:  *
 # `{os_info}`: Something like "X11; Linux x86_64". * `{webkit_version}`:
@@ -85,6 +85,12 @@ config.set('content.javascript.enabled', True, 'chrome://*/*')
 # Enable JavaScript.
 # Type: Bool
 config.set('content.javascript.enabled', True, 'qute://*/*')
+
+# Allow pdf.js to view PDF files in the browser. Note that the files can
+# still be downloaded by clicking the download button in the pdf.js
+# viewer.
+# Type: Bool
+c.content.pdfjs = True
 
 # Proxy to use. In addition to the listed values, you can use a
 # `socks://...` or `http://...` URL.
@@ -370,11 +376,6 @@ c.colors.tabs.selected.even.fg = '#fbf1c7'
 # Background color of selected even tabs.
 # Type: QtColor
 c.colors.tabs.selected.even.bg = '#3c3836'
-
-# Background color for webpages if unset (or empty to use the theme's
-# color).
-# Type: QtColor
-#c.colors.webpage.bg =
 
 # This setting can be used to map keys to other keys. When the key used
 # as dictionary-key is pressed, the binding for the key used as
