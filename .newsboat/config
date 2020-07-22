@@ -5,7 +5,7 @@ max-items 50
 # externel browser, macro is comma (,)
 browser "/usr/bin/w3m %u"
 macro m set browser "ts mpv %u"; open-in-browser ; set browser "/usr/bin/w3m %u"
-macro b set browser "$BROWSER %u"; open-in-browser ; set browser "/usr/bin/w3m %u"
+macro o set browser "$BROWSER %u"; open-in-browser ; set browser "/usr/bin/w3m %u"
 macro l set browser "mpsyt playurl %u"; open-in-browser ; set browser "/usr/bin/w3m %u"
 
 # unbind keys
@@ -14,12 +14,22 @@ unbind-key j
 unbind-key k
 unbind-key J
 unbind-key K
+unbind-key g
+unbind-key G
 
 # bind keys - vim style
 bind-key j down
 bind-key k up
+bind-key ^D pagedown
+bind-key ^U pageup
+bind-key g home
+bind-key G end
 bind-key l open
 bind-key h quit
+
+# Rebind sort from g to s
+bind-key s sort
+bind-key S rev-sort
 
 # solarized
 color background         default   default

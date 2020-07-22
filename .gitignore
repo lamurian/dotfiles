@@ -10,6 +10,11 @@
 !.gitignore
 !/.newsboat/config
 !/.newsboat/urls
+!/.newsboat/manga-urls
+!/.newsboat/yt-urls
+!/.newsboat/cache.db
+!/.newsboat/manga-cache.db
+!/.newsboat/yt-cache.db
 !README.md
 !.Rprofile
 !.tmux.conf
