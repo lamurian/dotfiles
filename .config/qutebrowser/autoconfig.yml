@@ -6,11 +6,5 @@
 
 config_version: 2
 settings:
-  content.notifications:
-    https://calendar.google.com: true
-  content.proxy:
-    global: system
-  content.register_protocol_handler:
-    https://calendar.google.com?cid=%25s: true
   content.user_stylesheets:
     global: null

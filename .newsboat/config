@@ -35,12 +35,15 @@ bind-key S rev-sort
 color background         default   default
 color listnormal         default   default
 color listnormal_unread  default   default
-color listfocus          black     cyan
-color listfocus_unread   black     cyan
+color listfocus          cyan      default
+color listfocus_unread   yellow    default
 color info               default   black
 color article            default   default
 
 # highlights
-highlight article "^(Title):.*$" blue default
-highlight article "https?://[^ ]+" red default
-highlight article "\\[image\\ [0-9]+\\]" green default
+highlight article "^(Title):.*$" cyan default
+highlight article "https?://[^ ]+" magenta default
+highlight article "\\[image\\ [0-9]+\\]" blue default
+
+# Ignore feeds with languages other than English
+ignore-article "*" "content !~ \"Lang.*: English\""
