@@ -11,13 +11,6 @@ if [ $? == 0 ]; then
 	tmux send-key -t $SES:0.3 "mpsyt" ENTER
 	tmux send-key -t $SES:0.1 "ranger $ONDR" ENTER
 	tmux send-key -t $SES:0.4 "top" ENTER
-
-	# net
-	tmux send-key -t $SES:1.0 "w3m duck.com"
-	tmux select-pane -t $SES:1.0
-	
-	# Move to man
-	tmux select-window -t $SES:0
 	tmux select-pane -t 2
 
 else

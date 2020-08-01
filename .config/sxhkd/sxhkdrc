@@ -1,6 +1,14 @@
 #
 # wm independent hotkeys
 #
+alt + Return
+        st
+
+alt + m
+        omnimenu run > /dev/null 2>&1
+
+alt + o
+        omnimenu > /dev/null 2>&1 
 
 # XF86 Keys
 XF86AudioMute

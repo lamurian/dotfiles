@@ -13,18 +13,9 @@ Plug 'jpalardy/vim-slime'		" Slime plug-in to interpret code
 Plug 'neo4j-contrib/cypher-vim-syntax'	" Syntax highlight for cypher
 call plug#end()
 
-" Lilypond integration
-let $lilypath = glob("`readlink -f /usr/**/lilypond/**/vim`")
-if isdirectory($lilypath)   " Check if dir exists
-        filetype off
-        set runtimepath+=$lilypath
-        filetype on
-        syntax on
-endif
-
 "	GENERAL CONFIG
-syntax on
 colorscheme elflord
+filetype plugin on
 set directory=/mnt/data/.cache/vim/swap
 set backupdir=/mnt/data/.cache/vim/bak
 set path+=**    " Enable find in current pwd
@@ -45,7 +36,7 @@ hi SpellBad ctermbg=Black ctermfg=Red
 
 "	OMNI-COMPLETION
 filetype plugin on
-set omnifunc=syntaxcomplete#Complete
+set omnifunc=syntaxcomplete#complete
 
 "	SPECIFIC CONFIG
 
@@ -76,7 +67,7 @@ let g:netrw_banner = 0
 "	KEYMAP
 
 " Buffer management
-nnoremap tn :edit<Space>
+nnoremap tn :find<Space>
 nnoremap tk :bprev<CR>
 nnoremap tj :bnext<CR>
 nnoremap th :bfirst<CR>
@@ -107,7 +98,12 @@ nnoremap <C-L> <C-W><C-L>
 nnoremap <C-H> <C-W><C-H>
 
 "	BUFFER OPTIONS
-
 autocmd BufEnter *rc loadview
+<<<<<<< HEAD
 autocmd BufEnter *conf loadview
-"autocmd BufNewFile *.Rmd 0r $HOME/.vim/skeleton/skel-rmd
+=======
+autocmd BufLeave *rc mkview
+autocmd BufEnter *conf loadview
+autocmd BufLeave *conf mkview
+>>>>>>> d2b3ef88559eea853bdf0a75a863f1b1a69222b3
+autocmd BufNewFile *.Rmd 0r $HOME/.vim/skeleton/skel-rmd
