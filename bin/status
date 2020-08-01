@@ -14,7 +14,7 @@ pwr() {
 }
 
 con() {
-	cat /sys/class/net/wlp3s0/operstate
+	cat /sys/class/net/wlp*/operstate
 }
 
 case $1 in
