@@ -6,13 +6,13 @@ setlocal shiftwidth=2
 function! FoldCode()
         let line = getline(v:lnum)
         let prior = getline(v:lnum-1)
-        if match(line, '^\(\\documentclass\|%%\)\|^\\\(\(sub\)*section\|chapter\)') >= 0
+        if match(line, '^\(\\documentclass\|%\+\)') >= 0
                 return ">1"     " Start of document, section, or double comment
         "elseif match(line, '^%\s\+') >= 0
         "        return ">2"     " Single comment
-        elseif match(line, '^\\begin{\w\+}') >= 0
+        elseif match(line, '^\\\(\(sub\)*section\|chapter\|begin{\w\+}\)') >= 0
                 return ">2"     " Single comment
-	elseif match(line, '^$') >= 0 && match(prior, '^$') >= 0
+        elseif match(line, '^$\|\\end{\w\+}') >= 0 && match(prior, '^$') >= 0
 		return 0	" consecutive empty lines
         else
                 return "="
