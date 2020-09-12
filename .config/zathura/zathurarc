@@ -1,8 +1,9 @@
 # Zathura behaviour
 set selection-clipboard 	clipboard
-set adjust-open 		width
-set window-height		800
-set window-width		1050
+#set adjust-open 		width   # Cause a rendering problem in v0.3.5
+set adjust-open                 height
+#set window-height		800
+#set window-width		1050
 
 # Colour configuration
 set recolor 			true
