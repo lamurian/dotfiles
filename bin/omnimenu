@@ -16,8 +16,8 @@ flist () {
 }
 
 frun() {
-        # Run flatpak via dmenu
-        flatpak run -v $(flist | dmenu -i -p "flatpak run")
+        # Run flatpak + dbus via dmenu
+        dbus-launch flatpak run -v $(flist | dmenu -i -p "flatpak run")
 }
 
 fcurrent() {

@@ -28,6 +28,7 @@
 !.irssi/**
 !/.pandoc/**
 !/.vim/after/**
+!/.vim/ftdetect/**
 !/.vim/skeleton/**
 !/.vim/view/**
 
