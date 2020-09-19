@@ -11,7 +11,7 @@ cd "$dir"
 
 case $file in
         *\.md) pandoc "$file" -o "$base"."$ext" ;;
-        *\.Rmd) echo "require(rmarkdown); rmarkdown::render('$file', output_format='all', quiet=TRUE)" | R -q --vanilla ;;
+        *\.Rmd|*\.Rmarkdown) echo "require(rmarkdown); rmarkdown::render('$file', output_format='all', quiet=TRUE)" | R -q --vanilla ;;
         *\.tex) pdflatex -interaction=nonstopmode -output-directory="$dir" "$file" ;;
         *\.ly) lilypond -o "$base" "$file" ;;
 esac

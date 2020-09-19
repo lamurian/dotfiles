@@ -2,7 +2,6 @@
 
 setlocal spell
 setlocal noexpandtab
-setlocal textwidth=79
 abbr -> $\to$
 
 " Foldexpr for markdown flavours
