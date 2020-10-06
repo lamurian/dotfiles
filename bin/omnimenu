@@ -10,8 +10,7 @@ menu() {
 # Flatpak menu
 flist () {
         # List installed package
-
-        flatpak list | tail -n +1 | awk -F '\t' '/com|us\./{print $2}'
+        flatpak list | tail -n +1 | awk -F '\t' '/com|us\.|jasp/{print $2}'
 
 }
 
