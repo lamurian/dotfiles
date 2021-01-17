@@ -243,7 +243,7 @@ config.set('content.register_protocol_handler', True, 'https://mail.google.com?e
 
 # List of user stylesheet filenames to use.
 # Type: List of File, or File
-c.content.user_stylesheets = []
+#c.content.user_stylesheets = ['/home/lam/.config/qutebrowser/userstyle/gruvbox.css']
 
 # Open new tabs (middleclick/ctrl+click) in the background.
 # Type: Bool
@@ -523,7 +523,7 @@ c.colors.webpage.prefers_color_scheme_dark = True
 # `colors.webpage.darkmode.threshold.background` to 205.  - "With
 # selective inversion of everything": Combines the two variants   above.
 # Type: Bool
-c.colors.webpage.darkmode.enabled = True
+c.colors.webpage.darkmode.enabled = False
 
 # Which algorithm to use for modifying how colors are rendered with
 # darkmode.
@@ -571,7 +571,7 @@ c.colors.webpage.darkmode.grayscale.all = True
 c.bindings.key_mappings = {'<Ctrl+6>': '<Ctrl+^>', '<Ctrl+Enter>': '<Ctrl+Return>', '<Ctrl+j>': '<Return>', '<Ctrl+m>': '<Return>', '<Ctrl+[>': '<Escape>', '<Enter>': '<Return>', '<Shift+Enter>': '<Return>', '<Shift+Return>': '<Return>'}
 
 # Bindings for normal mode
-config.bind(',M', 'hint links spawn --detach torify umpv {hint-url}')
+config.bind(',M', 'hint links spawn --detach mpv {hint-url}')
 config.bind(',m', 'hint links spawn --detach umpv {hint-url}')
 config.bind('<', ':tab-move -')
 config.bind('>', ':tab-move +')
