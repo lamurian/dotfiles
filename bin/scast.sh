@@ -9,6 +9,7 @@ SOUND=$(pactl list sources short | awk '{print $2}' | grep mon)
 ffmpeg \
         -f pulse -i default \
         -f x11grab \
+        -show_region 1 \
 	-video_size $SIZE \
         -framerate 30 \
         -i :0.0 -c:v libx264 \
