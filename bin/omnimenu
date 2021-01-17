@@ -10,12 +10,13 @@ menu() {
 # Flatpak menu
 flist () {
         # List installed package
-        flatpak list | tail -n +1 | awk -F '\t' '/com/{print $2}'
+        flatpak list | tail -n +1 | awk -F '\t' '/com|us\.|jasp/{print $2}'
+
 }
 
 frun() {
-        # Run flatpak via dmenu
-        flatpak run -v $(flist | dmenu -i -p "flatpak run")
+        # Run flatpak + dbus via dmenu
+        dbus-launch flatpak run -v $(flist | dmenu -i -p "flatpak run")
 }
 
 fcurrent() {
@@ -59,10 +60,11 @@ vidmenu() {
 # Record menu
 recmenu() {
         # Start and stop scast.sh
-        ARGS=$(echo -e "start\nstop" | dmenu -p "Recording:")
+        ARGS=$(echo -e "start\nstop\nselect" | dmenu -p "Recording:")
         case $ARGS in
                 start) scast.sh & sleep 0.2s && dunstify "Recording" "PID: $(pgrep ffmpeg | tail -n1)" ;;
                 stop) kill $(pgrep ffmpeg | dmenu -p "Stop PID:") ;;
+                select) ffcast -s ffmpeg -f x11grab -r 30 -show_region 1 -s %s -i %D+%c $(date +%y%m%d_%H%M%S.mp4)
         esac
 }
 
@@ -85,7 +87,7 @@ mpdmenu() {
 case $ARGS in
         music) mpdmenu ;;
         flatpak) flatmenu ;;
-        pass) passmenu -p "Pass:" ;;
+        pass) passmenu -i -p "Pass:" ;;
         power) pwrmenu ;;
         read) bookmenu ;;
         record) recmenu ;;

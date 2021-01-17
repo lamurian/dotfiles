@@ -5,13 +5,13 @@
 file=$(readlink -f "$1")
 dir=$(dirname "$file")
 base="${file%.*}"
-ext="$2"
+[ ! -z $2 ] && ext="$2" || ext="pdf"
 
 cd "$dir"
 
 case $file in
         *\.md) pandoc "$file" -o "$base"."$ext" ;;
-        *\.Rmd) echo "require(rmarkdown); rmarkdown::render('$file', output_format='all', quiet=TRUE)" | R -q --vanilla ;;
-        *\.tex) pdflatex -interaction=nonstopmode -output-directory="$dir" "$file" ;;
+        *\.Rmd|*\.Rmarkdown) echo "require(rmarkdown); rmarkdown::render('$file', output_format='all', quiet=TRUE)" | R -q --vanilla ;;
+        *\.tex) xelatex -interaction=nonstopmode -output-directory="$dir" "$file" ;;
         *\.ly) lilypond -o "$base" "$file" ;;
 esac

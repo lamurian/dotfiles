@@ -9,7 +9,8 @@
 !.bashrc
 !.gitignore
 !/.newsboat/config
-!/.newsboat/urls
+!/.newsboat/*urls
+!/.newsboat/*cache.db
 !README.md
 !.Rprofile
 !.tmux.conf
@@ -21,28 +22,16 @@
 
 # Whitelisting folders
 !/bin/**
+!/.gnupg/**
 !.irssi/**
 !/.pandoc/**
 !/.vim/after/**
+!/.vim/ftdetect/**
 !/.vim/skeleton/**
 !/.vim/view/**
 
 # Whitelisting sub in .config folder
-!/.config/bspwm/**
-!/.config/color/**
-!/.config/dunst/**
-!/.config/i3/**
-!/.config/mp*./**
-!/.config/n*/**
-!/.config/polybar/config
-!/.config/qutebrowser/**
-!/.config/ranger/*.py
-!/.config/ranger/*.conf
-!/.config/surfraw/**
-!/.config/systemd/**
-!/.config/sxhkd/**
-!/.config/termite/**
-!/.config/z*/**
+!/.config/**/**
 
 # Blacklist unnecessary files
 .config/chromium

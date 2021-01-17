@@ -5,11 +5,12 @@ sxhkd -c $XDG_CONFIG_HOME/sxhkd/{sxhkdrc,bsphk} &
 
 # Launch bar and other program
 feh --bg-fill /mnt/shared/Pictures/wallpaper/02.png &
-compton 2>&1 &
-polybar bspwm &
+#polybar bspwm &
 
 # Desktop name
 bspc monitor -d I II III IV V VI VII VIII IX X
+#bspc monitor eDP1 -d I II III IV X
+#bspc monitor DP1 -d V VI VII VIII IX X
 
 # Behaviour
 bspc config border_width         	2
@@ -31,7 +32,6 @@ bspc config presel_feedback_color 	'#282a2e'
 
 # Rule
 bspc rule -a Gimp desktop='^8' state=floating follow=on
-bspc rule -a Chromium desktop='^2'
 bspc rule -a mplayer state=floating
 bspc rule -a Kupfer.py focus=on
 bspc rule -a Screenkey manage=off

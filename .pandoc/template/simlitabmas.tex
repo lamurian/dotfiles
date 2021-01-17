@@ -1,20 +1,10 @@
-\documentclass[%
-$if(fontsize)$
-  $fontsize$,
-$endif$
-$if(lang)$
-  $babel-lang$,
-$endif$
-$if(papersize)$
-  $papersize$paper,
-$endif$
-$if(aspectratio)$
-  aspectratio=$aspectratio$,
-$endif$
-$for(classoption)$
-  $classoption$$sep$,
-$endfor$ %
-]{$documentclass$}
+\documentclass[]{report}
+
+% Redefine languages
+\renewcommand{\contentsname}{DAFTAR ISI}
+\renewcommand{\abstractname}{RINGKASAN}
+\renewcommand{\tablename}{Tabel}
+\renewcommand{\figurename}{Gambar}
 
 % Options for packages loaded elsewhere
 \PassOptionsToPackage{unicode$for(hyperrefoptions)$,$hyperrefoptions$$endfor$}{hyperref}
@@ -62,7 +52,7 @@ $endif$
 \def\fps@figure{htbp}
 \makeatother
 
-\usepackage{amsmath,lmodern}
+\usepackage{amsmath,lmodern,amssymb}
 \usepackage{booktabs}
 \providecommand{\tightlist}{%
   \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
@@ -83,76 +73,105 @@ $for(bibliography)$
 $endfor$
 $endif$
 
-$if(title)$
-\title{$title$$if(thanks)$\thanks{$thanks$}$endif$}
-$endif$
-$if(subtitle)$
-\usepackage{etoolbox}
-\makeatletter
-\providecommand{\subtitle}[1]{% add subtitle to \maketitle
-  \apptocmd{\@title}{\par {\large #1 \par}}{}{}
-}
-\makeatother
-\subtitle{$subtitle$}
-$endif$
+%% SIMLITABMAS FORMAT
 
-% Loop author names
-$if(author)$
-$for(author)$
-$if(author.name)$
-\author$if(author.no)$[$author.no$]$endif$
-{$author.name$ 
-$if(author.corauth)$\corref{$corauth$}$endif$%
-$if(author.corref)$\corref{$author.corref$}$endif$%
-$if(author.fnref)$\fnref{$author.fnref$}$endif$%
-}
-$if(author.ead)$\ead{\texttt{$author.ead$}}$endif$
-$endif$
-$if(author.corauth)$\cortext[$corauth$]{Corresponding author}$endif$
-$if(author.corref)$
-$if(author.cortext)$\cortext[$author.corref$]{$author.cortext$}
-$else$\cortext[$author.corref$]{Corresponding author}
-$endif$
-$endif$
-$if(author.fnref)$
-$if(author.fntext)$\fntext[$author.fnref$]{$author.fntext$}$endif$
-$endif$
-$endfor$
-$endif$
+% No indentation and set spaces between paragraph
+\setlength{\parindent}{0cm}
+\setlength{\parskip}{1em}
 
-% Loop institution name
-$if(institution)$
-$for(institution)$
-$if(institution.name)$
-\address$if(institution.authno)$[$institution.authno$]$endif$
-{$institution.name$}
-$endif$
-$endfor$
-$endif$
+% Change geometry
+\usepackage[margin=1in]{geometry}
 
-\date{}
+% Use spacing
+\usepackage{setspace}
+\spacing{1.5}
+
+% Float placement for figure
+\usepackage{float}
+\floatplacement{figure}{H}
+
+% Configure chapter
+\usepackage{titlesec}
+\titleformat{\chapter}[display]
+{\center\fontfamily{ptm}\fontsize{12}{14}\selectfont\bfseries}
+{BAB \ \thechapter}{1em}{}
+\titlespacing{\chapter}{0em}{-2.5em}{2em}
+
+% Configure section
+\titleformat{\section}
+{\fontfamily{ptm}\fontsize{12}{14}\selectfont\bfseries}
+{}{0pt}{}
+
+% Configure subsection
+\titleformat{\subsection}
+{\fontfamily{ptm}\fontsize{12}{14}\selectfont\bfseries}
+{}{0pt}{}
+
+% Configure subsection
+\titleformat{\subsubsection}
+{\fontfamily{ptm}\fontsize{12}{14}\selectfont}
+{}{0pt}{}
+
+% Page numbering on first few pages
+\pagenumbering{roman}
+
+% Use footer
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
+$if(version)$\lfoot{version $version.no$, date $version.date$}$endif$
+\cfoot{\thepage}
 
 % Include package from yaml
 $for(header-includes)$
 $header-includes$
 $endfor$
 
+% Fix cslreferences environment
+$if(csl-refs)$
+\newlength{\cslhangindent}
+\setlength{\cslhangindent}{1.5em}
+\newenvironment{cslreferences}%
+  {$if(csl-hanging-indent)$\setlength{\parindent}{0pt}%
+  \everypar{\setlength{\hangindent}{\cslhangindent}}\ignorespaces$endif$}%
+  {\par}
+$endif$
+
 \begin{document}
+
+\begin{titlepage}
+\begin{center}
+$if(title)$
+\fontfamily{ptm}\fontsize{14}{16}\selectfont\textbf{\uppercase{$title$}}\\
+\vspace{1em}
+$endif$
+
+\fontfamily{ptm}\fontsize{12}{14}\selectfont
+$if(author)$$for(author)$
+$author$\\
+$endfor$$endif$
+\end{center}
+
+$if(abstract)$ % Abstract
+\section{RINGKASAN}
+\fontfamily{ptm}\fontsize{12}{14}\selectfont
+$abstract$
+
+$if(keyword)$\textbf{Kata kunci:} $keyword$$endif$
+$endif$
+\vfill
+\end{titlepage}
+
 $if(has-frontmatter)$
 \frontmatter
 $endif$
-$if(title)$
-$if(abstract)$
-\begin{abstract}
-$abstract$
-\end{abstract}
-$endif$
-$endif$
 
-\maketitle
 $for(include-before)$
 $include-before$
 $endfor$
+
+%\begin{spacing}{1}\tableofcontents\end{spacing}
 
 $if(linestretch)$
 \setstretch{$linestretch$}
@@ -161,6 +180,8 @@ $if(has-frontmatter)$
 \mainmatter
 $endif$
 
+% Set font for text body
+\fontfamily{ptm}\fontsize{12}{14}\selectfont
 $body$
 
 $if(has-frontmatter)$

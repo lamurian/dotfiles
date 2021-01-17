@@ -8,7 +8,7 @@ tmux has-session -t $SES &> /dev/null
 if [ $? == 0 ]; then
 
 	# man
-	tmux send-key -t $SES:0.3 "mpsyt" ENTER
+	tmux send-key -t $SES:0.3 "newsboat" ENTER
 	tmux send-key -t $SES:0.1 "ranger $ONDR" ENTER
 	tmux send-key -t $SES:0.4 "top" ENTER
 	tmux select-pane -t 2

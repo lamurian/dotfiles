@@ -1,11 +1,3 @@
-# terminal emulator
-alt + Return
-	termite
-
-# program launcher
-alt + m
-	dmenu_run
-
 #
 # bspwm hotkeys
 #

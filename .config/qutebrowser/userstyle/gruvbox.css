@@ -1,11 +1,18 @@
-/* ALL */
-*,.bg-gray,.bg-gray-light {
+/* Lamurian */
+
+.bg-gray,.bg-gray-light {
 	background-color: #1d2021 !important;
 	color: #ebdbb2 !important;
   border: none !important;
 }
 
-::after,::before {
+.table,.intro,.card {
+  background-color: #282828 !important;
+  color: #ebdbb2 !important;
+	background-image: none !important;
+}
+
+.row,.toolbarLabel,.secondaryToolbar,.toolbar,.toolbarButton,::after,::before {
 	background-color: #1d2021 !important;
 	background-image: none !important;
 }
@@ -22,3 +29,18 @@ a {
 .tfB0Bf input[type="submit"], .btn {
   background-image: none;
 }
+
+/* */
+
+.fa,.header,.container,.breadcrumb,.sectionname,.main,.navbar,.navbar-toggler,.MathJax_SVG,.home-page,.bg-gray,.bg-gray-light {
+	background-color: #1d2021 !important;
+	color: #ebdbb2 !important;
+  border: none !important;
+}
+
+.form-control,.textLayer,.col-3,.block,.col-9,.topics,.activity-wrapper,.section,.actions,.navbar-collapse,.content {
+  background-color: #282828 !important;
+  color: #ebdbb2 !important;
+	background-image: none !important;
+}
+

@@ -10,6 +10,8 @@ set -o vi
 
 # Global alias
 alias ls='ls --color=auto'
+alias yt='newsboat -u $HOME/.newsboat/yt.urls -c $HOME/.newsboat/yt-cache.db'
+alias manga='newsboat -u $HOME/.newsboat/manga.urls -c $HOME/.newsboat/manga-cache.db'
 
 # Alias for tty only
 if [ -z $DISPLAY ]; then
@@ -61,4 +63,4 @@ export XDG_CONFIG_HOME=$HOME/.config
 
 # Runtime dir and pulse server for flatpak env
 export XDG_RUNTIME_DIR=/mnt/data/lamuri/runtime
-export PULSE_SERVER=unix:/tmp/pulse-socket
+#export PULSE_SERVER=unix:/tmp/pulse-socket
