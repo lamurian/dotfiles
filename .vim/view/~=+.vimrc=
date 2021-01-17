@@ -1,4 +1,4 @@
-let s:so_save = &so | let s:siso_save = &siso | set so=0 siso=0
+let s:so_save = &g:so | let s:siso_save = &g:siso | setg so=0 siso=0 | setl so=-1 siso=-1
 argglobal
 vnoremap <buffer> <silent> [" :exe "normal! gv"|call search('\%(^\s*".*\n\)\%(^\s*"\)\@!', "bW")
 nnoremap <buffer> <silent> [" :call search('\%(^\s*".*\n\)\%(^\s*"\)\@!', "bW")
@@ -108,6 +108,7 @@ setlocal nospell
 setlocal spellcapcheck=[.?!]\\_[\\])'\"\	\ ]\\+
 setlocal spellfile=
 setlocal spelllang=en,id
+setlocal spelloptions=
 setlocal statusline=%!airline#statusline(1)
 setlocal suffixesadd=
 setlocal swapfile
@@ -136,43 +137,37 @@ setlocal wrapmargin=0
 silent! normal! zE
 16,22fold
 3,23fold
-24,44fold
-45,48fold
-51,60fold
-61,65fold
-66,70fold
-71,73fold
-49,74fold
-77,84fold
-85,87fold
-98,101fold
-88,101fold
-102,106fold
-75,107fold
-108,112fold
+24,27fold
+30,39fold
+40,44fold
+45,49fold
+50,52fold
+28,53fold
+56,63fold
+64,66fold
+67,80fold
+81,85fold
+54,86fold
+87,91fold
 3
 normal! zo
 3
 normal! zc
-49
+28
 normal! zo
-49
+28
 normal! zc
-75
+54
 normal! zo
-88
-normal! zo
-88
+54
 normal! zc
-75
-normal! zc
-let s:l = 3 - ((2 * winheight(0) + 35) / 71)
+let s:l = 87 - ((86 * winheight(0) + 35) / 71)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-3
+87
 normal! 0
-let &so = s:so_save | let &siso = s:siso_save
+let &g:so = s:so_save | let &g:siso = s:siso_save
 nohlsearch
 doautoall SessionLoadPost
 " vim: set ft=vim :

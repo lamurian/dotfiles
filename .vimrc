@@ -21,27 +21,6 @@ if isdirectory($lilypath)   " Check if dir exists
         filetype on
 endif
 
-"	GENERAL CONFIG
-syntax on
-colorscheme elflord
-set directory=/mnt/data/.cache/vim/swap
-set backupdir=/mnt/data/.cache/vim/bak
-set path+=**    " Enable find in current pwd
-set number relativenumber expandtab wildmenu
-set mouse=a clipboard^=unnamed
-set hls is smartcase ignorecase
-set splitbelow splitright
-set spelllang=en,id
-set encoding=utf-8
-set cursorline cursorcolumn
-set t_Co=256
-hi CursorLine cterm=None ctermbg=Black
-hi CursorColumn cterm=None ctermbg=Black
-hi Folded ctermbg=Black
-hi FoldColumn ctermbg=Black
-hi Conceal ctermbg=Black
-hi SpellBad ctermbg=Black ctermfg=Red
-
 "	OMNI-COMPLETION
 filetype plugin on
 set omnifunc=syntaxcomplete#Complete
@@ -110,3 +89,25 @@ nnoremap <C-H> <C-W><C-H>
 autocmd BufEnter *rc loadview
 autocmd BufEnter *conf loadview
 "autocmd BufNewFile *.Rmd 0r $HOME/.vim/skeleton/skel-rmd
+
+"	GENERAL CONFIG
+syntax on
+colorscheme elflord " Other to choose: pablo
+set directory=/mnt/data/.cache/vim/swap
+set backupdir=/mnt/data/.cache/vim/bak
+set path+=**    " Enable find in current pwd
+set number relativenumber expandtab wildmenu
+set mouse=a clipboard^=unnamed
+set hls is smartcase ignorecase
+set splitbelow splitright
+set spelllang=en,id
+set encoding=utf-8
+set cursorline cursorcolumn
+set t_Co=256
+hi StatusLine ctermbg=Black ctermfg=White
+hi CursorLine cterm=None ctermbg=Black
+hi CursorColumn cterm=None ctermbg=Black
+hi Folded ctermbg=Black
+hi FoldColumn ctermbg=Black
+hi Conceal ctermbg=Black
+hi SpellBad ctermbg=Black ctermfg=Red
