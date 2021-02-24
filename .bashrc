@@ -29,8 +29,8 @@ PS1='\[\033[1;34m\] -- \[\033[0m\] '
 # Nifty function
 ac() {
 	# Change into specified dir
-        [ -z $1 ] && cd $(find $ONDR $BLOG -type d | fzf) || \
-                cd $(find $1 -type d | fzf)
+        [ -z $1 ] && cd $(find $ONDR $BLOG -type d -not -path "*/.git/*" | fzf) || \
+                cd $(find $1 -type d -not -path "*/.git/*" | fzf)
 }
 
 conf() {
@@ -58,6 +58,7 @@ export EDITOR=vim
 export SYSTEMD_EDITOR=vim
 
 export XDG_DATA_HOME=/mnt/data/lamuri
+export XDG_DATA_DIRS=$XDG_DATA_DIRS:/mnt/data/lamuri/flatpak/share
 export XDG_CACHE_HOME=/mnt/data/.cache/
 export XDG_CONFIG_HOME=$HOME/.config
 
