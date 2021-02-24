@@ -60,6 +60,12 @@ nnoremap tj :bnext<CR>
 nnoremap th :bfirst<CR>
 nnoremap tl :blast<CR>
 nnoremap tq :bdelete<CR>
+nnoremap ttn :tabnew<CR>
+nnoremap ttk :tabprev<CR>
+nnoremap ttj :tabnext<CR>
+nnoremap tth :tabfirst<CR>
+nnoremap ttl :tablast<CR>
+nnoremap ttq :tabclose<CR>
 
 " Easy folding toggle
 nnoremap <space> za
@@ -92,7 +98,7 @@ autocmd BufEnter *conf loadview
 
 "	GENERAL CONFIG
 syntax on
-colorscheme elflord " Other to choose: pablo
+colorscheme pablo " Other to consider: elflord
 set directory=/mnt/data/.cache/vim/swap
 set backupdir=/mnt/data/.cache/vim/bak
 set path+=**    " Enable find in current pwd

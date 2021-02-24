@@ -86,7 +86,7 @@ setlocal modifiable
 setlocal nrformats=bin,octal,hex
 setlocal number
 setlocal numberwidth=4
-setlocal omnifunc=syntaxcomplete#complete
+setlocal omnifunc=syntaxcomplete#Complete
 setlocal path=
 setlocal nopreserveindent
 setlocal nopreviewwindow
@@ -143,12 +143,13 @@ silent! normal! zE
 45,49fold
 50,52fold
 28,53fold
-56,63fold
-64,66fold
-67,80fold
-81,85fold
-54,86fold
+56,69fold
+70,72fold
+73,86fold
 87,91fold
+54,92fold
+93,97fold
+let &fdl = &fdl
 3
 normal! zo
 3
@@ -161,11 +162,11 @@ normal! zc
 normal! zo
 54
 normal! zc
-let s:l = 87 - ((86 * winheight(0) + 35) / 71)
+let s:l = 93 - ((92 * winheight(0) + 19) / 39)
 if s:l < 1 | let s:l = 1 | endif
-exe s:l
+keepjumps exe s:l
 normal! zt
-87
+keepjumps 93
 normal! 0
 let &g:so = s:so_save | let &g:siso = s:siso_save
 nohlsearch
