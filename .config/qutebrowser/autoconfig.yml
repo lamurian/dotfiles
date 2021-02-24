@@ -8,7 +8,5 @@ config_version: 2
 settings:
   content.notifications:
     https://www.askpython.com: false
-    https://www.cnbcindonesia.com: false
-    https://www.kompas.com: false
-  content.user_stylesheets:
-    global: null
+  content.proxy:
+    global: system
