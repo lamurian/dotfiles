@@ -47,6 +47,8 @@ force_color_prompt=yes
 
 export ONDR=/mnt/data/OneDrive
 export BLOG=/mnt/shared/Documents/blog
+export ACDM=$ONDR/Documents/academy
+export BOOK=/mnt/shared/ebook
 export PATH=$PATH:/shims:/home/lam/.local/bin:/home/lam/bin
 
 export LC_ALL=en_US.UTF-8

@@ -165,7 +165,7 @@ config.set('content.media.video_capture', True, 'https://meet.google.com')
 #   - true
 #   - false
 #   - ask
-config.set('content.notifications', False, 'https://calendar.google.com')
+config.set('content.notifications.enabled', False, 'https://calendar.google.com')
 
 # Allow websites to show notifications.
 # Type: BoolAsk
@@ -173,7 +173,7 @@ config.set('content.notifications', False, 'https://calendar.google.com')
 #   - true
 #   - false
 #   - ask
-config.set('content.notifications', True, 'https://meet.google.com')
+config.set('content.notifications.enabled', True, 'https://meet.google.com')
 
 # Allow websites to show notifications.
 # Type: BoolAsk
@@ -181,7 +181,7 @@ config.set('content.notifications', True, 'https://meet.google.com')
 #   - true
 #   - false
 #   - ask
-config.set('content.notifications', False, 'https://web.telegram.org')
+config.set('content.notifications.enabled', False, 'https://web.telegram.org')
 
 # Allow websites to show notifications.
 # Type: BoolAsk
@@ -189,7 +189,7 @@ config.set('content.notifications', False, 'https://web.telegram.org')
 #   - true
 #   - false
 #   - ask
-config.set('content.notifications', True, 'https://web.whatsapp.com')
+config.set('content.notifications.enabled', True, 'https://web.whatsapp.com')
 
 # Allow websites to show notifications.
 # Type: BoolAsk
@@ -197,7 +197,7 @@ config.set('content.notifications', True, 'https://web.whatsapp.com')
 #   - true
 #   - false
 #   - ask
-config.set('content.notifications', False, 'https://www.analyticsvidhya.com')
+config.set('content.notifications.enabled', False, 'https://www.analyticsvidhya.com')
 
 # Allow websites to show notifications.
 # Type: BoolAsk
@@ -205,7 +205,7 @@ config.set('content.notifications', False, 'https://www.analyticsvidhya.com')
 #   - true
 #   - false
 #   - ask
-config.set('content.notifications', False, 'https://www.reddit.com')
+config.set('content.notifications.enabled', False, 'https://www.reddit.com')
 
 # Allow pdf.js to view PDF files in the browser. Note that the files can
 # still be downloaded by clicking the download button in the pdf.js
@@ -511,7 +511,7 @@ c.colors.tabs.selected.even.bg = '#3c3836'
 
 # Force `prefers-color-scheme: dark` colors for websites.
 # Type: Bool
-c.colors.webpage.prefers_color_scheme_dark = True
+#c.colors.webpage.prefers_color_scheme_dark = True
 
 # Render all web contents using a dark theme. Example configurations
 # from Chromium's `chrome://flags`:  - "With simple HSL/CIELAB/RGB-based

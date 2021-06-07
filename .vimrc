@@ -53,7 +53,7 @@ let g:netrw_banner = 0
 
 "	KEYMAP
 
-" Buffer management
+" Buffer and tab management
 nnoremap tn :edit<Space>
 nnoremap tk :bprev<CR>
 nnoremap tj :bnext<CR>
@@ -84,11 +84,15 @@ vnoremap P "+P
 vnoremap d "+d
 vnoremap D "+D
 
-" Split navigations
+" Split navigations and resizing
+nnoremap <C-H> <C-W><C-H>
 nnoremap <C-J> <C-W><C-J>
 nnoremap <C-K> <C-W><C-K>
 nnoremap <C-L> <C-W><C-L>
-nnoremap <C-H> <C-W><C-H>
+nnoremap <Leader>[ :vertical resize -10 <CR>
+nnoremap <Leader>- :resize +10 <CR>
+nnoremap <Leader>= :resize -10 <CR>
+nnoremap <Leader>] :vertical resize +10 <CR>
 
 "	BUFFER OPTIONS
 
@@ -98,7 +102,7 @@ autocmd BufEnter *conf loadview
 
 "	GENERAL CONFIG
 syntax on
-colorscheme pablo " Other to consider: elflord
+colorscheme pablo " Selection: elflord, pablo, industry
 set directory=/mnt/data/.cache/vim/swap
 set backupdir=/mnt/data/.cache/vim/bak
 set path+=**    " Enable find in current pwd

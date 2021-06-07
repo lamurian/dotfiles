@@ -6,7 +6,42 @@
 
 config_version: 2
 settings:
-  content.notifications:
+  content.desktop_capture:
+    https://meet.google.com: true
+    https://teams.microsoft.com: true
+    https://web.skype.com: true
+  content.geolocation:
+    https://www.google.com: false
+    https://www.petco.com: false
+  content.media.audio_capture:
+    https://teams.microsoft.com: true
+    https://web.skype.com: true
+    https://www.airmeet.com: true
+  content.media.audio_video_capture:
+    https://ome.tv: true
+    https://teams.microsoft.com: true
+    https://web.skype.com: true
+    https://www.airmeet.com: true
+    https://zoom.us: true
+  content.media.video_capture:
+    https://teams.microsoft.com: true
+    https://ujiansimak.ui.ac.id: true
+    https://web.skype.com: true
+    https://web.whatsapp.com: false
+    https://www.airmeet.com: true
+  content.notifications.enabled:
+    https://calendar.google.com: true
+    https://colab.research.google.com: true
+    https://meet.google.com: true
+    https://psychreel.com: false
+    https://semawur.com: false
+    https://thetalesofdemonsandgods.com: false
+    https://vitalflux.com: false
+    https://w11.mangafreak.net: false
+    https://web.skype.com: true
+    https://web.telegram.org: true
     https://www.askpython.com: false
+    https://www.dezyre.com: false
+    https://www.mltut.com: false
   content.proxy:
-    global: system
+    global: socks://localhost:9050/
