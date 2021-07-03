@@ -11,7 +11,9 @@ settings:
     https://teams.microsoft.com: true
     https://web.skype.com: true
   content.geolocation:
+    https://web.budgetbakers.com: false
     https://www.google.com: false
+    https://www.olx.co.id: false
     https://www.petco.com: false
   content.media.audio_capture:
     https://teams.microsoft.com: true
@@ -24,6 +26,7 @@ settings:
     https://www.airmeet.com: true
     https://zoom.us: true
   content.media.video_capture:
+    https://quilgo.com: true
     https://teams.microsoft.com: true
     https://ujiansimak.ui.ac.id: true
     https://web.skype.com: true
