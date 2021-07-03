@@ -1,8 +1,8 @@
-setlocal shiftwidth=4
+setlocal shiftwidth=2
 setlocal textwidth=79
 setlocal fileformat=unix 
-setlocal tabstop=4
-setlocal softtabstop=4
+setlocal tabstop=2
+setlocal softtabstop=2
 setlocal expandtab
 setlocal autoindent
 
@@ -10,7 +10,7 @@ setlocal autoindent
 function! FoldCode()
 	let line = getline(v:lnum)
 	let prior = getline(v:lnum-1)
-	if match(line, '^%\+') >= 0
+	if match(line, '^%\+\s') >= 0
 		return ">1"	" comment
 	elseif match(line, 'function') >= 0
 		return ">2"	" function

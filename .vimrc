@@ -54,13 +54,19 @@ let g:netrw_banner = 0
 
 "	KEYMAP
 
-" Buffer management
+" Buffer and tab management
 nnoremap tn :edit<Space>
 nnoremap tk :bprev<CR>
 nnoremap tj :bnext<CR>
 nnoremap th :bfirst<CR>
 nnoremap tl :blast<CR>
 nnoremap tq :bdelete<CR>
+nnoremap ttn :tabnew<CR>
+nnoremap ttk :tabprev<CR>
+nnoremap ttj :tabnext<CR>
+nnoremap tth :tabfirst<CR>
+nnoremap ttl :tablast<CR>
+nnoremap ttq :tabclose<CR>
 
 " Easy folding toggle
 nnoremap <space> za
@@ -79,11 +85,15 @@ vnoremap P "+P
 vnoremap d "+d
 vnoremap D "+D
 
-" Split navigations
+" Split navigations and resizing
+nnoremap <C-H> <C-W><C-H>
 nnoremap <C-J> <C-W><C-J>
 nnoremap <C-K> <C-W><C-K>
 nnoremap <C-L> <C-W><C-L>
-nnoremap <C-H> <C-W><C-H>
+nnoremap <Leader>[ :vertical resize -10 <CR>
+nnoremap <Leader>- :resize +10 <CR>
+nnoremap <Leader>= :resize -10 <CR>
+nnoremap <Leader>] :vertical resize +10 <CR>
 
 "	BUFFER OPTIONS
 
@@ -93,7 +103,7 @@ autocmd BufEnter *conf loadview
 
 "	GENERAL CONFIG
 syntax on
-colorscheme elflord " Other to choose: pablo
+colorscheme pablo " Selection: elflord, pablo, industry
 set directory=/mnt/data/.cache/vim/swap
 set backupdir=/mnt/data/.cache/vim/bak
 set path+=**    " Enable find in current pwd

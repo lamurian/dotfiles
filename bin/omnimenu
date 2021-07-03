@@ -64,7 +64,7 @@ recmenu() {
         case $ARGS in
                 start) scast.sh & sleep 0.2s && dunstify "Recording" "PID: $(pgrep ffmpeg | tail -n1)" ;;
                 stop) kill $(pgrep ffmpeg | dmenu -p "Stop PID:") ;;
-                select) ffcast -s ffmpeg -f x11grab -r 30 -show_region 1 -s %s -i %D+%c $(date +%y%m%d_%H%M%S.mp4)
+                select) ffcast -s ffmpeg -f x11grab -r 30 -show_region 1 -s %s -i %D+%c -f pulse -i default /mnt/shared/Videos/_recording/$(date +%y%m%d_%H%M%S.mp4)
         esac
 }
 
