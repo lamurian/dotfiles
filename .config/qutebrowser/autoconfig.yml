@@ -9,19 +9,32 @@ settings:
   content.desktop_capture:
     https://meet.google.com: true
     https://teams.microsoft.com: true
+    https://us02web.zoom.us: true
     https://web.skype.com: true
+    https://zoom.us: true
   content.geolocation:
+    https://bpjsketenagakerjaan.go.id: false
+    https://linksehat.com: false
     https://web.budgetbakers.com: false
+    https://www.bpjsketenagakerjaan.go.id: false
+    https://www.btpn.com: false
+    https://www.byu.id: false
     https://www.google.com: false
     https://www.olx.co.id: false
     https://www.petco.com: false
+    https://www.upstation.asia: false
   content.media.audio_capture:
     https://teams.microsoft.com: true
+    https://us02web.zoom.us: true
+    https://us06web.zoom.us: true
     https://web.skype.com: true
     https://www.airmeet.com: true
+    https://zoom.us: true
   content.media.audio_video_capture:
     https://ome.tv: true
     https://teams.microsoft.com: true
+    https://us02web.zoom.us: true
+    https://us06web.zoom.us: true
     https://web.skype.com: true
     https://www.airmeet.com: true
     https://zoom.us: true
@@ -29,22 +42,32 @@ settings:
     https://quilgo.com: true
     https://teams.microsoft.com: true
     https://ujiansimak.ui.ac.id: true
+    https://us02web.zoom.us: true
     https://web.skype.com: true
     https://web.whatsapp.com: false
     https://www.airmeet.com: true
   content.notifications.enabled:
     https://calendar.google.com: true
     https://colab.research.google.com: true
+    https://duo.google.com: true
+    https://mail.google.com: true
     https://meet.google.com: true
+    https://money.kompas.com: false
     https://psychreel.com: false
     https://semawur.com: false
     https://thetalesofdemonsandgods.com: false
+    https://us02web.zoom.us: true
     https://vitalflux.com: false
     https://w11.mangafreak.net: false
     https://web.skype.com: true
     https://web.telegram.org: true
     https://www.askpython.com: false
+    https://www.bukalapak.com: false
+    https://www.chess.com: false
+    https://www.cnbcindonesia.com: false
     https://www.dezyre.com: false
+    https://www.forbes.com: false
     https://www.mltut.com: false
+    https://www.startup4industry.id: false
   content.proxy:
     global: socks://localhost:9050/
