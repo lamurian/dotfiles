@@ -12,7 +12,7 @@ alt + o
         omnimenu > /dev/null 2>&1
 
 alt + t
-        dunstify "Current time" $(date +%H:%M:%S) -r 1 -u low -t 1000
+        dunstify " $(date +%d\ %b\ %Y)" " $(date +%H:%M:%S)" -r 1 -u low -t 2000
 
 # XF86 Keys
 XF86AudioMute

@@ -6,7 +6,7 @@ vol=$(pulsemixer --get-volume | awk '{print $1}')
 
 # Decide whether the volume is muted or not
 amixer get Master | tail -n 1 | grep off 2>&1 > /dev/null && \
-	icon="<span foreground='#666666'></span>" || \
+	icon="<span foreground='#666666'></span>" || \
 	icon=""
 
 md1o="<span foreground='#999999'><b>"	# Open tag for markdown formatting
