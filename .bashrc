@@ -29,7 +29,7 @@ PS1='\[\033[1;34m\]── \[\033[0m\] '
 # Nifty function
 ac() {
 	# Change into specified dir
-        [ -z $1 ] && cd $(find $ONDR $BLOG -type d -not -path "*/.git/*" | fzf) || \
+        [ -z $1 ] && cd $(find $ONDR $BUKA $BLOG -type d -not -path "*/.git/*" | fzf) || \
                 cd $(find $1 -type d -not -path "*/.git/*" | fzf)
 }
 
@@ -46,6 +46,7 @@ blog() {
 force_color_prompt=yes
 
 export ONDR=/mnt/data/OneDrive
+export BUKA=/mnt/shared/Documents/jobs/Bukalapak
 export BLOG=/mnt/shared/Documents/blog
 export ACDM=$ONDR/Documents/academy
 export BOOK=/mnt/shared/ebook
