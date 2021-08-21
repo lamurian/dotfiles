@@ -14,6 +14,7 @@ settings:
     https://zoom.us: true
   content.geolocation:
     https://bpjsketenagakerjaan.go.id: false
+    https://docheck.id: false
     https://linksehat.com: false
     https://web.budgetbakers.com: false
     https://www.bpjsketenagakerjaan.go.id: false
@@ -28,6 +29,7 @@ settings:
     https://us02web.zoom.us: true
     https://us06web.zoom.us: true
     https://web.skype.com: true
+    https://who.zoom.us: true
     https://www.airmeet.com: true
     https://zoom.us: true
   content.media.audio_video_capture:
@@ -46,12 +48,16 @@ settings:
     https://web.skype.com: true
     https://web.whatsapp.com: false
     https://www.airmeet.com: true
+    https://zoom.us: true
   content.notifications.enabled:
+    https://app.slack.com: true
     https://calendar.google.com: true
     https://colab.research.google.com: true
+    https://docheck.id: false
     https://duo.google.com: true
     https://mail.google.com: true
     https://meet.google.com: true
+    https://megapolitan.kompas.com: false
     https://money.kompas.com: false
     https://psychreel.com: false
     https://semawur.com: false
@@ -67,6 +73,7 @@ settings:
     https://www.cnbcindonesia.com: false
     https://www.dezyre.com: false
     https://www.forbes.com: false
+    https://www.kompas.tv: false
     https://www.mltut.com: false
     https://www.startup4industry.id: false
   content.proxy:
