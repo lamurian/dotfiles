@@ -78,6 +78,7 @@ setlocal nolinebreak
 setlocal nolisp
 setlocal lispwords=
 setlocal nolist
+setlocal listchars=
 setlocal makeencoding=
 setlocal makeprg=
 setlocal matchpairs=(:),{:},[:]
@@ -135,39 +136,39 @@ setlocal nowinfixwidth
 setlocal wrap
 setlocal wrapmargin=0
 silent! normal! zE
-16,22fold
-3,23fold
-24,27fold
-30,39fold
-40,44fold
-45,49fold
-50,52fold
-28,53fold
-56,69fold
-70,72fold
-73,86fold
-87,95fold
-54,96fold
-97,101fold
+17,23fold
+3,24fold
+25,28fold
+31,40fold
+41,45fold
+46,50fold
+51,53fold
+29,54fold
+57,70fold
+71,73fold
+74,87fold
+88,96fold
+55,97fold
+98,102fold
 let &fdl = &fdl
 3
 normal! zo
 3
 normal! zc
-28
+29
 normal! zo
-28
+29
 normal! zc
-54
+55
 normal! zo
-54
+55
 normal! zc
 let s:l = 15 - ((14 * winheight(0) + 35) / 71)
 if s:l < 1 | let s:l = 1 | endif
 keepjumps exe s:l
 normal! zt
 keepjumps 15
-normal! 0
+normal! 01|
 let &g:so = s:so_save | let &g:siso = s:siso_save
 nohlsearch
 doautoall SessionLoadPost

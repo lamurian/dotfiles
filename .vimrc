@@ -11,6 +11,7 @@ Plug 'vim-airline/vim-airline' 		" Airline..
 Plug 'vim-airline/vim-airline-themes' 	" ..and its theme
 Plug 'jpalardy/vim-slime'		" Slime plug-in to interpret code
 Plug 'neo4j-contrib/cypher-vim-syntax'	" Syntax highlight for cypher
+Plug 'thalesmello/lkml.vim'
 call plug#end()
 
 " Lilypond integration
