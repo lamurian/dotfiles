@@ -33,6 +33,8 @@ settings:
     https://www.airmeet.com: true
     https://zoom.us: true
   content.media.audio_video_capture:
+    https://app.chime.aws: true
+    https://miro.com: true
     https://ome.tv: true
     https://teams.microsoft.com: true
     https://us02web.zoom.us: true
@@ -50,17 +52,27 @@ settings:
     https://www.airmeet.com: true
     https://zoom.us: true
   content.notifications.enabled:
+    https://app.chime.aws: true
     https://app.slack.com: true
     https://calendar.google.com: true
     https://colab.research.google.com: true
     https://docheck.id: false
     https://duo.google.com: true
+    https://gitlab.cloud.bukalapak.io: true
+    https://industri.kontan.co.id: false
     https://mail.google.com: true
+    https://medistree.odoo.com: true
+    https://medistree.zulipchat.com: true
+    https://medtech-imeri.zulipchat.com: true
     https://meet.google.com: true
     https://megapolitan.kompas.com: false
     https://money.kompas.com: false
     https://psychreel.com: false
+    https://semaths.com: false
     https://semawur.com: false
+    https://supply-redash-production.bukalapak.io: true
+    https://teams.live.com: true
+    https://teams.microsoft.com: true
     https://thetalesofdemonsandgods.com: false
     https://us02web.zoom.us: true
     https://vitalflux.com: false
@@ -74,6 +86,7 @@ settings:
     https://www.dezyre.com: false
     https://www.forbes.com: false
     https://www.kompas.tv: false
+    https://www.machinelearningplus.com: false
     https://www.mltut.com: false
     https://www.startup4industry.id: false
   content.proxy:
