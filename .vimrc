@@ -105,8 +105,8 @@ autocmd BufEnter *conf loadview
 "	GENERAL CONFIG
 syntax on
 colorscheme pablo " Selection: elflord, pablo, industry
-set directory=/mnt/data/.cache/vim/swap
-set backupdir=/mnt/data/.cache/vim/bak
+set directory=/home/lam/data/.cache/vim/swap
+set backupdir=/home/lam/data/.cache/vim/bak
 set path+=**    " Enable find in current pwd
 set number relativenumber expandtab wildmenu
 set mouse=a clipboard^=unnamed
