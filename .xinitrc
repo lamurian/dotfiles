@@ -8,9 +8,9 @@ call_bspwm() {
 }
 
 call_dwm() {
-	feh --bg-fill $ONDR/Pictures/wallpaper/misty-forest.jpg &
+	feh --bg-fill $HOME/data/private/Pictures/wallpaper/misty-forest.jpg &
 	sxhkd &
-	# Requrie `status` script from t480 branch in dotfiles git
+	# Require `status` script from t480 branch in dotfiles git
 	while true; do xsetroot -name " `status pwr` "; sleep 5s; done &
 	exec dwm
 }
