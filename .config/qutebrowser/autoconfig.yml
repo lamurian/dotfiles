@@ -57,6 +57,7 @@ settings:
     https://calendar.google.com: true
     https://colab.research.google.com: true
     https://docheck.id: false
+    https://drive.google.com: true
     https://duo.google.com: true
     https://gitlab.cloud.bukalapak.io: true
     https://industri.kontan.co.id: false
@@ -68,8 +69,10 @@ settings:
     https://megapolitan.kompas.com: false
     https://money.kompas.com: false
     https://psychreel.com: false
+    https://redash-production.bukalapak.io: true
     https://semaths.com: false
     https://semawur.com: false
+    https://style.tribunnews.com: false
     https://supply-redash-production.bukalapak.io: true
     https://teams.live.com: true
     https://teams.microsoft.com: true
@@ -89,5 +92,30 @@ settings:
     https://www.machinelearningplus.com: false
     https://www.mltut.com: false
     https://www.startup4industry.id: false
+    https://www.youtube.com: true
   content.proxy:
-    global: socks://localhost:9050/
+    global: system
+  downloads.remove_finished:
+    global: 100
+  fileselect.folder.command:
+    global:
+    - st
+    - -e
+    - ranger
+    - --choosedir={}
+  fileselect.handler:
+    global: external
+  fileselect.multiple_files.command:
+    global:
+    - st
+    - -e
+    - ranger
+    - --choosefiles={}
+  fileselect.single_file.command:
+    global:
+    - st
+    - -e
+    - ranger
+    - --choosefile={}
+  zoom.default:
+    global: 90%
