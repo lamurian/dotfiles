@@ -49,9 +49,12 @@ export DATA=$HOME/data
 export BLOG=$DATA/private/Documents/blog
 export BOOK=$DATA/private/Documents/ebook
 export PROF=$DATA/professional
+export WC=$PROF/jobs/writing-center
+export MT=$PROF/jobs/medtech
 export BUKA=$PROF/jobs/bukalapak
 export ACDM=$PROF/Documents/academy
-export PATH=$PATH:/shims:/home/lam/.local/bin:/home/lam/bin
+export PYENV=$DATA/private/programs/pyenv # PyEnv root folder
+export PATH=$PATH:/shims:/home/lam/.local/bin:/home/lam/bin:$PYENV/bin
 
 export LC_ALL=en_US.UTF-8
 export LANG=en_US.UTF-8
@@ -66,6 +69,12 @@ export XDG_DATA_DIRS=$XDG_DATA_DIRS:$DATA/lamuri/flatpak/share
 export XDG_CACHE_HOME=$DATA/.cache/
 export XDG_CONFIG_HOME=$HOME/.config
 
+# Use Kvantum style
+export QT_STYLE_OVERRIDE=kvantum
+
 # Runtime dir and pulse server for flatpak env
 export XDG_RUNTIME_DIR=$DATA/lamuri/runtime
 #export PULSE_SERVER=unix:/tmp/pulse-socket
+
+# Add `pyenv` path
+eval "$(pyenv init -)"
