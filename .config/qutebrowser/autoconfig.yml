@@ -55,6 +55,7 @@ settings:
     https://app.chime.aws: true
     https://app.slack.com: true
     https://calendar.google.com: true
+    https://chat.zulip.org: true
     https://colab.research.google.com: true
     https://docheck.id: false
     https://drive.google.com: true
@@ -69,7 +70,9 @@ settings:
     https://megapolitan.kompas.com: false
     https://money.kompas.com: false
     https://psychreel.com: false
+    https://python.zulipchat.com: true
     https://redash-production.bukalapak.io: true
+    https://rumah.mitula.co.id: false
     https://semaths.com: false
     https://semawur.com: false
     https://style.tribunnews.com: false
@@ -80,6 +83,7 @@ settings:
     https://us02web.zoom.us: true
     https://vitalflux.com: false
     https://w11.mangafreak.net: false
+    https://web.mention.com: false
     https://web.skype.com: true
     https://web.telegram.org: true
     https://www.askpython.com: false
@@ -87,11 +91,13 @@ settings:
     https://www.chess.com: false
     https://www.cnbcindonesia.com: false
     https://www.dezyre.com: false
+    https://www.engagez.net: true
     https://www.forbes.com: false
     https://www.kompas.tv: false
     https://www.machinelearningplus.com: false
     https://www.mltut.com: false
     https://www.startup4industry.id: false
+    https://www.tiktok.com: false
     https://www.youtube.com: true
   content.proxy:
     global: system
@@ -104,7 +110,7 @@ settings:
     - ranger
     - --choosedir={}
   fileselect.handler:
-    global: external
+    global: default
   fileselect.multiple_files.command:
     global:
     - st
