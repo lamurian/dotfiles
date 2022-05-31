@@ -55,7 +55,7 @@ let g:netrw_banner = 0
 "	KEYMAP
 
 " Buffer and tab management
-nnoremap tn :edit<Space>
+nnoremap tn :FZF<CR>
 nnoremap tk :bprev<CR>
 nnoremap tj :bnext<CR>
 nnoremap th :bfirst<CR>
