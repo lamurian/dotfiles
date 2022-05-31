@@ -53,14 +53,18 @@ export WC=$PROF/jobs/writing-center
 export MT=$PROF/jobs/medtech
 export BUKA=$PROF/jobs/bukalapak
 export ACDM=$PROF/Documents/academy
+export PHD=$PROF/Documents/academy/_postgrad/PhD-course
 export PYENV=$DATA/private/programs/pyenv # PyEnv root folder
-export PATH=$PATH:/shims:/home/lam/.local/bin:/home/lam/bin:$PYENV/bin
+export FLUTTER=$DATA/private/programs/flutter # Flutter root folder
+export SDK=$DATA/private/programs/android-sdk # Android ANDROID_SDK_ROOT root folder
+export PATH=$PATH:/shims:/home/lam/.local/bin:/home/lam/bin:$PYENV/bin:$FLUTTER/bin:$SDK/cmdline-tools/latest/bin:$SDK/emulator:$SDK/platform-tools:$SDK/tools:$SDK/tools/bin
 
 export LC_ALL=en_US.UTF-8
 export LANG=en_US.UTF-8
 export LANGUAGE=en_US.UTF-8
 
 export BROWSER=qutebrowser
+export CHROME_EXECUTABLE=/bin/chromium
 export EDITOR=vim
 export SYSTEMD_EDITOR=vim
 
