@@ -20,3 +20,6 @@ https://phys.org/rss-feed/technology-news/internet/ "~Internet" "Technology"
 https://phys.org/rss-feed/technology-news/consumer-gadgets/ "~Gadget" "Technology"
 http://www.debian-administration.org/articles.rdf "~Debian Admin" "Technology"
 http://feeds2.feedburner.com/Command-line-fu "~Bash" "Technology"
+
+# Entertainment
+https://mangadex.dev/rss/ "~Mangadex" "Entertainment" "Manga"
