@@ -82,6 +82,7 @@ settings:
     https://cloudminingprofy.com: false
     https://colab.research.google.com: true
     https://cryptotabbrowser.com: false
+    https://discourse.openehr.org: true
     https://docheck.id: false
     https://drfone.wondershare.com: false
     https://drive.google.com: true
@@ -124,6 +125,7 @@ settings:
     https://www.askpython.com: false
     https://www.bukalapak.com: false
     https://www.chess.com: false
+    https://www.cio.com: false
     https://www.cnbcindonesia.com: false
     https://www.dezyre.com: false
     https://www.duolingo.com: true
