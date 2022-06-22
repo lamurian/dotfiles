@@ -1,7 +1,10 @@
-" File for xaringan in rmarkdown
+" File for xaringan in rmarkdown (custom ext `*.Rmarkdown`)
 
+setlocal shiftwidth=4
+setlocal tabstop=4
+setlocal softtabstop=4
+setlocal expandtab
 setlocal spell
-setlocal noexpandtab
 abbr -> $\to$
 
 " Foldexpr for markdown flavours
