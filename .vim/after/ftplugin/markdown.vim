@@ -1,6 +1,10 @@
+" For `*.md` and `*.Rmd` files
+
+setlocal shiftwidth=4
+setlocal tabstop=4
+setlocal softtabstop=4
+setlocal expandtab
 setlocal spell
-setlocal noexpandtab
-setlocal textwidth=79
 abbr -> $\to$
 
 " Foldexpr for markdown flavours

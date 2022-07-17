@@ -56,7 +56,7 @@ let g:netrw_banner = 0
 "	KEYMAP
 
 " Buffer and tab management
-nnoremap tn :edit<Space>
+nnoremap tn :FZF<CR>
 nnoremap tk :bprev<CR>
 nnoremap tj :bnext<CR>
 nnoremap th :bfirst<CR>
@@ -104,7 +104,7 @@ autocmd BufEnter *conf loadview
 
 "	GENERAL CONFIG
 syntax on
-colorscheme pablo " Selection: elflord, pablo, industry
+colorscheme default " Selection: elflord, pablo, industry
 set directory=/home/lam/data/.cache/vim/swap
 set backupdir=/home/lam/data/.cache/vim/bak
 set path+=**    " Enable find in current pwd
@@ -116,10 +116,28 @@ set spelllang=en,id
 set encoding=utf-8
 set cursorline cursorcolumn
 set t_Co=256
+
+" Highlight
 hi StatusLine ctermbg=Black ctermfg=White
 hi CursorLine cterm=None ctermbg=Black
 hi CursorColumn cterm=None ctermbg=Black
+
+hi Search ctermbg=Yellow ctermfg=Black
+hi CurSearch ctermbg=Yellow ctermfg=Black
+
 hi Folded ctermbg=Black
 hi FoldColumn ctermbg=Black
-hi Conceal ctermbg=Black
-hi SpellBad ctermbg=Black ctermfg=Red
+
+hi Conceal    ctermbg=Black
+hi SignColumn ctermbg=Black ctermfg=248
+hi MatchParen ctermbg=Black
+
+hi SpellBad   ctermbg=Black ctermfg=Red
+hi SpellCap   ctermbg=Black ctermfg=81
+hi SpellRare  ctermbg=Black ctermfg=225
+hi SpellLocal ctermbg=Black ctermfg=14
+
+hi DiffAdd    ctermfg=Black
+hi DiffChange ctermfg=Black
+hi DiffDelete ctermfg=Black
+hi DiffText   ctermfg=Black
