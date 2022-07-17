@@ -4,17 +4,17 @@
 rclone copy -PuL $PROF/jobs/faal fkui:/fisiologi-biofisika-kedokteran
 rclone copy -PuL $PROF/jobs/writing-center imeri:/writing-center
 rclone copy -PuL $PROF/jobs/medtech imeri:/medtech
-rclone move -PuL $DATA/private/Videos/.private private:/
-rclone copy -PuL $DATA/private/Documents/ebook ebook:/
+rclone move -PuL $DATA/personal/Videos/.private private:/
+rclone copy -PuL $DATA/personal/Documents/ebook ebook:/
 
 # Dump local data to cloud repo
-#rclone copy -PuL $DATA/private data:/private
+rclone copy -PuL $DATA/personal data:/personal
 rclone copy -PuL $DATA/professional data:/professional
-rclone copy -PuL $DATA/virtual data:/virtual
+rclone copy -PuL $DATA/virtual/OS data:/virtual/OS
 
-# Synchornize local files and cloud repo
-rclone sync -PuL $PROF professional:/
-rclone sync -PuL $PHD phd:/
+# Synchornize cloud repos
+rclone sync -PuL data:/professional professional:/
+rclone sync -PuL data:/professional/Documents/academy/_postgrad/PhD-course phd:/
 rclone sync -PuL imeri:/writing-center onedrive:/
 rclone sync -PuL ebook:/ book:/
 rclone sync -PuL ebook:/ mt-reading:/

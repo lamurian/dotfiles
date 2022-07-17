@@ -8,7 +8,7 @@ call_bspwm() {
 }
 
 call_dwm() {
-	feh --bg-fill $HOME/data/private/Pictures/wallpaper/misty-forest.jpg &
+	feh --bg-fill $HOME/data/personal/Pictures/wallpaper/misty-forest.jpg &
 	sxhkd &
 	# Require `status` script from t480 branch in dotfiles git
 	while true; do xsetroot -name " `status pwr` "; sleep 5s; done &
@@ -16,11 +16,11 @@ call_dwm() {
 }
 
 call_dwm_mod() {
-	feh --bg-fill $HOME/data/private/Pictures/wallpaper/misty-forest.jpg &
+	feh --bg-fill $HOME/data/personal/Pictures/wallpaper/misty-forest.jpg &
 	sxhkd &
 	# Require `status` script from t480 branch in dotfiles git
 	while true; do xsetroot -name " `status pwr` "; sleep 5s; done &
-	exec /home/lam/data/private/programs/suckless/dwm/dwm
+	exec /home/lam/data/personal/programs/suckless/dwm/dwm
 }
 
 call_min() {
