@@ -2,6 +2,8 @@
 options('menu.graphics'=F)
 
 # Enable semi-transparency using cairo
-setHook(packageEvent("grDevices", "onLoad"),
-function(...) grDevices::X11.options(type='cairo'))
+setHook(
+    packageEvent("grDevices", "onLoad"),
+    function(...) grDevices::X11.options(type='cairo')
+)
 options(device='x11')
