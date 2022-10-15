@@ -75,6 +75,7 @@ settings:
     https://app.slack.com: true
     https://askinglot.com: false
     https://attentive.zulipchat.com: true
+    https://blog.csdn.net: false
     https://business.facebook.com: true
     https://cajspirituality.com: false
     https://calendar.google.com: true
@@ -87,9 +88,11 @@ settings:
     https://drfone.wondershare.com: false
     https://drive.google.com: true
     https://duo.google.com: true
+    https://en.mazec.info: false
     https://gitlab.cloud.bukalapak.io: true
     https://industri.kontan.co.id: false
     https://inflameemanent.cam: false
+    https://joyofandroid.com: false
     https://mail.google.com: true
     https://medistree.odoo.com: true
     https://medistree.zulipchat.com: true
@@ -99,6 +102,7 @@ settings:
     https://money.kompas.com: false
     https://neatmanga.com: false
     https://pdhdrawings.com: false
+    https://plantuml.com: false
     https://psychreel.com: false
     https://push.getbeamer.com: true
     https://python.zulipchat.com: true
@@ -131,13 +135,17 @@ settings:
     https://www.duolingo.com: true
     https://www.engagez.net: true
     https://www.forbes.com: false
+    https://www.gadgetsnow.com: false
     https://www.kompas.com: false
     https://www.kompas.tv: false
+    https://www.laptop6.com: false
     https://www.machinelearningplus.com: false
     https://www.mltut.com: false
+    https://www.mprnews.org: false
     https://www.pngmart.com: false
     https://www.qnap.com: false
     https://www.startup4industry.id: false
+    https://www.suaramerdeka.com: false
     https://www.tiktok.com: false
     https://www.youtube.com: true
   content.proxy:
