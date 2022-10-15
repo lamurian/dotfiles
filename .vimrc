@@ -102,41 +102,49 @@ autocmd BufEnter *conf loadview
 "autocmd BufNewFile *.Rmd 0r $HOME/.vim/skeleton/skel-rmd
 
 "	GENERAL CONFIG
+
+if isdirectory("/home/lam/data") " Check if dir exists to set swap and backup
+        set directory=/home/lam/data/.cache/vim/swap
+        set backupdir=/home/lam/data/.cache/vim/bak
+endif
+
 syntax on
 colorscheme default " Selection: elflord, pablo, industry
-set directory=/home/lam/data/.cache/vim/swap
-set backupdir=/home/lam/data/.cache/vim/bak
 set path+=**    " Enable find in current pwd
 set number relativenumber expandtab wildmenu
+set nocursorline nocursorcolumn
 set mouse=a clipboard^=unnamed
 set hls is smartcase ignorecase
 set splitbelow splitright
 set spelllang=en,id
 set encoding=utf-8
-set cursorline cursorcolumn
 set t_Co=256
 
 " Highlight
-hi StatusLine ctermbg=Black ctermfg=White
-hi CursorLine cterm=None ctermbg=Black
-hi CursorColumn cterm=None ctermbg=Black
+hi StatusLine   ctermbg=None   ctermfg=White
+hi CursorLine   term=None      cterm=None     ctermbg=None
+hi CursorColumn term=None      cterm=None     ctermbg=None
+hi Search       ctermbg=Yellow ctermfg=Black
+hi CurSearch    ctermbg=Yellow ctermfg=Black
 
-hi Search ctermbg=Yellow ctermfg=Black
-hi CurSearch ctermbg=Yellow ctermfg=Black
+hi Folded       ctermbg=None
+hi FoldColumn   ctermbg=None
 
-hi Folded ctermbg=Black
-hi FoldColumn ctermbg=Black
+hi Conceal      ctermbg=None
+hi SignColumn   ctermbg=Black  ctermfg=Grey
+hi MatchParen   ctermbg=Grey   ctermfg=Black
+hi visual       cterm=bold     ctermbg=Black
 
-hi Conceal    ctermbg=Black
-hi SignColumn ctermbg=Black ctermfg=248
-hi MatchParen ctermbg=Black
+hi SpellBad     ctermbg=None   ctermfg=Red
+hi SpellCap     ctermbg=None   ctermfg=81
+hi SpellRare    ctermbg=None   ctermfg=225
+hi SpellLocal   ctermbg=None   ctermfg=14
 
-hi SpellBad   ctermbg=Black ctermfg=Red
-hi SpellCap   ctermbg=Black ctermfg=81
-hi SpellRare  ctermbg=Black ctermfg=225
-hi SpellLocal ctermbg=Black ctermfg=14
+hi DiffAdd      ctermfg=Black
+hi DiffChange   ctermfg=Black
+hi DiffDelete   ctermfg=Black
+hi DiffText     ctermfg=Black
 
-hi DiffAdd    ctermfg=Black
-hi DiffChange ctermfg=Black
-hi DiffDelete ctermfg=Black
-hi DiffText   ctermfg=Black
+hi LineNr       ctermbg=Blue   ctermfg=Black guifg=Black term=Bold cterm=Bold
+hi LineNrAbove  ctermbg=None   ctermfg=Grey
+hi LineNrBelow  ctermbg=None   ctermfg=Grey
