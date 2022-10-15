@@ -29,7 +29,7 @@ PS1='\[\033[1;34m\] -- \[\033[0m\] '
 # Nifty function
 ac() {
 	# Change into specified dir
-        [ -z $1 ] && cd $(find $PROF $BUKA $BLOG -type d -not -path "*/.git/*" | fzf) || \
+        [ -z $1 ] && cd $(find $PROF $DOCS -type d -not -path "*/.git/*" | fzf) || \
                 cd $(find $1 -type d -not -path "*/.git/*" | fzf)
 }
 
@@ -46,12 +46,12 @@ blog() {
 force_color_prompt=yes
 
 export DATA=$HOME/data
-export BLOG=$DATA/personal/Documents/blog
-export BOOK=$DATA/personal/Documents/ebook
+export DOCS=$DATA/personal/Documents
+export BLOG=$DOCS/blog
+export BOOK=$DOCS/ebook
 export PROF=$DATA/professional
 export WC=$PROF/jobs/writing-center
 export MT=$PROF/jobs/medtech
-export BUKA=$PROF/jobs/bukalapak
 export ACDM=$PROF/Documents/academy
 export PHD=$PROF/Documents/academy/_postgrad/PhD-course
 export PYENV=$DATA/personal/programs/pyenv # PyEnv root folder
@@ -80,5 +80,21 @@ export QT_STYLE_OVERRIDE=kvantum
 export XDG_RUNTIME_DIR=$DATA/lamuri/runtime
 #export PULSE_SERVER=unix:/tmp/pulse-socket
 
+# >>> conda initialize >>>
+# !! Contents within this block are managed by 'conda init' !!
+__conda_setup="$('/home/lam/data/personal/programs/miniconda/v3/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
+if [ $? -eq 0 ]; then
+    eval "$__conda_setup"
+else
+    if [ -f "/home/lam/data/personal/programs/miniconda/v3/etc/profile.d/conda.sh" ]; then
+        . "/home/lam/data/personal/programs/miniconda/v3/etc/profile.d/conda.sh"
+    else
+        export PATH="/home/lam/data/personal/programs/miniconda/v3/bin:$PATH"
+    fi
+fi
+unset __conda_setup
+# <<< conda initialize <<<
+
 # Add `pyenv` path
 eval "$(pyenv init -)"
+
