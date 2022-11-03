@@ -2,16 +2,16 @@ runtime! archlinux.vim
 
 "	PLUGIN
 call plug#begin('~/.vim/plugged')
-Plug 'vim-pandoc/vim-rmarkdown'		" RMarkdown function through vim
-Plug 'nathangrigg/vim-beancount' 	" Beancount plugin
+Plug 'vim-pandoc/vim-rmarkdown'		    " RMarkdown function through vim
+Plug 'nathangrigg/vim-beancount' 	    " Beancount plugin
 Plug 'vim-pandoc/vim-pandoc-syntax' 	" Highlight pandoc syntax
-Plug 'lilydjwg/colorizer' 		" Colorize #RRGGBB etc
-Plug 'vim-syntastic/syntastic' 		" File syntax
-Plug 'vim-airline/vim-airline' 		" Airline..
+Plug 'quarto-dev/quarto-vim'            " Highlight quarto syntax
+Plug 'lilydjwg/colorizer' 	            " Colorize #RRGGBB etc
+Plug 'vim-syntastic/syntastic' 		    " File syntax
+Plug 'vim-airline/vim-airline' 		    " Airline..
 Plug 'vim-airline/vim-airline-themes' 	" ..and its theme
-Plug 'jpalardy/vim-slime'		" Slime plug-in to interpret code
+Plug 'jpalardy/vim-slime'		        " Slime plug-in to interpret code
 Plug 'neo4j-contrib/cypher-vim-syntax'	" Syntax highlight for cypher
-Plug 'thalesmello/lkml.vim'
 call plug#end()
 
 " Lilypond integration
@@ -40,7 +40,7 @@ let g:syntastic_python_checkers = ['python3']
 
 " Airline config
 let g:airline_powerline_fonts = 0
-let g:airline_theme = 'peaksea'
+let g:airline_theme = 'atomic'
 let g:airline#extensions#tabline#enabled = 1
 
 " Vim slime config
