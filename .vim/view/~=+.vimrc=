@@ -26,6 +26,7 @@ setlocal buftype=
 setlocal nocindent
 setlocal cinkeys=0{,0},0),0],:,0#,!^F,o,O,e
 setlocal cinoptions=
+setlocal cinscopedecls=public,protected,private
 setlocal cinwords=if,else,while,do,for,switch
 setlocal colorcolumn=
 setlocal comments=sO:\"\ -,mO:\"\ \ ,eO:\"\",:\"
@@ -49,6 +50,7 @@ setlocal expandtab
 if &filetype != 'vim'
 setlocal filetype=vim
 endif
+setlocal fillchars=
 setlocal fixendofline
 setlocal foldcolumn=0
 setlocal foldenable
@@ -126,10 +128,12 @@ setlocal termwinscroll=10000
 setlocal termwinsize=
 setlocal textwidth=78
 setlocal thesaurus=
+setlocal thesaurusfunc=
 setlocal noundofile
 setlocal undolevels=-123456
 setlocal varsofttabstop=
 setlocal vartabstop=
+setlocal virtualedit=
 setlocal wincolor=
 setlocal nowinfixheight
 setlocal nowinfixwidth
@@ -163,11 +167,11 @@ normal! zc
 normal! zo
 55
 normal! zc
-let s:l = 15 - ((14 * winheight(0) + 35) / 71)
+let s:l = 8 - ((5 * winheight(0) + 27) / 54)
 if s:l < 1 | let s:l = 1 | endif
 keepjumps exe s:l
 normal! zt
-keepjumps 15
+keepjumps 8
 normal! 01|
 let &g:so = s:so_save | let &g:siso = s:siso_save
 nohlsearch

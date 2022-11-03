@@ -1,4 +1,4 @@
-" File for xaringan in rmarkdown (custom ext `*.Rmarkdown`)
+" For `*.qmd`
 
 setlocal shiftwidth=2
 setlocal tabstop=2
@@ -11,11 +11,10 @@ abbr -> $\to$
 function! FoldMD()
 	let line = getline(v:lnum)
 	let prior = getline(v:lnum-1)
-	let after = getline(v:lnum+1)
-	if match(line, '^---') >= 0 " && v:lnum == 1
-		return ">1"	" yaml and remark.js slide
-        elseif match(after, '^---') >=0
-                return "<1"
+	if match(line, '^#\(.*[|~]\)\@!') >= 0
+		return ">1"	" headings
+	elseif match(line, '^---') >= 0 && v:lnum == 1
+		return ">2"	" yaml
 	elseif match(line, '^`*{') >= 0
 		return ">2"	" code block
 	elseif match(prior, '^```$') >= 0

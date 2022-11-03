@@ -1,20 +1,50 @@
 #!/bin/bash
 
-# Copy local files to cloud repo
-rclone copy -PuL $PROF/jobs/faal fkui:/fisiologi-biofisika-kedokteran
-rclone copy -PuL $PROF/jobs/writing-center imeri:/writing-center
-rclone copy -PuL $PROF/jobs/medtech imeri:/medtech
-rclone move -PuL $DATA/personal/Videos/.private private:/
-rclone copy -PuL $DATA/personal/Documents/ebook ebook:/
+## FUNC
 
-# Dump local data to cloud repo
-rclone copy -PuL $DATA/personal data:/personal
-rclone copy -PuL $DATA/professional data:/professional
-rclone copy -PuL $DATA/virtual/OS data:/virtual/OS
+prof() {
+        echo "Synchronizing $PROF"
+        rclone copy -PuL $PROF data:/professional
+        rclone copy -PuL data:/professional/jobs/faal fkui:/fisiologi-biofisika-kedokteran
+        rclone copy -PuL data:/professional/jobs/writing-center imeri:/writing-center
+        rclone copy -PuL data:/professional/jobs/medtech imeri:/medtech
+}
 
-# Synchornize cloud repos
-rclone sync -PuL data:/professional professional:/
-rclone sync -PuL data:/professional/Documents/academy/_postgrad/PhD-course phd:/
-rclone sync -PuL imeri:/writing-center onedrive:/
-rclone sync -PuL ebook:/ book:/
-rclone sync -PuL ebook:/ mt-reading:/
+personal() {
+        echo "Synchronizing personal and private data"
+        rclone move -PuL $DATA/personal/Videos/.private private:/
+        rclone copy -PuL private:/S amarrylan:/
+        rclone copy -PuL private:/M amarrylan:/
+        rclone copy -PuL private:/B amarrylan:/
+        rclone copy -PuL private:/F amarrylan:/
+}
+
+ebook() {
+        echo "Synchronizing the ebook repository"
+        rclone copy -PuL $DATA/personal/Documents/ebook ebook:/
+        rclone sync -PuL ebook:/ book:/
+        rclone sync -PuL ebook:/ mt-reading:/
+}
+
+dump() {
+        echo "Dumping the $DATA/virutal and $DATA/personal"
+        rclone copy -PuL $DATA/virtual/OS data:/virtual/OS
+        rclone copy -PuL $DATA/personal data:/personal
+}
+
+all() {
+        echo "Performing all operations"
+        rclone sync -PuL data:/professional professional:/
+        rclone sync -PuL data:/professional/Documents/academy/_postgrad/PhD-course phd:/
+        rclone sync -PuL imeri:/writing-center onedrive:/
+}
+
+
+## SYNC
+
+case $1 in
+        help) echo "Help!" ;;
+        prof*|job*) prof ;;
+        pers*|priv*) personal ;;
+        *) prof && personal && ebook && dump && all ;;
+esac
