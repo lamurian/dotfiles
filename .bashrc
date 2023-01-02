@@ -94,7 +94,7 @@ else
 fi
 unset __conda_setup
 # <<< conda initialize <<<
-export PATH="/home/lam/data/personal/programs/miniconda/v3/bin:$PATH"
+export PATH="$PATH:/home/lam/data/personal/programs/miniconda/v3/bin"
 
 # Add `pyenv` path
 eval "$(pyenv init -)"
