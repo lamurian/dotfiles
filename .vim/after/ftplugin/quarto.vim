@@ -5,6 +5,7 @@ setlocal tabstop=2
 setlocal softtabstop=2
 setlocal expandtab
 setlocal spell
+setlocal autoindent
 abbr -> $\to$
 
 " Foldexpr for markdown flavours
@@ -19,6 +20,10 @@ function! FoldMD()
 		return ">2"	" code block
 	elseif match(prior, '^```$') >= 0
 		return "<2"	" end of code block
+	elseif match(line, '^:\+ {') >= 0
+		return ">2"	" class
+	elseif match(prior, '^:\+$') >= 0
+		return "<2"	" end of class
 	else
 		return "="
 	endif
