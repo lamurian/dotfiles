@@ -39,8 +39,24 @@ conf() {
 }
 
 blog() {
-        # Edit blog content
-        vim $(find $BLOG -iregex '.*R?md' | fzf -m)
+    # Edit blog content
+    vim $(find $BLOG -iregex '.*R?md' | fzf -m)
+}
+
+book () {
+    # Read book in terminal
+    BOOKPATH=$(find $BOOK -iregex '.*\(pdf\|epub\)' | fzf -m)
+    BASE=$(basename $BOOKPATH)
+    EXT=$(echo $BASE | cut -d "." -f 2)
+    echo $BASE with an extension of $EXT
+    case $EXT in
+        pdf)
+            fbpdf $BOOKPATH
+            ;;
+        epub)
+            bk $BOOKPATH
+            ;;
+    esac
 }
 
 force_color_prompt=yes
@@ -57,7 +73,7 @@ export PHD=$PROF/Documents/academy/_postgrad/PhD-course
 export PYENV=$DATA/personal/programs/pyenv # PyEnv root folder
 export FLUTTER=$DATA/personal/programs/flutter # Flutter root folder
 export SDK=$DATA/personal/programs/android-sdk # Android ANDROID_SDK_ROOT root folder
-export PATH=$PATH:/shims:/home/lam/.local/bin:/home/lam/bin:$PYENV/bin:$FLUTTER/bin:$SDK/cmdline-tools/latest/bin:$SDK/emulator:$SDK/platform-tools:$SDK/tools:$SDK/tools/bin
+export PATH=$PATH:/shims:/home/lam/.local/bin:/home/lam/bin:$PYENV/bin:$FLUTTER/bin:$SDK/cmdline-tools/latest/bin:$SDK/emulator:$SDK/platform-tools:$SDK/tools:$SDK/tools/bin:$HOME/.cargo/bin
 
 export LC_ALL=en_US.UTF-8
 export LANG=en_US.UTF-8
@@ -98,3 +114,6 @@ export PATH="$PATH:/home/lam/data/personal/programs/miniconda/v3/bin"
 
 # Add `pyenv` path
 eval "$(pyenv init -)"
+
+# Created by `pipx` on 2023-01-19 08:18:24
+export PATH="$PATH:/home/lam/.local/bin"
