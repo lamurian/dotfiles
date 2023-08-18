@@ -1,10 +1,10 @@
 # Function to call wm
 call_i3() {
-	exec i3
+	exec dbus-run-session i3
 }
 
 call_bspwm() {
-	exec bspwm
+	exec dbus-run-session bspwm
 }
 
 call_dwm() {
@@ -12,7 +12,7 @@ call_dwm() {
 	sxhkd &
 	# Require `status` script from t480 branch in dotfiles git
 	while true; do xsetroot -name " `status pwr` "; sleep 5s; done &
-	exec dwm
+	exec dbus-run-session dwm
 }
 
 call_dwm_mod() {
@@ -20,7 +20,7 @@ call_dwm_mod() {
 	sxhkd &
 	# Require `status` script from t480 branch in dotfiles git
 	while true; do xsetroot -name " `status pwr` "; sleep 5s; done &
-	exec /home/lam/data/personal/programs/suckless/dwm/dwm
+	exec dbus-run-session /home/lam/data/personal/programs/suckless/dwm/dwm
 }
 
 call_min() {
