@@ -1,0 +1,52 @@
+#!/bin/bash
+
+# Create directories
+createdir() {
+    echo "Creting directories"
+    mkdir -p \
+        data/{raw,processed} \
+        docs/_source \
+        render \
+        src/{R,python,sql,bash}
+    touch \
+        data/.gitignore \
+        data/{raw,processed}/.gitignore \
+        docs/.gitignore \
+        docs/_source/.gitignore \
+        src/.gitignore
+    echo "Done!"
+}
+
+# Setting up `renv`
+setrenv() {
+    R --vanilla -q -e "renv::init()"
+}
+
+# Initialize git
+setgit() {
+    echo "Initializing git repository"
+    git init
+    wget https://gist.githubusercontent.com/lamurian/2aff7a79a12e4d5673516a4f62eb3644/raw/e96cb6d74cc3476a521db237531afa12a84bfd6f/.gitignore -O .gitignore
+    wget https://gist.githubusercontent.com/lamurian/2aff7a79a12e4d5673516a4f62eb3644/raw/3ff614d7ec7c782e90803d316a366b3c136c1b9e/README -O README
+    wget https://gist.githubusercontent.com/lamurian/2aff7a79a12e4d5673516a4f62eb3644/raw/13cef8a99a814451bd1de8f782ecff517efd26bb/data-README -O data/README
+    git add --all
+    git commit .gitignore -m "Initialize project repository"
+    git commit renv.lock .Rprofile renv/activate.R renv/.gitignore -m "Track R packages with renv"
+    git commit --all -m "Preserve the directory structure"
+    echo "Done!"
+}
+
+# Run everything
+init() {
+    createdir && setrenv && setgit
+}
+
+# Call the project script
+[ -z $1 ] && ARGS=$(init) || ARGS=$1
+case $ARGS in
+        createdir|dir|mkdir) createdir ;;
+        setgit) setgit ;;
+        renv) setrenv ;;
+        init) init ;;
+        *) echo "Command is not supported, please issue dir, git, renv, or init. Use init for first-time run.";;
+esac
