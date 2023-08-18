@@ -2,48 +2,22 @@
 
 ## FUNC
 
-prof() {
-        echo "Synchronizing $PROF"
-        rclone copy -PuL $PROF onedrive-ui:professional
-        #rclone copy -PuL data:/professional/jobs/faal fkui:/fisiologi-biofisika-kedokteran
-        #rclone copy -PuL data:/professional/jobs/writing-center imeri:/writing-center
-        #rclone copy -PuL data:/professional/jobs/medtech imeri:/medtech
-}
-
-personal() {
-        echo "Synchronizing personal and private data"
-        rclone move -PuL $DATA/personal/Videos/.private onedrive-ui:personal/Videos/.private
-        rclone copy -PuL onedrive-ui:personal/Videos/.private/S amarrylan:/
-        rclone copy -PuL onedrive-ui:personal/Videos/.privat:/M amarrylan:/
-        rclone copy -PuL onedrive-ui:personal/Videos/.privat:/B amarrylan:/
-        rclone copy -PuL onedrive-ui:personal/Videos/.privat:/F amarrylan:/
-}
-
-ebook() {
-        echo "Synchronizing the ebook repository"
-        rclone copy -PuL $DATA/personal/Documents/ebook onedrive-ui:personal/Documents/ebook
-        rclone sync -PuL onedrive-ui:personal/Documents/ebook mt-reading:/
-}
-
-dump() {
-        echo "Dumping the $DATA/virutal and $DATA/personal"
-        rclone copy -PuL $DATA/virtual/OS onedrive-ui:/virtual/OS
-        rclone copy -PuL $DATA/personal onedrive-ui:/personal
-}
-
-all() { # Currently not used
-        echo "Performing all operations"
-        rclone sync -PuL data:/professional professional:/
-        rclone sync -PuL data:/professional/Documents/academy/_postgrad/PhD-course phd:/
-        rclone sync -PuL imeri:/writing-center onedrive:/
+choose() { # Choose which directory to sync
+    find $DATA/{personal,professional} \
+        -maxdepth 2 \
+        -regex ".*\(git\|log\|cache\|programs\).*" -prune \
+        -o -name "*" -type d -print \
+    | fzf
 }
 
 
 ## SYNC
 
-case $1 in
-        help) echo "Help!" ;;
-        prof*|job*) prof ;;
-        pers*|priv*) personal ;;
-        *) prof && personal && ebook && dump ;;
-esac
+DIR=$(choose | sed "s/\/home\/lam\/data\///g")
+
+rclone copy -PuL $DATA/$DIR onedrive-ui:$DIR/.log
+
+for dirname in $(find $DATA/$DIR/* -maxdepth 0 -type d | sed "s/.*\///"); do
+    echo "Synchronizing $dirname in $DIR"
+    rclone sync -PuL $DATA/$DIR/$dirname onedrive-ui:$DIR/$dirname
+done
