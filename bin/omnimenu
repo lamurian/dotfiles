@@ -10,8 +10,7 @@ menu() {
 # Flatpak menu
 flist () {
         # List installed package
-        flatpak list | tail -n +1 | awk -F '\t' '/com|us\.|jasp/{print $2}'
-
+        flatpak list | tail -n +1 | awk -F '\t' '/com|us\.|jasp|tele/{print $2}'
 }
 
 frun() {
@@ -45,7 +44,7 @@ bookmenu() {
         EXT='.*\(pdf\|epub\)'
         BOOKDIR='/home/lam/data/professional /home/lam/data/personal/Documents/ebook'
         PDF=$(find $BOOKDIR -type f -iregex $EXT | dmenu -i -l 5 -p "Read:")
-        [ ! -z "$PDF" ] && zathura $PDF
+        [ ! -z "$PDF" ] && zathura "$PDF"
 }
 
 # Videos menu
@@ -54,7 +53,7 @@ vidmenu() {
         EXT='.*\(mp4\|mpv\|mkv\|avi\|webm\|flv\|mov\|wmv\|m4p\|m4v\|3gp\)'
         VIDDIR='/home/lam/data/personal/Videos /home/lam/.tmp'
         VID=$(find $VIDDIR -type f -iregex $EXT | dmenu -i -l 5 -p "Watch:")
-        [ ! -z "$VID" ] && mpv $VID
+        [ ! -z "$VID" ] && mpv "$VID"
 }
 
 # Record menu
@@ -64,7 +63,7 @@ recmenu() {
         case $ARGS in
                 start) scast.sh & sleep 0.2s && dunstify "Recording" "PID: $(pgrep ffmpeg | tail -n1)" ;;
                 stop) kill $(pgrep ffmpeg | dmenu -p "Stop PID:") ;;
-                select) ffcast -s ffmpeg -f x11grab -r 60 -show_region 1 -s %s -i %D+%c -f pulse -i default /home/lam/data/personal/Videos/_recording/$(date +%y%m%d_%H%M%S.mp4)
+                select) ffcast -s ffmpeg -f x11grab -r 20 -show_region 1 -s %s -i %D+%c -f pulse -i default /home/lam/data/personal/Videos/_recording/$(date +%y%m%d_%H%M%S.mp4)
         esac
 }
 

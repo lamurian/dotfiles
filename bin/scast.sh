@@ -2,7 +2,7 @@
 
 # Little script to produce screen cast
 
-[ -z $1 ] && OUTPUT=$DATA/private/Videos/_recording/$(date +%y%m%d_%H%M%S.mp4) || OUTPUT=${1}
+[ -z $1 ] && OUTPUT=$DATA/personal/Videos/_recording/$(date +%y%m%d_%H%M%S.mp4) || OUTPUT=${1}
 MIC=$(pactl list sources short | awk '{print $2}' | grep input) # Record audio input (mic), same as `default`
 SIZE=$(xrandr -q --current | grep \* | awk '{print $1}' | head -n 1)
 SOUND=$(pactl list sources short | awk '{print $2}' | grep mon) # Record audio output from the desktop
