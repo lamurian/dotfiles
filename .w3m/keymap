@@ -1,35 +1,273 @@
-# Custom button:
-# Ctrl  : C-, ^
-# Escape: ESC-, M-, ^[
-# Space : SPC, ' '
-# Tab   : TAB, ^i, ^I
-# Delete: DEL, ^?
-# Up    : UP, ^[[A
-# Down  : DOWN, ^[[B
-# Right : RIGHT, ^[[C
-# Left  : LEFT, ^[[D
+## MARK
 
-# Navigation
-keymap h	MOVE_LEFT
-keymap j	MOVE_DOWN
-keymap k	MOVE_UP
-keymap l	MOVE_RIGHT
-keymap C-d	NEXT_PAGE
-keymap C-u	PREV_PAGE
-keymap C-e	UP
-keymap C-y	DOWN
+# Mark important part of the web page
+keymap m  MARK
+keymap .  NEXT_MARK
+keymap ,  PREV_MARK
 
-# Tab handling
-keymap J	NEXT_TAB
-keymap K	PREV_TAB
-keymap x	CLOSE_TAB
+# Mark all search terms
+keymap \"   REG_MARK
 
-# Link handling
-keymap ]	NEXT_LINK
-keymap [	PREV_LINK
-keymap f	GOTO_LINK
-keymap F	TAB_LINK
+# Mark URL-like strings as anchors
+keymap :    MARK_URL
 
-# Highlighted search
-keymap /	ISEARCH
-keymap ?	ISEARCH_BACK
+# Mark current word as URL
+keymap ";"  MARK_WORD
+
+keymap M-:  MARK_MID
+
+
+## NAVIGATE
+
+# Scroll screen up one line
+keymap C-e  UP
+keymap d    UP
+
+# Scroll screen down one line
+keymap C-y  DOWN
+keymap u    DOWN
+
+# Scroll screen left
+keymap M-,  LEFT
+
+# Scroll screen right
+keymap M-.  RIGHT
+
+# Movement across the page
+keymap h    MOVE_LEFT
+keymap C-p  MOVE_UP
+keymap k    MOVE_UP
+keymap C-n  MOVE_DOWN
+keymap j    MOVE_DOWN
+keymap l    MOVE_RIGHT
+keymap M-<  SHIFT_LEFT
+keymap M->  SHIFT_RIGHT
+keymap W    PREV_WORD
+keymap b    PREV_WORD
+keymap w    NEXT_WORD
+
+# Various ways to to proceed page by page
+keymap =    NEXT_PAGE
+keymap +    NEXT_PAGE
+keymap C-d  NEXT_PAGE
+keymap SPC  NEXT_PAGE
+keymap DOWN NEXT_PAGE
+keymap -    PREV_PAGE
+keymap C-u  PREV_PAGE
+keymap UP   PREV_PAGE
+
+keymap TAB  NEXT_LINK
+keymap M-TAB PREV_LINK
+
+# First link on page
+keymap [    LINK_BEGIN
+
+# Last link on page
+keymap ]    LINK_END
+
+keymap C-a  LINE_BEGIN
+keymap 0    LINE_BEGIN
+keymap \^   LINE_BEGIN
+keymap $    LINE_END
+
+# Top of page
+keymap g    BEGIN
+
+# Bottom of page
+keymap G    END
+
+# Undo last movement/jump across the page
+keymap (    UNDO
+
+# Redo the same
+keymap )    REDO
+
+keymap M-g  GOTO_LINE
+keymap Z    CENTER_H
+keymap z    CENTER_V
+
+
+## SEARCH
+
+# Incremental search
+keymap C-r  ISEARCH_BACK
+keymap C-s  ISEARCH
+
+# Regular search
+keymap /    SEARCH
+keymap ?    SEARCH_BACK
+keymap N    SEARCH_PREV
+keymap n    SEARCH_NEXT
+
+
+## BUFFER
+
+# Previous buffer, close current
+keymap B    BACK
+
+# Navigate back without deleting current buffer
+keymap H        PREV
+keymap <        PREV
+keymap LEFT     PREV
+
+# Navigate forward without deleting current buffer
+keymap L        NEXT
+keymap >        NEXT
+keymap RIGHT    NEXT
+
+# Display current buffer URL
+keymap c    PEEK
+
+# Pop-up menu with open buffers
+keymap s    SELECT_MENU
+
+# Open current buffer in an external browser (app)
+keymap O    EXTERN
+
+# Open new URL
+keymap C-l  GOTO
+keymap C-L  GOTO_RELATIVE
+
+# Open local file
+keymap V    LOAD
+
+# edit buffer (the textual rendering, not the html source) in VIM (or editor)
+keymap M-e  EDIT_SCREEN
+
+# Edit source in VIM (or editor)
+keymap E    EDIT
+
+keymap |    PIPE_BUF
+
+# Save buffer
+keymap S    SAVE_SCREEN
+
+# Save html (source)
+keymap M-s  SAVE
+
+keymap C-l  REDRAW
+
+# Reload source URL
+keymap R    RELOAD
+
+# View source
+keymap v    VIEW
+
+
+## TABS
+
+keymap {        PREV_TAB
+keymap K        PREV_TAB
+keymap }        NEXT_TAB
+keymap J        NEXT_TAB
+
+# Move tabs around
+keymap M-{      TAB_LEFT
+keymap M-}      TAB_RIGHT
+
+keymap C-q      CLOSE_TAB
+keymap C-w      CLOSE_TAB
+keymap x        CLOSE_TAB
+keymap C-t      NEW_TAB
+keymap t        NEW_TAB
+
+
+## LINKS
+
+# Open link in new tab
+keymap F    TAB_LINK
+keymap a    SAVE_LINK
+
+# Open current link in ext browser (application)
+keymap o    EXTERN_LINK
+keymap M-M  EXTERN_LINK
+
+# menu of links
+keymap M-l  LIST_MENU
+
+# Another link list
+keymap T    LIST
+
+# jump to link in page
+keymap M-M  MOVE_LIST_MENU
+
+
+## IMAGE
+
+# Hover over image placeholder to view externally
+keymap I    VIEW_IMAGE
+
+keymap M-I  SAVE_IMAGE
+
+# Peek at image URL while hovered over placeholder
+keymap i    PEEK_IMG
+
+
+## MISC
+
+# Trigger input field submit action
+keymap C-c  SUBMIT
+
+# Current line #, total lines, cols, etc
+keymap C-g  LINE_INFO
+
+# Browsing history
+keymap C-h  HISTORY
+ 
+# Options page
+keymap C-o  OPTIONS
+
+# Reload config options
+keymap M-r  REINIT
+
+keymap M-o  SET_OPTION
+keymap C-z  SUSPEND
+keymap !    SHELL
+keymap @    READ_SHELL
+
+# page info, including the response HTTP header
+keymap M-+  INFO
+
+keymap D    DOWNLOAD_LIST
+
+# View the key mappings (with w3m descriptions), including the possible unassigned commands
+keymap P    HELP
+keymap M-m  MOUSE_TOGGLE
+keymap q    QUIT
+keymap Q    EXIT
+keymap r    VERSION
+
+# Optionally configurable menu (~/.w3m/menu)
+keymap M    MENU
+keymap M-a  ADD_BOOKMARK
+
+# Bookmark page
+keymap M-b BOOKMARK
+
+# Run internal command
+keymap M-c COMMAND
+
+# Invoke the external dictionary with input word
+keymap M-w DICT_WORD
+
+# Invoke the dictionary with word under cursor
+keymap M-W DICT_WORD_AT
+
+
+## MACROS
+
+# Specific pages shortcuts. Also showcases macros via COMMAND
+
+# Open search engine, proceed to and select the search box
+keymap M-/ COMMAND  "GOTO https://duckduckgo.com/lite/; NEXT_LINK; GOTO_LINK"
+
+keymap M-\" GOTO     http://wttr.in/?lang=fr&m
+
+# Add URL to the first bookmark section in one stroke
+keymap M-8 COMMAND "ADD_BOOKMARK; LINK_END; GOTO_LINK"
+
+# Proceed straight to these user-defined commands in the help page
+keymap M-? COMMAND "HELP; SEARCH User-Defined; NEXT_PAGE; CENTER_V"
+
+# Pipe to an external table-to-csv converter, then edit the rendered buffer
+keymap M-T COMMAND "VIEW; PIPE_BUF tabletocsv; EDIT_SCREEN"
