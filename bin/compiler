@@ -1,5 +1,4 @@
 #!/usr/bin/sh
-
 # Reimplemented from: https://github.com/LukeSmithxyz/voidrice/blob/master/.local/bin/compiler
 
 file=$(readlink -f "$1")
@@ -11,6 +10,7 @@ cd "$dir"
 
 case $file in
         *\.md) pandoc "$file" -o "$base"."$ext" ;;
+        *\.qmd) quarto render $file --cache-refresh;;
         *\.Rmd|*\.Rmarkdown) echo "require(rmarkdown); rmarkdown::render('$file', output_format='all', quiet=TRUE)" | R -q --vanilla ;;
         *\.tex) xelatex -interaction=nonstopmode -output-directory="$dir" "$file" ;;
         *\.ly) lilypond -o "$base" "$file" ;;
