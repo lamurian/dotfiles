@@ -1,0 +1,11 @@
+#!/bin/bash
+
+INDIR=$(realpath $(find $pwd -type d | fzf --prompt="Directory containing files to link: "))
+OUTDIR=$(realpath $(find $pwd -type d | fzf --prompt="Output directory: "))
+
+for f in $(ls $INDIR); do
+    echo "Linking $f"
+    ln -f $INDIR/$f $OUTDIR/$f
+done
+
+echo "Done!"
