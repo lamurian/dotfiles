@@ -11,7 +11,7 @@ Plug 'vim-syntastic/syntastic' 		    " File syntax
 Plug 'vim-airline/vim-airline' 		    " Airline..
 Plug 'vim-airline/vim-airline-themes' 	" ..and its theme
 Plug 'jpalardy/vim-slime'		        " Slime plug-in to interpret code
-Plug 'neo4j-contrib/cypher-vim-syntax'	" Syntax highlight for cypher
+Plug 'junegunn/fzf.vim'             	" Syntax highlight for cypher
 call plug#end()
 
 " Lilypond integration
@@ -55,11 +55,11 @@ let g:netrw_banner = 0
 "	KEYMAP
 
 " Buffer and tab management
-nnoremap tn :FZF<CR>
+nnoremap tn :Files<CR>
+nnoremap tN :GFiles<CR>
+nnoremap tb :Buffers<CR>
 nnoremap tk :bprev<CR>
 nnoremap tj :bnext<CR>
-nnoremap th :bfirst<CR>
-nnoremap tl :blast<CR>
 nnoremap tq :bdelete<CR>
 nnoremap ttn :tabnew<CR>
 nnoremap ttk :tabprev<CR>
