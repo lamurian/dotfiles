@@ -78,6 +78,7 @@ setlocal iskeyword=@,48-57,_,192-255,#
 setlocal keywordprg=:help
 setlocal nolinebreak
 setlocal nolisp
+setlocal lispoptions=
 setlocal lispwords=
 setlocal nolist
 setlocal listchars=
@@ -106,6 +107,7 @@ setlocal showbreak=
 setlocal sidescrolloff=-1
 setlocal signcolumn=auto
 setlocal nosmartindent
+setlocal nosmoothscroll
 setlocal softtabstop=4
 setlocal nospell
 setlocal spellcapcheck=[.?!]\\_[\\])'\"\	\ ]\\+
@@ -167,11 +169,11 @@ normal! zc
 normal! zo
 55
 normal! zc
-let s:l = 8 - ((5 * winheight(0) + 27) / 54)
+let s:l = 14 - ((11 * winheight(0) + 22) / 44)
 if s:l < 1 | let s:l = 1 | endif
 keepjumps exe s:l
 normal! zt
-keepjumps 8
+keepjumps 14
 normal! 01|
 let &g:so = s:so_save | let &g:siso = s:siso_save
 nohlsearch
