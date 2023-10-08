@@ -86,7 +86,7 @@ mpdmenu() {
 case $ARGS in
         music) mpdmenu ;;
         flatpak) flatmenu ;;
-        pass) passmenu -i -p "Pass:" ;;
+        pass) gopass sync & gopass show -c $(gopass ls --flat | dmenu -p "Search Password:");;
         power) pwrmenu ;;
         read) bookmenu ;;
         record) recmenu ;;
