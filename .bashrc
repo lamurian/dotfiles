@@ -96,6 +96,9 @@ export QT_STYLE_OVERRIDE=kvantum
 export XDG_RUNTIME_DIR=$DATA/lamuri/runtime
 #export PULSE_SERVER=unix:/tmp/pulse-socket
 
+# Integrate FZF to bash
+eval "$(fzf --bash)"
+
 # >>> conda initialize >>>
 # !! Contents within this block are managed by 'conda init' !!
 __conda_setup="$('/home/lam/data/personal/programs/miniconda/v3/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
