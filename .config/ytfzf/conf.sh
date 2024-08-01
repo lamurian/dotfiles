@@ -1,0 +1,11 @@
+is_detach=1
+is_loop=1
+search_again=1
+show_thumbnails=1
+async_thumbnails=1
+notify_playing=1
+fzf_preview_side=left
+nsfw=1
+pages_to_scrape=5
+max_thread_count=4
+multi_search=0
