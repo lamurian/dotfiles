@@ -12,8 +12,10 @@ function! FoldCode()
 	let prior = getline(v:lnum-1)
 	if match(line, '^#\+\s') >= 0
 		return ">1"	" comment
-	elseif match(line, '\(<-\|=\)\s\+func') >= 0
+	elseif match(line, '\(<-\)\s\+func') >= 0
 		return ">2"	" function
+        elseif match(line, '^\s\+#\+\s') >= 0
+		return ">3"	" nested comment
 	elseif match(line, '^$') >= 0 && match(prior, '^$') >= 0
 		return 0	" consecutive empty lines
 	else
