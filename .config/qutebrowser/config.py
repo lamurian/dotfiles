@@ -36,29 +36,6 @@ config.load_autoconfig(False)
 #   - no-unknown-3rdparty: Accept cookies from the same origin only, unless a cookie is already set for the domain. On QtWebEngine, this is the same as no-3rdparty.
 #   - never: Don't accept cookies at all.
 config.set('content.cookies.accept', 'all', 'chrome-devtools://*')
-
-# Which cookies to accept. With QtWebEngine, this setting also controls
-# other features with tracking capabilities similar to those of cookies;
-# including IndexedDB, DOM storage, filesystem API, service workers, and
-# AppCache. Note that with QtWebKit, only `all` and `never` are
-# supported as per-domain values. Setting `no-3rdparty` or `no-
-# unknown-3rdparty` per-domain on QtWebKit will have the same effect as
-# `all`. If this setting is used with URL patterns, the pattern gets
-# applied to the origin/first party URL of the page making the request,
-# not the request URL. With QtWebEngine 5.15.0+, paths will be stripped
-# from URLs, so URL patterns using paths will not match. With
-# QtWebEngine 5.15.2+, subdomains are additionally stripped as well, so
-# you will typically need to set this setting for `example.com` when the
-# cookie is set on `somesubdomain.example.com` for it to work properly.
-# To debug issues with this setting, start qutebrowser with `--debug
-# --logfilter network --debug-flag log-cookies` which will show all
-# cookies being set.
-# Type: String
-# Valid values:
-#   - all: Accept all cookies.
-#   - no-3rdparty: Accept cookies from the same origin only. This is known to break some sites, such as GMail.
-#   - no-unknown-3rdparty: Accept cookies from the same origin only, unless a cookie is already set for the domain. On QtWebEngine, this is the same as no-3rdparty.
-#   - never: Don't accept cookies at all.
 config.set('content.cookies.accept', 'all', 'devtools://*')
 
 # Allow websites to share screen content.
@@ -68,45 +45,10 @@ config.set('content.cookies.accept', 'all', 'devtools://*')
 #   - false
 #   - ask
 config.set('content.desktop_capture', True, 'https://meet.google.com')
-
-# Allow websites to share screen content.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.desktop_capture', True, 'https://meet.jit.si')
-
-# Allow websites to share screen content.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.desktop_capture', True, 'https://teams.microsoft.com')
-
-# Allow websites to share screen content.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.desktop_capture', True, 'https://us02web.zoom.us')
-
-# Allow websites to share screen content.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.desktop_capture', True, 'https://web.skype.com')
-
-# Allow websites to share screen content.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.desktop_capture', True, 'https://zoom.us')
 
 # Allow websites to request geolocations.
@@ -116,131 +58,9 @@ config.set('content.desktop_capture', True, 'https://zoom.us')
 #   - false
 #   - ask
 config.set('content.geolocation', False, 'https://bpjsketenagakerjaan.go.id')
-
-# Allow websites to request geolocations.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.geolocation', False, 'https://docheck.id')
-
-# Allow websites to request geolocations.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.geolocation', False, 'https://dparagon.com')
-
-# Allow websites to request geolocations.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.geolocation', False, 'https://linksehat.com')
-
-# Allow websites to request geolocations.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.geolocation', False, 'https://stylish-build-g9akv.cloud.serverless.com')
-
-# Allow websites to request geolocations.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.geolocation', False, 'https://web.budgetbakers.com')
-
-# Allow websites to request geolocations.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.geolocation', False, 'https://www.bpjsketenagakerjaan.go.id')
-
-# Allow websites to request geolocations.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.geolocation', False, 'https://www.btpn.com')
-
-# Allow websites to request geolocations.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.geolocation', False, 'https://www.byu.id')
-
-# Allow websites to request geolocations.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.geolocation', False, 'https://www.google.com')
-
-# Allow websites to request geolocations.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.geolocation', False, 'https://www.olx.co.id')
-
-# Allow websites to request geolocations.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.geolocation', False, 'https://www.petco.com')
-
-# Allow websites to request geolocations.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.geolocation', False, 'https://www.ralali.com')
-
-# Allow websites to request geolocations.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.geolocation', False, 'https://www.sehatq.com')
-
-# Allow websites to request geolocations.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.geolocation', False, 'https://www.tiket.com')
-
-# Allow websites to request geolocations.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.geolocation', False, 'https://www.upstation.asia')
-
-# Value to send in the `Accept-Language` header. Note that the value
-# read from JavaScript is always the global value.
-# Type: String
-config.set('content.headers.accept_language', '', 'https://matchmaker.krunker.io/*')
 
 # User agent to send.  The following placeholders are defined:  *
 # `{os_info}`: Something like "X11; Linux x86_64". * `{webkit_version}`:
@@ -257,86 +77,29 @@ config.set('content.headers.accept_language', '', 'https://matchmaker.krunker.io
 # JavaScript requires a restart.
 # Type: FormatString
 config.set('content.headers.user_agent', 'Mozilla/5.0 ({os_info}; rv:71.0) Gecko/20100101 Firefox/71.0', 'https://docs.google.com/*')
-
-# User agent to send.  The following placeholders are defined:  *
-# `{os_info}`: Something like "X11; Linux x86_64". * `{webkit_version}`:
-# The underlying WebKit version (set to a fixed value   with
-# QtWebEngine). * `{qt_key}`: "Qt" for QtWebKit, "QtWebEngine" for
-# QtWebEngine. * `{qt_version}`: The underlying Qt version. *
-# `{upstream_browser_key}`: "Version" for QtWebKit, "Chrome" for
-# QtWebEngine. * `{upstream_browser_version}`: The corresponding
-# Safari/Chrome version. * `{qutebrowser_version}`: The currently
-# running qutebrowser version.  The default value is equal to the
-# unchanged user agent of QtWebKit/QtWebEngine.  Note that the value
-# read from JavaScript is always the global value. With QtWebEngine
-# between 5.12 and 5.14 (inclusive), changing the value exposed to
-# JavaScript requires a restart.
-# Type: FormatString
-config.set('content.headers.user_agent', 'Mozilla/5.0 ({os_info}) AppleWebKit/{webkit_version} (KHTML, like Gecko) {upstream_browser_key}/{upstream_browser_version} Safari/{webkit_version}', 'https://web.whatsapp.com/')
-
-# User agent to send.  The following placeholders are defined:  *
-# `{os_info}`: Something like "X11; Linux x86_64". * `{webkit_version}`:
-# The underlying WebKit version (set to a fixed value   with
-# QtWebEngine). * `{qt_key}`: "Qt" for QtWebKit, "QtWebEngine" for
-# QtWebEngine. * `{qt_version}`: The underlying Qt version. *
-# `{upstream_browser_key}`: "Version" for QtWebKit, "Chrome" for
-# QtWebEngine. * `{upstream_browser_version}`: The corresponding
-# Safari/Chrome version. * `{qutebrowser_version}`: The currently
-# running qutebrowser version.  The default value is equal to the
-# unchanged user agent of QtWebKit/QtWebEngine.  Note that the value
-# read from JavaScript is always the global value. With QtWebEngine
-# between 5.12 and 5.14 (inclusive), changing the value exposed to
-# JavaScript requires a restart.
-# Type: FormatString
-config.set('content.headers.user_agent', 'Mozilla/5.0 ({os_info}; rv:90.0) Gecko/20100101 Firefox/90.0', 'https://accounts.google.com/*')
-
-# User agent to send.  The following placeholders are defined:  *
-# `{os_info}`: Something like "X11; Linux x86_64". * `{webkit_version}`:
-# The underlying WebKit version (set to a fixed value   with
-# QtWebEngine). * `{qt_key}`: "Qt" for QtWebKit, "QtWebEngine" for
-# QtWebEngine. * `{qt_version}`: The underlying Qt version. *
-# `{upstream_browser_key}`: "Version" for QtWebKit, "Chrome" for
-# QtWebEngine. * `{upstream_browser_version}`: The corresponding
-# Safari/Chrome version. * `{qutebrowser_version}`: The currently
-# running qutebrowser version.  The default value is equal to the
-# unchanged user agent of QtWebKit/QtWebEngine.  Note that the value
-# read from JavaScript is always the global value. With QtWebEngine
-# between 5.12 and 5.14 (inclusive), changing the value exposed to
-# JavaScript requires a restart.
-# Type: FormatString
 config.set('content.headers.user_agent', 'Mozilla/5.0 ({os_info}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99 Safari/537.36', 'https://*.slack.com/*')
+config.set('content.headers.user_agent', 'Mozilla/5.0 ({os_info}) AppleWebKit/{webkit_version} (KHTML, like Gecko) {upstream_browser_key}/{upstream_browser_version} Safari/{webkit_version}', 'https://web.whatsapp.com/')
+config.set('content.headers.user_agent', 'Mozilla/5.0 ({os_info}; rv:90.0) Gecko/20100101 Firefox/90.0', 'https://accounts.google.com/*')
 
 # Load images automatically in web pages.
 # Type: Bool
 config.set('content.images', True, 'chrome-devtools://*')
-
-# Load images automatically in web pages.
-# Type: Bool
 config.set('content.images', True, 'devtools://*')
 
 # Enable JavaScript.
 # Type: Bool
 config.set('content.javascript.enabled', True, 'chrome-devtools://*')
-
-# Enable JavaScript.
-# Type: Bool
 config.set('content.javascript.enabled', True, 'devtools://*')
-
-# Enable JavaScript.
-# Type: Bool
 config.set('content.javascript.enabled', True, 'chrome://*/*')
-
-# Enable JavaScript.
-# Type: Bool
 config.set('content.javascript.enabled', True, 'qute://*/*')
 
-# Allow websites to record audio.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.media.audio_capture', True, 'https://8x8.vc')
+# Allow locally loaded documents to access remote URLs.
+# Type: Bool
+config.set('content.local_content_can_access_remote_urls', True, 'file:///home/lam/data/lamuri/qutebrowser/userscripts/*')
+
+# Allow locally loaded documents to access other local URLs.
+# Type: Bool
+config.set('content.local_content_can_access_file_urls', False, 'file:///home/lam/data/lamuri/qutebrowser/userscripts/*')
 
 # Allow websites to record audio.
 # Type: BoolAsk
@@ -345,93 +108,15 @@ config.set('content.media.audio_capture', True, 'https://8x8.vc')
 #   - false
 #   - ask
 config.set('content.media.audio_capture', False, 'https://app.slack.com')
-
-# Allow websites to record audio.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.media.audio_capture', True, 'https://kemkes-go-id.zoom.us')
-
-# Allow websites to record audio.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.media.audio_capture', True, 'https://meet.jit.si')
-
-# Allow websites to record audio.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.media.audio_capture', True, 'https://teams.microsoft.com')
-
-# Allow websites to record audio.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.media.audio_capture', True, 'https://us02web.zoom.us')
-
-# Allow websites to record audio.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.media.audio_capture', True, 'https://us06web.zoom.us')
-
-# Allow websites to record audio.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.media.audio_capture', True, 'https://web.skype.com')
-
-# Allow websites to record audio.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.media.audio_capture', False, 'https://web.whatsapp.com')
-
-# Allow websites to record audio.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.media.audio_capture', True, 'https://who.zoom.us')
-
-# Allow websites to record audio.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.media.audio_capture', True, 'https://www.airmeet.com')
-
-# Allow websites to record audio.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.media.audio_capture', True, 'https://zoom.us')
-
-# Allow websites to record audio.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.media.audio_capture', True, 'https://meet.google.com')
 
 # Allow websites to record audio and video.
@@ -440,102 +125,15 @@ config.set('content.media.audio_capture', True, 'https://meet.google.com')
 #   - true
 #   - false
 #   - ask
-config.set('content.media.audio_video_capture', True, 'https://8x8.vc')
-
-# Allow websites to record audio and video.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.media.audio_video_capture', True, 'https://app.chime.aws')
-
-# Allow websites to record audio and video.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.media.audio_video_capture', True, 'https://kemkes-go-id.zoom.us')
-
-# Allow websites to record audio and video.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.media.audio_video_capture', True, 'https://meet.jit.si')
-
-# Allow websites to record audio and video.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.media.audio_video_capture', True, 'https://miro.com')
-
-# Allow websites to record audio and video.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.media.audio_video_capture', True, 'https://ome.tv')
-
-# Allow websites to record audio and video.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.media.audio_video_capture', True, 'https://teams.microsoft.com')
-
-# Allow websites to record audio and video.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.media.audio_video_capture', True, 'https://us02web.zoom.us')
-
-# Allow websites to record audio and video.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.media.audio_video_capture', True, 'https://us06web.zoom.us')
-
-# Allow websites to record audio and video.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.media.audio_video_capture', True, 'https://web.skype.com')
-
-# Allow websites to record audio and video.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.media.audio_video_capture', True, 'https://www.airmeet.com')
-
-# Allow websites to record audio and video.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.media.audio_video_capture', True, 'https://zoom.us')
-
-# Allow websites to record audio and video.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.media.audio_video_capture', True, 'https://meet.google.com')
 
 # Allow websites to record video.
@@ -544,94 +142,14 @@ config.set('content.media.audio_video_capture', True, 'https://meet.google.com')
 #   - true
 #   - false
 #   - ask
-config.set('content.media.video_capture', True, 'https://8x8.vc')
-
-# Allow websites to record video.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.media.video_capture', True, 'https://kemkes-go-id.zoom.us')
-
-# Allow websites to record video.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.media.video_capture', True, 'https://meet.jit.si')
-
-# Allow websites to record video.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.media.video_capture', True, 'https://quilgo.com')
-
-# Allow websites to record video.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.media.video_capture', True, 'https://teams.microsoft.com')
-
-# Allow websites to record video.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.media.video_capture', True, 'https://ujiansimak.ui.ac.id')
-
-# Allow websites to record video.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.media.video_capture', True, 'https://us02web.zoom.us')
-
-# Allow websites to record video.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.media.video_capture', True, 'https://web.skype.com')
-
-# Allow websites to record video.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.media.video_capture', False, 'https://web.whatsapp.com')
-
-# Allow websites to record video.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.media.video_capture', True, 'https://www.airmeet.com')
-
-# Allow websites to record video.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.media.video_capture', True, 'https://zoom.us')
-
-# Allow websites to record video.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.media.video_capture', True, 'https://meet.google.com')
 
 # Allow websites to show notifications.
@@ -640,655 +158,18 @@ config.set('content.media.video_capture', True, 'https://meet.google.com')
 #   - true
 #   - false
 #   - ask
-config.set('content.notifications.enabled', True, 'https://app-us2.wrike.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', True, 'https://app.chime.aws')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.notifications.enabled', True, 'https://app.element.io')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.notifications.enabled', True, 'https://app.slack.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://askinglot.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', True, 'https://attentive.zulipchat.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://blog.csdn.net')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.notifications.enabled', True, 'https://business.facebook.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://cajspirituality.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.notifications.enabled', True, 'https://chat.zulip.org')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://cloudminingprofy.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', True, 'https://colab.research.google.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://cryptotabbrowser.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.notifications.enabled', True, 'https://discourse.openehr.org')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://docheck.id')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://drfone.wondershare.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', True, 'https://drive.google.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', True, 'https://duo.google.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://en.mazec.info')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', True, 'https://gitlab.cloud.bukalapak.io')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://industri.kontan.co.id')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://inflameemanent.cam')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://joyofandroid.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.notifications.enabled', True, 'https://mail.google.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', True, 'https://medistree.odoo.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.notifications.enabled', True, 'https://medistree.zulipchat.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.notifications.enabled', True, 'https://medtech-imeri.zulipchat.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://megapolitan.kompas.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://money.kompas.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://neatmanga.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://pdhdrawings.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://plantuml.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://psychreel.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', True, 'https://push.getbeamer.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', True, 'https://python.zulipchat.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', True, 'https://redash-production.bukalapak.io')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://rumah.mitula.co.id')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://rumah.trovit.co.id')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://seller.shopee.co.id')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://semaths.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://semawur.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://shopee.co.id')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://style.tribunnews.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', True, 'https://supply-redash-production.bukalapak.io')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', True, 'https://teams.live.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', True, 'https://teams.microsoft.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://thetalesofdemonsandgods.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://travel.kompas.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', True, 'https://tree.taiga.io')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', True, 'https://us02web.zoom.us')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://vitalflux.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://w11.mangafreak.net')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://web.mention.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', True, 'https://web.skype.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://www.askpython.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://www.bukalapak.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://www.chess.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://www.cio.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://www.cnbcindonesia.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://www.dezyre.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', True, 'https://www.duolingo.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', True, 'https://www.engagez.net')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://www.forbes.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://www.gadgetsnow.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://www.kompas.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://www.kompas.tv')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://www.laptop6.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://www.machinelearningplus.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://www.mltut.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://www.mprnews.org')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://www.pngmart.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://www.qnap.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://www.startup4industry.id')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://www.suaramerdeka.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://www.tiktok.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', True, 'https://www.youtube.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.notifications.enabled', False, 'https://calendar.google.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.notifications.enabled', True, 'https://meet.google.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.notifications.enabled', False, 'https://web.telegram.org')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.notifications.enabled', True, 'https://web.whatsapp.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://www.analyticsvidhya.com')
-
-# Allow websites to show notifications.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
-config.set('content.notifications.enabled', False, 'https://www.reddit.com')
 
 # Display PDF files via PDF.js in the browser without showing a download
 # prompt. Note that the files can still be downloaded by clicking the
@@ -1317,14 +198,6 @@ c.content.proxy = 'system'
 #   - false
 #   - ask
 config.set('content.register_protocol_handler', False, 'https://calendar.google.com?cid=%25s')
-
-# Allow websites to register protocol handlers via
-# `navigator.registerProtocolHandler`.
-# Type: BoolAsk
-# Valid values:
-#   - true
-#   - false
-#   - ask
 config.set('content.register_protocol_handler', True, 'https://mail.google.com?extsrc=mailto&url=%25s')
 
 # List of user stylesheet filenames to use.
@@ -1337,14 +210,15 @@ c.content.user_stylesheets = []
 c.downloads.remove_finished = 100
 
 # Handler for selecting file(s) in forms. If `external`, then the
-# commands specified by `fileselect.single_file.command` and
-# `fileselect.multiple_files.command` are used to select one or multiple
-# files respectively.
+# commands specified by `fileselect.single_file.command`,
+# `fileselect.multiple_files.command` and `fileselect.folder.command`
+# are used to select one file, multiple files, and folders,
+# respectively.
 # Type: String
 # Valid values:
 #   - default: Use the default file selector.
 #   - external: Use an external command.
-c.fileselect.handler = 'default'
+c.fileselect.handler = 'external'
 
 # Command (and arguments) to use for selecting a single file in forms.
 # The command should write the selected file path to the specified file
@@ -1412,7 +286,7 @@ c.tabs.show = 'multiple'
 #   - left
 #   - right
 #   - center
-c.tabs.title.alignment = 'left'
+c.tabs.title.alignment = 'center'
 
 # Width (in pixels) of the progress indicator (0 to disable).
 # Type: Int
@@ -1436,6 +310,109 @@ c.window.hide_decoration = False
 # Type: Perc
 c.zoom.default = '90%'
 
+## COLORS
+
+c.colors.completion.fg = '#e5e9f0'
+c.colors.completion.odd.bg = '#2e3440'
+c.colors.completion.even.bg = '#2e3440'
+c.colors.completion.category.fg = '#81a1c1'
+c.colors.completion.category.bg = '#2e3440'
+c.colors.completion.category.border.top = '#2e3440'
+c.colors.completion.category.border.bottom = '#2e3440'
+c.colors.completion.item.selected.fg = '#e5e9f0'
+c.colors.completion.item.selected.bg = '#434c5e'
+c.colors.completion.item.selected.border.top = '#434c5e'
+c.colors.completion.item.selected.border.bottom = '#434c5e'
+c.colors.completion.item.selected.match.fg = '#e5e9f0'
+c.colors.completion.match.fg = '#d08770'
+c.colors.completion.scrollbar.fg = '#e5e9f0'
+c.colors.completion.scrollbar.bg = '#2e3440'
+
+c.colors.contextmenu.menu.bg = '#2e3440'
+c.colors.contextmenu.menu.fg = '#e5e9f0'
+c.colors.contextmenu.selected.bg = '#434c5e'
+c.colors.contextmenu.selected.fg = '#e5e9f0'
+c.colors.contextmenu.disabled.bg = '#3b4252'
+c.colors.contextmenu.disabled.fg = '#d8dee9'
+
+c.colors.downloads.bar.bg = '#2e3440'
+c.colors.downloads.start.fg = '#2e3440'
+c.colors.downloads.start.bg = '#81a1c1'
+c.colors.downloads.stop.fg = '#2e3440'
+c.colors.downloads.stop.bg = '#88c0d0'
+c.colors.downloads.error.fg = '#bf616a'
+
+c.colors.hints.fg = '#2e3440'
+c.colors.hints.bg = '#ebcb8b'
+c.colors.hints.match.fg = '#e5e9f0'
+
+c.colors.keyhint.fg = '#e5e9f0'
+c.colors.keyhint.suffix.fg = '#e5e9f0'
+c.colors.keyhint.bg = '#2e3440'
+
+c.colors.messages.error.fg = '#2e3440'
+c.colors.messages.error.bg = '#bf616a'
+c.colors.messages.error.border = '#bf616a'
+c.colors.messages.warning.fg = '#2e3440'
+c.colors.messages.warning.bg = '#b48ead'
+c.colors.messages.warning.border = '#b48ead'
+c.colors.messages.info.fg = '#e5e9f0'
+c.colors.messages.info.bg = '#2e3440'
+c.colors.messages.info.border = '#2e3440'
+
+c.colors.prompts.fg = '#e5e9f0'
+c.colors.prompts.border = '#2e3440'
+c.colors.prompts.bg = '#2e3440'
+c.colors.prompts.selected.fg = '#e5e9f0'
+c.colors.prompts.selected.bg = '#434c5e'
+
+c.colors.statusbar.normal.fg = '#e5e9f0'
+c.colors.statusbar.normal.bg = '#2e3440'
+c.colors.statusbar.insert.fg = '#88c0d0'
+c.colors.statusbar.insert.bg = '#2e3440'
+c.colors.statusbar.passthrough.fg = '#ebcb8b'
+c.colors.statusbar.passthrough.bg = '#2e3440'
+c.colors.statusbar.private.fg = '#b48ead'
+c.colors.statusbar.private.bg = '#2e3440'
+c.colors.statusbar.command.fg = '#d8dee9'
+c.colors.statusbar.command.bg = '#3b4252'
+c.colors.statusbar.command.private.fg = '#b48ead'
+c.colors.statusbar.command.private.bg = '#3b4252' # Background color of the statusbar in private browsing + command mode.
+c.colors.statusbar.caret.fg = '#81a1c1' # Foreground color of the statusbar in caret mode.
+c.colors.statusbar.caret.bg = '#2e3440'
+c.colors.statusbar.caret.selection.fg = '#81a1c1'
+c.colors.statusbar.caret.selection.bg = '#2e3440'
+c.colors.statusbar.progress.bg = '#81a1c1'
+c.colors.statusbar.url.fg = '#e5e9f0'
+c.colors.statusbar.url.error.fg = '#bf616a'
+c.colors.statusbar.url.hover.fg = '#d08770'
+c.colors.statusbar.url.success.http.fg = '#a3be8c'
+c.colors.statusbar.url.success.https.fg = '#a3be8c'
+c.colors.statusbar.url.warn.fg = '#b48ead'
+
+c.colors.tabs.bar.bg = '#2e3440'
+c.colors.tabs.indicator.start = '#81a1c1'
+c.colors.tabs.indicator.stop = '#88c0d0'
+c.colors.tabs.indicator.error = '#bf616a'
+c.colors.tabs.odd.fg = '#e5e9f0'
+c.colors.tabs.odd.bg = '#2e3440'
+c.colors.tabs.even.fg = '#e5e9f0'
+c.colors.tabs.even.bg = '#2e3440'
+c.colors.tabs.selected.odd.fg = '#e5e9f0'
+c.colors.tabs.selected.odd.bg = '#434c5e'
+c.colors.tabs.selected.even.fg = '#e5e9f0'
+c.colors.tabs.selected.even.bg = '#434c5e'
+c.colors.tabs.pinned.odd.fg = '#2e3440'
+c.colors.tabs.pinned.odd.bg = '#a3be8c'
+c.colors.tabs.pinned.even.fg = '#2e3440'
+c.colors.tabs.pinned.even.bg = '#a3be8c'
+c.colors.tabs.pinned.selected.odd.fg = '#e5e9f0'
+c.colors.tabs.pinned.selected.odd.bg = '#434c5e'
+c.colors.tabs.pinned.selected.even.fg = '#e5e9f0'
+c.colors.tabs.pinned.selected.even.bg = '#434c5e'
+
+c.colors.webpage.bg = '#2e3440'
+
 # Value to use for `prefers-color-scheme:` for websites. The "light"
 # value is only available with QtWebEngine 5.15.2+. On older versions,
 # it is the same as "auto". The "auto" value is broken on QtWebEngine
@@ -1449,16 +426,12 @@ c.zoom.default = '90%'
 c.colors.webpage.preferred_color_scheme = 'dark'
 
 # Render all web contents using a dark theme. Example configurations
-# from Chromium's `chrome://flags`:  - "With simple HSL/CIELAB/RGB-based
-# inversion": Set   `colors.webpage.darkmode.algorithm` accordingly.  -
-# "With selective image inversion": Set
-# `colors.webpage.darkmode.policy.images` to `smart`.  - "With selective
-# inversion of non-image elements": Set
-# `colors.webpage.darkmode.threshold.text` to 150 and
-# `colors.webpage.darkmode.threshold.background` to 205.  - "With
-# selective inversion of everything": Combines the two variants   above.
+# from Chromium's `chrome://flags`: - "With simple HSL/CIELAB/RGB-based
+# inversion": Set   `colors.webpage.darkmode.algorithm` accordingly, and
+# set `colors.webpage.darkmode.policy.images` to `never`.  - "With
+# selective image inversion": qutebrowser default settings.
 # Type: Bool
-c.colors.webpage.darkmode.enabled = True
+c.colors.webpage.darkmode.enabled = False
 
 # Which algorithm to use for modifying how colors are rendered with
 # darkmode. The `lightness-cielab` value was added with QtWebEngine 5.14
@@ -1481,21 +454,16 @@ c.colors.webpage.darkmode.contrast = 1.0
 # left as in the original, non-dark-mode page. Set to 256 to always
 # invert text color or to 0 to never invert text color.
 # Type: Int
-c.colors.webpage.darkmode.threshold.text = 200
+c.colors.webpage.darkmode.threshold.foreground = 200
 
 # Threshold for inverting background elements with dark mode. Background
 # elements with brightness above this threshold will be inverted, and
 # below it will be left as in the original, non-dark-mode page. Set to
 # 256 to never invert the color or to 0 to always invert it. Note: This
-# behavior is the opposite of `colors.webpage.darkmode.threshold.text`!
+# behavior is the opposite of
+# `colors.webpage.darkmode.threshold.foreground`!
 # Type: Int
 c.colors.webpage.darkmode.threshold.background = 200
-
-# Render all colors as grayscale. This only has an effect when
-# `colors.webpage.darkmode.algorithm` is set to `lightness-hsl` or
-# `brightness-rgb`.
-# Type: Bool
-c.colors.webpage.darkmode.grayscale.all = True
 
 # Map keys to other keys, so that they are equivalent in all modes. When
 # the key used as dictionary-key is pressed, the binding for the key
@@ -1517,14 +485,11 @@ config.bind(',M', 'hint links spawn --detach mpv {hint-url}')
 config.bind(',m', 'hint links spawn --detach umpv {hint-url}')
 config.bind('<', ':tab-move -')
 config.bind('>', ':tab-move +')
-config.bind('h', 'scroll-px -25 0')
-config.bind('j', 'scroll-px 0 25')
-config.bind('k', 'scroll-px 0 -25')
-config.bind('l', 'scroll-px 25 0')
+config.bind('h', 'scroll-px -70 0')
+config.bind('j', 'scroll-px 0 50')
+config.bind('k', 'scroll-px 0 -50')
+config.bind('l', 'scroll-px 70 0')
 config.bind('sD', ":set content.user_stylesheets ''")
 config.bind('sd', ':set content.user_stylesheets /home/lam/.config/qutebrowser/userstyle/gruvbox.css')
 config.bind('tj', 'tab-next')
 config.bind('tk', 'tab-prev')
-
-# Sourcing the theme
-config.source('themes/themes/minimal/base16-nord.config.py')
