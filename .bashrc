@@ -23,9 +23,11 @@ else	# Unset alias outside tty
 fi
 
 # PS1 mod
-PS1='\[\033[1;34m\] \W ‣ \[\033[0m\]'
- #PS1='\[\033[1;34m\]→ \[\033[0m\]'
- #PS1='\033[1;35m\]┌  \W\n└ ─  \u: \033[0m\]'
+get_branch_name() {
+    git branch 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/(\1) /'
+}
+
+PS1='\[\033[1;34m\] \W \[\033[1;31m\]$(get_branch_name)\[\033[1;34m\]‣ \[\033[0m\]'
 
 # Nifty function
 ac() {
