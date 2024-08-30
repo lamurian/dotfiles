@@ -10,9 +10,9 @@ Plug 'vim-syntastic/syntastic' 		    " File syntax
 Plug 'vim-airline/vim-airline' 		    " Airline..
 Plug 'vim-airline/vim-airline-themes' 	" ..and its theme
 Plug 'jpalardy/vim-slime'		        " Slime plug-in to interpret code
-Plug 'junegunn/fzf.vim'             	" Vim fuzzy finder
-Plug 'arcticicestudio/nord-vim'         " Nord colorscheme
-Plug 'elzr/vim-json'                    " JSON syntax formatting
+Plug 'junegunn/fzf.vim'             	" FZF for vim
+Plug 'junegunn/fzf'                   	" FZF for vim
+Plug 'arcticicestudio/nord-vim'       	" FZF for vim
 call plug#end()
 
 " Lilypond integration
@@ -46,7 +46,7 @@ let g:airline#extensions#tabline#enabled = 1
 
 " Vim slime config
 let g:slime_target = "tmux"
-let g:slime_paste_file = "$HOME/.tmp/slime_paste"
+let g:slime_paste_file = expand("$HOME/.tmp/slime_paste")
 let g:slime_default_config = {"socket_name": "default", "target_pane": ":.0"}
 
 " Netrw config
