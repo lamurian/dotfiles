@@ -12,4 +12,4 @@ ffmpeg \
         -f x11grab -show_region 1 -video_size $SIZE -framerate 30 -i :0.0 \
         -vcodec libx265 -crf 24 \
         -acodec libmp3lame -ar 48000 -q:a 1 \
-	-vsync 1 -f mp4 $OUTPUT
+        -fps_mode 1 -f mp4 $OUTPUT
