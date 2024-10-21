@@ -8,8 +8,9 @@
 # new and find (note).
 
 ## Initialize environment
+
 PARA="Projects Areas Resources Archives"
-DOCS=$([ -z $DOCS ] && echo "~/Documents" || echo "$DOCS")
+DOCS=$([ -z "$DOCS" ] && echo "~/Documents" || echo "$DOCS")
 ROOT=$([ -z $2 ] && echo $DOCS/Cognoscere || echo $2)
 PROGNAME=$0
 
@@ -20,7 +21,7 @@ usage() {
 Usage: $PROGNAME [-h] [-n] [-f <dir>] [-s <string>]
 -h: Print this help text
 -n: Create a new note
--f: Fuzzy find notes from a specified directory, will search ~/Documents by default and if not found will issue '$PROGNAME -n'
+-f: Fuzzy find notes from a specified directory, will search ~/Documents by default
 -s: Search for tags within notes using the silver searcher (ag)
 EOF
     exit 1
@@ -29,7 +30,7 @@ EOF
 ## Set path for the new note
 
 set_name() {
-    TYPE=$(for menu in $PARA; do echo $menu; done | fzf --height=10)
+    TYPE=$(for menu in $PARA; do echo $menu; done | fzf --height=6)
 
     read -p "Insert topic: " TOPIC
     DATE=$(date +%F)
@@ -73,7 +74,7 @@ new_note() {
 ## Fetch the path to the notes
 
 fetch_note_path() {
-    NOTE=$(find $ROOT -iname "*md" -type f | fzf)
+    NOTE=$(find $ROOT -iname "*md" -type f | fzf --preview "head -n 100 {}" --border double --tmux)
     echo $NOTE
 }
 
@@ -96,7 +97,7 @@ find_note() {
         NOTE="$FPATH"
         set_yaml > "$NOTE"
     fi
-    $EDITOR "$NOTE"
+    vim -c "cd $ROOT" "$NOTE"
 }
 
 ## Search for tags
@@ -116,7 +117,7 @@ while getopts ":hnfs:" arg; do
             new_note
             ;;
         f) # Find old note from specified directory
-            find_note
+            fetch_note_path
             ;;
         s) # Search for tags within notes
             search_tag
