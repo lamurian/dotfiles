@@ -10,9 +10,10 @@ Plug 'vim-syntastic/syntastic' 		    " File syntax
 Plug 'vim-airline/vim-airline' 		    " Airline..
 Plug 'vim-airline/vim-airline-themes' 	" ..and its theme
 Plug 'jpalardy/vim-slime'		        " Slime plug-in to interpret code
-Plug 'junegunn/fzf.vim'             	" FZF for vim
+Plug 'junegunn/fzf.vim'             	" Vim fuzzy finder
 Plug 'junegunn/fzf'                   	" FZF for vim
-Plug 'arcticicestudio/nord-vim'       	" FZF for vim
+Plug 'arcticicestudio/nord-vim'         " Nord colorscheme
+Plug 'elzr/vim-json'                    " JSON syntax formatting
 call plug#end()
 
 " Lilypond integration
@@ -52,6 +53,9 @@ let g:slime_default_config = {"socket_name": "default", "target_pane": ":.0"}
 " Netrw config
 let g:netrw_bufsettings = "noma nomod nobl nowrap ro nu relativenumber"
 let g:netrw_banner = 0
+
+" Vim JSON config
+let g:vim_json_syntax_conceal = 0
 
 "	KEYMAP
 
@@ -100,7 +104,6 @@ nnoremap <Leader>] :vertical resize +10 <CR>
 
 autocmd BufEnter *rc loadview
 autocmd BufEnter *conf loadview
-"autocmd BufNewFile *.Rmd 0r $HOME/.vim/skeleton/skel-rmd
 
 "	GENERAL CONFIG
 
@@ -132,9 +135,9 @@ hi Folded       ctermbg=None
 hi FoldColumn   ctermbg=None
 
 hi Conceal      ctermbg=None
-hi SignColumn   ctermbg=Black  ctermfg=Grey
-hi MatchParen   ctermbg=Grey   ctermfg=Black
-hi visual       cterm=bold     ctermbg=Black
+hi SignColumn   ctermbg=Black    ctermfg=Grey
+hi MatchParen   ctermbg=DarkGray ctermfg=White
+hi visual       cterm=bold       ctermbg=Black
 
 hi SpellBad     ctermbg=None   ctermfg=Red
 hi SpellCap     ctermbg=None   ctermfg=81

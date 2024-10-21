@@ -23,29 +23,44 @@ else	# Unset alias outside tty
 fi
 
 # PS1 mod
-PS1='\[\033[1;34m\] -- \[\033[0m\] '
-#PS1='\033[1;34m\]┌──\033[0m\] \u in \w\n\033[1;34m\]└─\033[0m\] '
+get_branch_name() {
+    git branch 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/(\1) /'
+}
+
+PS1='\[\033[1;34m\] \W \[\033[1;31m\]$(get_branch_name)\[\033[1;34m\]‣ \[\033[0m\]'
 
 # Nifty function
+fzf_tmux() {
+    fzf --border double --tmux "$@"
+}
+
+fzf_dir() {
+    fzf_tmux --preview "ls -lh {}"
+}
+
+fzf_file() {
+    fzf_tmux --preview "head -n 100 {}"
+}
+
 ac() {
 	# Change into specified dir
-        [ -z $1 ] && cd $(find $PROF $DOCS -type d -not -path "*/.git/*" | fzf) || \
-                cd $(find $1 -type d -not -path "*/.git/*" | fzf)
+    [ -z $1 ] && cd $(find $PROF $DOCS -type d -not -path "*/.git/*" | fzf_dir) || \
+            cd $(find $1 -type d -not -path "*/.git/*" | fzf_dir)
 }
 
 conf() {
 	# Open config file using vim
-	vim $(find $HOME/.config/* -type f | fzf -m)
+	vim -c "cd $HOME/.config" "$(find $HOME/.config/* -type f | fzf_file -m)"
 }
 
 blog() {
     # Edit blog content
-    vim $(find $BLOG -iregex '.*R?md' | fzf -m)
+    vim -c "cd $BLOG" "$(find $BLOG -iregex '.*R?md' | fzf_file -m)"
 }
 
 book () {
     # Read book in terminal
-    BOOKPATH=$(find $BOOK -iregex '.*\(pdf\|epub\)' | fzf -m)
+    BOOKPATH=$(find $BOOK -iregex '.*\(pdf\|epub\)' | fzf_dir -m)
     BASE=$(basename $BOOKPATH)
     EXT=$(echo $BASE | cut -d "." -f 2)
     echo $BASE with an extension of $EXT
@@ -95,6 +110,9 @@ export QT_STYLE_OVERRIDE=kvantum
 # Runtime dir and pulse server for flatpak env
 export XDG_RUNTIME_DIR=$DATA/lamuri/runtime
 #export PULSE_SERVER=unix:/tmp/pulse-socket
+
+# Integrate FZF to bash
+eval "$(fzf --bash)"
 
 # >>> conda initialize >>>
 # !! Contents within this block are managed by 'conda init' !!

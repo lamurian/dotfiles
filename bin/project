@@ -2,16 +2,16 @@
 
 # Create directories
 createdir() {
-    echo "Creting directories"
+    echo "Creating directories"
     mkdir -p \
         data/{raw,processed} \
-        docs/_source \
+        docs/{_source,results} \
         render \
         src/{R,python,sql,bash}
     touch \
         data/.gitignore \
         data/{raw,processed}/.gitignore \
-        docs/.gitignore \
+        docs/{.gitignore,ref.bib} \
         docs/_source/.gitignore \
         src/.gitignore
     echo "Done!"
@@ -20,15 +20,24 @@ createdir() {
 # Setting up `renv`
 setrenv() {
     R --vanilla -q -e "renv::init()"
+    R --vanilla -q -e "renv::settings\$snapshot.type('all')"
 }
 
 # Initialize git
 setgit() {
     echo "Initializing git repository"
     git init
-    wget https://gist.githubusercontent.com/lamurian/2aff7a79a12e4d5673516a4f62eb3644/raw/e96cb6d74cc3476a521db237531afa12a84bfd6f/.gitignore -O .gitignore
-    wget https://gist.githubusercontent.com/lamurian/2aff7a79a12e4d5673516a4f62eb3644/raw/3ff614d7ec7c782e90803d316a366b3c136c1b9e/README -O README
-    wget https://gist.githubusercontent.com/lamurian/2aff7a79a12e4d5673516a4f62eb3644/raw/13cef8a99a814451bd1de8f782ecff517efd26bb/data-README -O data/README
+    wget https://raw.githubusercontent.com/lamurian/snippet/master/research/.gitignore -O .gitignore
+    wget https://raw.githubusercontent.com/lamurian/snippet/master/research/LICENSE -O LICENSE
+    wget https://raw.githubusercontent.com/lamurian/snippet/master/research/README.qmd -O README.qmd
+    wget https://raw.githubusercontent.com/lamurian/snippet/master/research/data-README.md -O data/README.md
+    wget https://raw.githubusercontent.com/lamurian/snippet/master/R/.Rprofile -O ->> .Rprofile
+    wget https://raw.githubusercontent.com/lamurian/snippet/master/R/_targets.R -O _targets.R
+    wget https://raw.githubusercontent.com/lamurian/snippet/master/R/parse.R -O src/R/parse.R
+    wget https://raw.githubusercontent.com/lamurian/snippet/master/research/docs/_quarto.yml -O docs/_quarto.yml
+    wget https://raw.githubusercontent.com/lamurian/snippet/master/research/docs/_quarto-report.yml -O docs/_quarto-report.yml
+    wget https://raw.githubusercontent.com/lamurian/snippet/master/research/docs/_knitr-bib.yml -O docs/_knitr-bib.yml
+    wget https://raw.githubusercontent.com/lamurian/snippet/master/research/docs/_header.tex -O docs/_header.tex
     git add --all
     git commit .gitignore -m "Initialize project repository"
     git commit renv.lock .Rprofile renv/activate.R renv/.gitignore -m "Track R packages with renv"
@@ -44,9 +53,9 @@ init() {
 # Call the project script
 [ -z $1 ] && ARGS=$(init) || ARGS=$1
 case $ARGS in
-        createdir|dir|mkdir) createdir ;;
-        setgit) setgit ;;
-        renv) setrenv ;;
-        init) init ;;
-        *) echo "Command is not supported, please issue dir, git, renv, or init. Use init for first-time run.";;
+    createdir|dir|mkdir) createdir ;;
+    git) setgit ;;
+    renv) setrenv ;;
+    init) init ;;
+    *) echo "Command is not supported, please issue dir, git, renv, or init. Use init for first-time run.";;
 esac

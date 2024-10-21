@@ -1,0 +1,136 @@
+#!/bin/sh
+
+# Date: 2024-10-20
+# Author: Lamurian
+
+# This is a simple implementation of Zettelkasten, one of the most modular
+# note-taking approach. This script relies on two main functions: (create)
+# new and find (note).
+
+## Initialize environment
+
+PARA="Projects Areas Resources Archives"
+DOCS=$([ -z "$DOCS" ] && echo "~/Documents" || echo "$DOCS")
+ROOT=$([ -z $2 ] && echo $DOCS/Cognoscere || echo $2)
+PROGNAME=$0
+
+## Helper functions
+
+usage() {
+    cat << EOF >&2
+Usage: $PROGNAME [-h] [-n] [-f <dir>] [-s <string>]
+-h: Print this help text
+-n: Create a new note
+-f: Fuzzy find notes from a specified directory, will search ~/Documents by default
+-s: Search for tags within notes using the silver searcher (ag)
+EOF
+    exit 1
+}
+
+## Set path for the new note
+
+set_name() {
+    TYPE=$(for menu in $PARA; do echo $menu; done | fzf --height=6)
+
+    read -p "Insert topic: " TOPIC
+    DATE=$(date +%F)
+    TOPIC=$([ -z "$TOPIC" ] && echo $DATE || echo $TOPIC)
+    TITLE=$(echo $TOPIC | sed "s/./\U&/")
+    FNAME=$(echo $TOPIC | sed "s/\s/-/g").md
+
+    FPATH=$ROOT/$TYPE/$FNAME
+    echo $FPATH
+}
+
+## Set YAML header or addendum to automate note-taking
+
+set_yaml() {
+    cat << EOF
+---
+author: $(whoami | sed "s/./\U&/")
+date: $(date +%FT%T%:z)
+title: $TITLE
+---
+
+EOF
+}
+
+set_addendum() {
+    cat << EOF
+
+# Addendum by $(whoami | sed "s/./\U&/") on $(date)
+
+EOF
+}
+
+## Create a new note
+
+new_note() {
+    set_name
+    echo "Accessing $ROOT/$TYPE and creating $FNAME"
+    [ ! -f $FPATH ] && set_yaml > $FPATH || set_addendum >> $FPATH
+}
+
+## Fetch the path to the notes
+
+fetch_note_path() {
+    NOTE=$(find $ROOT -iname "*md" -type f | fzf --preview "head -n 100 {}" --border double --tmux)
+    echo $NOTE
+}
+
+## Fetch the name of the notes
+
+fetch_note_name() {
+    NOTE=$(fetch_note_path)
+    FNAME=$(echo $NOTE | sed "s/.*\///g")
+    echo $FNAME
+}
+
+## Find old notes or create a new one if not available
+
+find_note() {
+    NOTE=$(fetch_note_path)
+    echo $NOTE
+    if [ -z "$NOTE" ]; then
+        # Create a new file if the path is null
+        set_name
+        NOTE="$FPATH"
+        set_yaml > "$NOTE"
+    fi
+    vim -c "cd $ROOT" "$NOTE"
+}
+
+## Search for tags
+
+search_tag() {
+    echo "Searching for tags"
+}
+
+## Parse command options
+
+while getopts ":hnfs:" arg; do
+    case $arg in
+        h) # Print this help page
+            usage
+            ;;
+        n) # Create a new note
+            new_note
+            ;;
+        f) # Find old note from specified directory
+            fetch_note_path
+            ;;
+        s) # Search for tags within notes
+            search_tag
+            ;;
+        *) # Invalid option, print usage
+            usage
+            exit 1
+            ;;
+    esac
+done
+
+## Run find_note if no arguments were passed
+
+if [ $OPTIND -eq 1 ]; then
+    find_note
+fi

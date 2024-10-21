@@ -32,9 +32,9 @@ setlocal colorcolumn=
 setlocal comments=sO:\"\ -,mO:\"\ \ ,eO:\"\",:\"
 setlocal commentstring=\"%s
 setlocal complete=.,w,b,u,t,i
+setlocal completefunc=youcompleteme#CompleteFunc
 setlocal concealcursor=
 setlocal conceallevel=0
-setlocal completefunc=youcompleteme#CompleteFunc
 setlocal nocopyindent
 setlocal cryptmethod=
 setlocal nocursorbind
@@ -63,8 +63,8 @@ setlocal foldminlines=1
 setlocal foldnestmax=20
 setlocal foldtext=foldtext()
 setlocal formatexpr=
-setlocal formatoptions=croql
 setlocal formatlistpat=^\\s*\\d\\+[\\]:.)}\\t\ ]\\s*
+setlocal formatoptions=croql
 setlocal formatprg=
 setlocal grepprg=
 setlocal iminsert=0
@@ -137,6 +137,7 @@ setlocal varsofttabstop=
 setlocal vartabstop=
 setlocal virtualedit=
 setlocal wincolor=
+setlocal nowinfixbuf
 setlocal nowinfixheight
 setlocal nowinfixwidth
 setlocal wrap
@@ -148,33 +149,27 @@ silent! normal! zE
 32,41fold
 42,46fold
 47,51fold
-52,54fold
-30,55fold
-58,71fold
-72,74fold
-75,88fold
-89,97fold
-56,98fold
-99,103fold
+52,55fold
+56,57fold
+30,58fold
+61,74fold
+75,77fold
+78,91fold
+92,100fold
+59,101fold
+102,105fold
 let &fdl = &fdl
-3
-normal! zo
-3
-normal! zc
 30
 normal! zo
 30
 normal! zc
-56
-normal! zo
-56
-normal! zc
-let s:l = 15 - ((14 * winheight(0) + 34) / 69)
+let s:l = 30 - ((29 * winheight(0) + 24) / 49)
 if s:l < 1 | let s:l = 1 | endif
 keepjumps exe s:l
 normal! zt
-keepjumps 15
-normal! 01|
+keepjumps 30
+normal! 0
 let &g:so = s:so_save | let &g:siso = s:siso_save
+nohlsearch
 doautoall SessionLoadPost
 " vim: set ft=vim :
