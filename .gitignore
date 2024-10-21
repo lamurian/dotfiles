@@ -41,3 +41,4 @@
 R
 .vim/plugged
 .config/i3/start.log
+.config/ncmpcpp/error.log
