@@ -10,7 +10,7 @@
 ## Initialize environment
 
 PARA="Projects Areas Resources Archives"
-DOCS=$([ -z "$DOCS" ] && echo "~/Documents" || echo "$DOCS")
+DOCS=$([ -z "$DOCS" ] && echo "$HOME/Documents" || echo "$DOCS")
 ROOT=$([ -z $2 ] && echo $DOCS/Cognoscere || echo $2)
 PROGNAME=$0
 
