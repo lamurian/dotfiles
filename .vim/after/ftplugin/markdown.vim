@@ -7,6 +7,36 @@ setlocal expandtab
 setlocal spell
 abbr -> $\to$
 
+" Zettelkasten note linking
+function! LinkZettel()
+        " Use the provided zettel_dir or default to the current file's directory
+        let zettel_dir = expand('%:p:h') " Default to current file's directory
+
+        " Use FZF to select a note from the specified zettel_dir
+        let selected_file = system('find ' . zettel_dir . ' -type f -name "*.md" | fzf --preview "head -n 100 {}" --border double --tmux')
+        let selected_file = substitute(selected_file, '\n\+$', '', '')
+
+        if v:shell_error == 0 && !empty(selected_file)
+                let note_file = fnamemodify(selected_file, ':t:r') " Extract file name without path and .md extension
+                let note_link = fnamemodify(selected_file, ':.' . zettel_dir) " Extract full file name (with .md extension)
+
+                " Ask the user for alternative text (alt-name)
+                let alt_text = input('Enter alternative text: ')
+                let alt_text = empty(alt_text) ? note_file : alt_text " Use the note title fo no alt text provided
+
+                " Insert the markdown link at the current cursor position
+                let link_text = '[' . alt_text . '](' . note_link . ') '
+
+                " Append link text to the current line
+                let line = getline('.')
+                let cursor = col('.')
+                let line = strpart(line, 0, cursor) . link_text . strpart(line, cursor)
+                call setline('.', line)
+        endif
+endfunction
+
+nnoremap <leader>zk :call LinkZettel()<CR>
+
 " Foldexpr for markdown flavours
 function! FoldMD()
 	let line = getline(v:lnum)
