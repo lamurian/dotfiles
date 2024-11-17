@@ -35,8 +35,8 @@ set_name() {
     read -p "Insert topic: " TOPIC
     DATE=$(date +%F)
     TOPIC=$([ -z "$TOPIC" ] && echo $DATE || echo $TOPIC)
-    TITLE=$(echo $TOPIC | sed "s/./\U&/")
-    FNAME=$(echo $TOPIC | sed "s/\s/-/g").md
+    TITLE=$(echo $TOPIC | awk '{$1=toupper(substr($1, 1, 1)) substr($1, 2)} 1')
+    FNAME=$(echo $TOPIC | sed "s/[[:space:]]/-/g").md
 
     FPATH=$ROOT/$TYPE/$FNAME
     echo $FPATH
@@ -47,7 +47,7 @@ set_name() {
 set_yaml() {
     cat << EOF
 ---
-author: $(whoami | sed "s/./\U&/")
+author: $(whoami | awk '{$1=toupper(substr($1, 1, 1)) substr($1, 2)} 1')
 date: $(date +%FT%T%:z)
 title: $TITLE
 ---
