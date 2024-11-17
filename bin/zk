@@ -48,7 +48,7 @@ set_yaml() {
     cat << EOF
 ---
 author: $(whoami | awk '{$1=toupper(substr($1, 1, 1)) substr($1, 2)} 1')
-date: $(date +%FT%T%:z)
+date: $(gdate +%FT%T%:z)
 title: $TITLE
 ---
 
