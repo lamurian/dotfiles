@@ -10,7 +10,7 @@ abbr -> $\to$
 " Zettelkasten note linking
 function! LinkZettel()
         " Use the provided zettel_dir or default to the current file's directory
-        let zettel_dir = expand('%:p:h') " Default to current file's directory
+        let zettel_dir = expand('%:p:h:h') " Default to current file's directory
 
         " Use FZF to select a note from the specified zettel_dir
         let selected_file = system('find ' . zettel_dir . ' -type f -name "*.md" | fzf --preview "head -n 100 {}" --border double --tmux')
