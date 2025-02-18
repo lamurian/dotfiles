@@ -14,6 +14,12 @@ alt + o
 alt + t
         dunstify " $(date +%d\ %b\ %Y)" " $(date +%H:%M:%S)" -r 1 -u low -t 2000
 
+super + s
+        scrot -s -e 'xclip -selection clipboard -t image/png -i $f'
+
+super + shift + s
+        scrot -s $DATA/personal/Pictures/screenshot/%Y%m%d_T%H%M%S.png
+
 # XF86 Keys
 XF86AudioMute
 	pulsemixer --toggle-mute & ~/bin/vol-stat.sh
