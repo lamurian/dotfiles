@@ -1,0 +1,32 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "opencode-go/deepseek-v4-flash",
+  "default_agent": "plan",
+  "mcp": {
+    "context7": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "{file:.api_key/context7}"
+      },
+      "enabled": true
+    }
+  },
+  "permission": {
+    "glob": "allow",
+    "grep": "allow",
+    "bash": {
+      "git status *": "allow",
+      "git diff *": "allow",
+      "git log *": "allow",
+      "git push *": "deny",
+      "git commit *": "ask",
+      "head *": "allow",
+      "tail *": "allow",
+      "ruff *": "allow",
+      "pytest *": "allow",
+      "python -m ruff *": "allow",
+      "python -m pytest *": "allow"
+    }
+  }
+}
