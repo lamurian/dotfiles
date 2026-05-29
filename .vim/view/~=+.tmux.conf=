@@ -35,11 +35,13 @@ setlocal dictionary=
 setlocal nodiff
 setlocal equalprg=
 setlocal errorformat=
+setlocal eventignorewin=
 setlocal expandtab
 if &filetype != 'tmux'
 setlocal filetype=tmux
 endif
 setlocal fillchars=
+setlocal findfunc=
 setlocal fixendofline
 setlocal foldcolumn=0
 setlocal foldenable
@@ -135,25 +137,17 @@ silent! normal! zE
 7,17fold
 18,28fold
 29,31fold
-32,32fold
-32,34fold
 32,38fold
 39,42fold
 43,45fold
 46,49fold
 50,53fold
 let &fdl = &fdl
-32
-normal! zo
-32
-normal! zo
-32
-normal! zc
-let s:l = 36 - ((35 * winheight(0) + 17) / 34)
+let s:l = 32 - ((31 * winheight(0) + 35) / 71)
 if s:l < 1 | let s:l = 1 | endif
 keepjumps exe s:l
 normal! zt
-keepjumps 36
+keepjumps 32
 normal! 0
 let &g:so = s:so_save | let &g:siso = s:siso_save
 nohlsearch
