@@ -17,7 +17,7 @@ call plug#end()
 
 " Lilypond integration
 let $lilypath = glob("`readlink -f /usr/**/lilypond/**/vim`")
-if isdirectory($lilypath)   " Check if dir exists
+if isdirectory($lilypath) " Check if dir exists
         filetype off
         set runtimepath+=$lilypath
         filetype on
@@ -113,7 +113,7 @@ endif
 
 syntax on
 colorscheme nord " Selection: elflord, pablo, industry
-set path+=**    " Enable find in current pwd
+set path+=**     " Enable find in current pwd
 set number relativenumber expandtab wildmenu
 set nocursorline nocursorcolumn
 set mouse=a clipboard^=unnamed

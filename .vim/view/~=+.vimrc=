@@ -1,5 +1,7 @@
 let s:so_save = &g:so | let s:siso_save = &g:siso | setg so=0 siso=0 | setl so=-1 siso=-1
 argglobal
+nnoremap <buffer> <silent> gf :call vimgoto#Find("\<C-W>gF")
+nnoremap <buffer> <silent> f :call vimgoto#Find("\<C-W>F")
 vnoremap <buffer> <silent> [" :exe "normal! gv"|call search('\%(^\s*".*\n\)\%(^\s*"\)\@!', "bW")
 nnoremap <buffer> <silent> [" :call search('\%(^\s*".*\n\)\%(^\s*"\)\@!', "bW")
 vnoremap <buffer> <silent> [] m':exe "normal! gv"|call search('^\s*endf\%[unction]\>', "bW")
@@ -12,6 +14,13 @@ vnoremap <buffer> <silent> ][ m':exe "normal! gv"|call search('^\s*endf\%[unc
 nnoremap <buffer> <silent> ][ m':call search('^\s*endf\%[unction]\>', "W")
 vnoremap <buffer> <silent> ]] m':exe "normal! gv"|call search('^\s*fu\%[nction]\>', "W")
 nnoremap <buffer> <silent> ]] m':call search('^\s*fu\%[nction]\>', "W")
+nnoremap <buffer> <silent> gf :call vimgoto#Find('gF')
+let s:cpo_save=&cpo
+set cpo&vim
+nnoremap <buffer> <silent> <C-W>gf :call vimgoto#Find("\<C-W>gF")
+nnoremap <buffer> <silent> <C-W>f :call vimgoto#Find("\<C-W>F")
+let &cpo=s:cpo_save
+unlet s:cpo_save
 setlocal keymap=
 setlocal noarabic
 setlocal noautoindent
@@ -33,6 +42,7 @@ setlocal comments=sO:\"\ -,mO:\"\ \ ,eO:\"\",:\"
 setlocal commentstring=\"%s
 setlocal complete=.,w,b,u,t,i
 setlocal completefunc=youcompleteme#CompleteFunc
+setlocal completeopt=
 setlocal concealcursor=
 setlocal conceallevel=0
 setlocal nocopyindent
@@ -44,13 +54,16 @@ setlocal cursorlineopt=both
 setlocal define=
 setlocal dictionary=
 setlocal nodiff
+setlocal diffanchors=
 setlocal equalprg=
 setlocal errorformat=
+setlocal eventignorewin=
 setlocal expandtab
 if &filetype != 'vim'
 setlocal filetype=vim
 endif
 setlocal fillchars=
+setlocal findfunc=
 setlocal fixendofline
 setlocal foldcolumn=0
 setlocal foldenable
@@ -66,6 +79,7 @@ setlocal formatexpr=
 setlocal formatlistpat=^\\s*\\d\\+[\\]:.)}\\t\ ]\\s*
 setlocal formatoptions=croql
 setlocal formatprg=
+setlocal grepformat=
 setlocal grepprg=
 setlocal iminsert=0
 setlocal imsearch=-1
@@ -76,6 +90,7 @@ setlocal indentkeys=0{,0},0),0],:,0#,!^F,o,O,e,=end,=else,=cat,=fina,=END,0\\,0=
 setlocal noinfercase
 setlocal iskeyword=@,48-57,_,192-255,#
 setlocal keywordprg=:help
+setlocal lhistory=10
 setlocal nolinebreak
 setlocal nolisp
 setlocal lispoptions=
@@ -101,6 +116,7 @@ setlocal norightleft
 setlocal rightleftcmd=search
 setlocal noscrollbind
 setlocal scrolloff=-1
+setlocal scrolloffpad=-1
 setlocal shiftwidth=8
 setlocal noshortname
 setlocal showbreak=
@@ -115,6 +131,7 @@ setlocal spellfile=
 setlocal spelllang=en,id
 setlocal spelloptions=
 setlocal statusline=%!airline#statusline(1)
+setlocal statuslineopt=
 setlocal suffixesadd=
 setlocal swapfile
 setlocal synmaxcol=3000
@@ -140,42 +157,40 @@ setlocal wincolor=
 setlocal nowinfixbuf
 setlocal nowinfixheight
 setlocal nowinfixwidth
+setlocal winhighlight=
 setlocal wrap
 setlocal wrapmargin=0
 silent! normal! zE
-18,24fold
-3,25fold
-26,29fold
-32,41fold
-42,46fold
-47,51fold
-52,54fold
-30,55fold
-58,71fold
-72,74fold
-75,88fold
-89,97fold
-56,98fold
-99,103fold
+sil! 18,24fold
+sil! 18,25fold
+sil! 3,25fold
+sil! 26,29fold
+sil! 32,41fold
+sil! 32,41fold
+sil! 42,46fold
+sil! 42,46fold
+sil! 47,51fold
+sil! 47,51fold
+sil! 52,54fold
+sil! 52,55fold
+sil! 56,57fold
+sil! 30,58fold
+sil! 72,74fold
+sil! 61,74fold
+sil! 75,77fold
+sil! 78,91fold
+sil! 92,100fold
+sil! 59,101fold
+sil! 102,105fold
+sil! 126,153fold
 let &fdl = &fdl
-30
-normal! zo
-30
-normal! zc
-30
-normal! zo
-30
-normal! zc
-56
-normal! zo
-56
-normal! zc
-let s:l = 15 - ((14 * winheight(0) + 34) / 69)
+let s:l = 115 - ((56 * winheight(0) + 28) / 57)
 if s:l < 1 | let s:l = 1 | endif
 keepjumps exe s:l
 normal! zt
-keepjumps 15
-normal! 01|
+keepjumps 115
+normal! 017|
 let &g:so = s:so_save | let &g:siso = s:siso_save
+nohlsearch
 doautoall SessionLoadPost
 " vim: set ft=vim :
