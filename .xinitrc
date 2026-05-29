@@ -31,6 +31,7 @@ call_min() {
 
 unclutter -idle 1 -noevents &
 song-notif.sh 2>&1 > /dev/null &
+sudo tailscale up --advertise-exit-node --ssh
 
 # Call the wm
 call_dwm

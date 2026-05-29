@@ -12,8 +12,10 @@ function! FoldCode()
 	let prior = getline(v:lnum-1)
 	if match(line, '^#') >= 0
 		return ">1"	" comment
-	elseif match(line, '^\(class\|def\).*:') >= 0
-		return ">2"	" function or class
+	elseif match(line, '^class.*:') >= 0
+		return ">1"	" class
+	elseif match(line, '^\(\s\|\t\)*def.*(') >= 0
+		return ">2"	" function
 	elseif match(line, '^$') >= 0 && match(prior, '^$') >= 0
 		return 0	" consecutive empty lines
 	else

@@ -42,7 +42,7 @@ fzf_file() {
     fzf_tmux --preview "head -n 100 {}"
 }
 
-ac() {
+goto() {
 	# Change into specified dir
     [ -z $1 ] && cd $(find $PROF $DOCS -type d -not -path "*/.git/*" | fzf_dir) || \
             cd $(find $1 -type d -not -path "*/.git/*" | fzf_dir)
@@ -88,7 +88,7 @@ export PHD=$PROF/Documents/academy/_postgrad/PhD-course
 export PYENV=$DATA/personal/programs/pyenv # PyEnv root folder
 export FLUTTER=$DATA/personal/programs/flutter # Flutter root folder
 export SDK=$DATA/personal/programs/android-sdk # Android ANDROID_SDK_ROOT root folder
-export PATH=$PATH:/shims:/home/lam/.local/bin:/home/lam/bin:$PYENV/bin:$FLUTTER/bin:$SDK/cmdline-tools/latest/bin:$SDK/emulator:$SDK/platform-tools:$SDK/tools:$SDK/tools/bin:$HOME/.cargo/bin
+export PATH=$PATH:/shims:/home/lam/.local/bin:/home/lam/bin:$PYENV/bin:$FLUTTER/bin:$SDK/cmdline-tools/latest/bin:$SDK/emulator:$SDK/platform-tools:$SDK/tools:$SDK/tools/bin:$HOME/.cargo/bin:$HOME/data/.cache/.bun/bin
 
 export LC_ALL=en_US.UTF-8
 export LANG=en_US.UTF-8
@@ -135,3 +135,4 @@ eval "$(pyenv init -)"
 
 # Created by `pipx` on 2023-01-19 08:18:24
 export PATH="$PATH:/home/lam/.local/bin"
+export PATH="$PATH:$(go env GOPATH)/bin"
