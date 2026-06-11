@@ -4,7 +4,7 @@ import { loadContent, getPackageRoot } from "./utils.ts";
 import {
   discoverEmbeddedAgents,
   mapWithConcurrencyLimit,
-  type AgentConfig,
+  runScoutSubprocess,
   type ScoutResult,
 } from "./subagent-runner.ts";
 
@@ -88,7 +88,7 @@ export async function decomposeInstruction(
         tasks.push({
           agent: String(item.agent),
           task: String(item.task),
-        });
+      });
       }
     }
     return tasks.length > 0
@@ -135,18 +135,30 @@ export async function runParallelExploration(
     }));
   }
 
-  const results = await mapWithConcurrencyLimit(tasks, MAX_CONCURRENCY, async (task) => {
+  // Pre-fill partial results with sentinel exitCode (-1 = not yet completed)
+  const partialResults: ScoutResult[] = tasks.map((t) => ({
+    agent: t.agent,
+    task: t.task,
+    output: "",
+    usage: { input: 0, output: 0, cost: 0, turns: 0 },
+    exitCode: -1,
+  }));
+
+  const results = await mapWithConcurrencyLimit(tasks, MAX_CONCURRENCY, async (task, index) => {
     try {
-      const output = await runScoutProcess(scout, task.task, _cwd, _signal);
-      return {
+      const output = await runScoutSubprocess(scout, task.task, _cwd, _signal);
+      const result: ScoutResult = {
         agent: task.agent,
         task: task.task,
         output,
         usage: { input: 0, output: 0, cost: 0, turns: 0 },
         exitCode: 0,
       };
+      partialResults[index] = result;
+      _onUpdate?.([...partialResults]);
+      return result;
     } catch (err) {
-      return {
+      const result: ScoutResult = {
         agent: task.agent,
         task: task.task,
         output: "",
@@ -154,23 +166,13 @@ export async function runParallelExploration(
         exitCode: 1,
         errorMessage: (err as Error).message,
       };
+      partialResults[index] = result;
+      _onUpdate?.([...partialResults]);
+      return result;
     }
   });
 
   return results;
-}
-
-/** Execute a single scout in a subprocess. Returns text output. */
-async function runScoutProcess(
-  _agent: AgentConfig,
-  _task: string,
-  _cwd: string,
-  _signal?: AbortSignal,
-): Promise<string> {
-  // NOTE: In test mode, returns placeholder. Actual subprocess spawning
-  // (spawning `pi --mode json -p --no-session`) requires a full pi binary
-  // and is tested via integration tests.
-  return `## Files Examined\n- \`src/main.ts\`\n\n## Findings\nMock scout output for: ${_task}`;
 }
 
 // ─── Synthesis ─────────────────────────────────────────────────────────────────
@@ -267,22 +269,42 @@ function formatFallbackSummary(instruction: string, results: ScoutResult[]): str
   return lines.join("\n");
 }
 
-/** Create a text-based loading indicator. */
+/**
+ * Create a text-based loading indicator that writes to stderr.
+ *
+ * The spinner animates on its own interval. `update()` overwrites the
+ * current line with a new spinner frame and message. `done()` clears
+ * the interval and prints a final newline to release the line.
+ *
+ * @param _description - Label for the spinner (currently unused, reserved).
+ * @returns Object with `update(text)` and `done()` methods.
+ */
 export function createLoader(_description: string) {
   let frame = 0;
   const frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
-  const interval = setInterval(() => {
+  let currentText = "";
+
+  const tick = () => {
     frame = (frame + 1) % frames.length;
-  }, 80);
+    if (currentText) {
+      process.stderr.write(`\r${frames[frame]} ${currentText}`);
+    }
+  };
+
+  const interval = setInterval(tick, 80);
 
   return {
-    /** Update the loader text. */
-    update(_text: string) {
-      return `${frames[frame]} ${_text}`;
+    /** Update the loader text and redraw. */
+    update(text: string) {
+      currentText = text;
+      process.stderr.write(`\r${frames[frame]} ${text}`);
     },
-    /** Stop the loader. */
+    /** Stop the loader and release the line. */
     done() {
       clearInterval(interval);
+      if (currentText) {
+        process.stderr.write(`\r${currentText}\n`);
+      }
     },
   };
 }

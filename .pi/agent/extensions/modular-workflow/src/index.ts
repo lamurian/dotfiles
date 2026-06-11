@@ -101,6 +101,12 @@ export default function (pi: ExtensionAPI): void {
     }
 
     // /brainstorm phases (requirements, specifying, planning): only .md files
+    const isBrainstormPhase = currentState.phase === "requirements" ||
+      currentState.phase === "specifying" ||
+      currentState.phase === "planning";
+
+    if (!isBrainstormPhase) return;
+
     if (isToolCallEventType("write", event)) {
       const path: string = event.input.path ?? "";
       if (!path.endsWith(".md")) {
@@ -122,6 +128,8 @@ export default function (pi: ExtensionAPI): void {
         };
       }
     }
+
+    return;
   });
 
   // ── /discuss ───────────────────────────────────────────────
