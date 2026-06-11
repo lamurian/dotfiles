@@ -14,13 +14,14 @@ import { createAdrFromBrainstorm } from "./brainstorm.ts";
  *   /adr new <title>                         — create a new ADR
  *   /adr status <path> <status>              — update ADR status in ARCHITECTURE.md
  *   /adr (no args)                           — show ARCHITECTURE.md summary
+ *   /adr help                                — show detailed help
  *
  * @param pi - ExtensionAPI reference.
  */
 export function registerAdrCommand(pi: ExtensionAPI): void {
   pi.registerCommand("adr", {
     description:
-      "Manage ADRs. Usage: /adr [list|show|new <title>|status <path> <status>]",
+      "Manage ADRs. Usage: /adr help for details",
     handler: async (args, ctx) => {
       const parts = args.trim().split(/\s+/);
       const cmd = parts[0]?.toLowerCase();
@@ -42,6 +43,24 @@ export function registerAdrCommand(pi: ExtensionAPI): void {
 
       if (cmd === "status") {
         await handleAdrStatus(ctx, parts[1], parts[2] as AdrStatus);
+        return;
+      }
+
+      if (cmd === "help" || cmd === "--help" || cmd === "-h") {
+        ctx.ui.notify(
+          [
+            "━━━ /adr — Architecture Decision Record management ━━━",
+            "",
+            "  /adr                               Show ARCHITECTURE.md summary",
+            "  /adr list                          List all ADRs",
+            "  /adr show [index]                  Show an ADR (default: latest)",
+            "  /adr new <title>                   Create a new ADR",
+            "  /adr status <path> <status>        Update ADR status in ARCHITECTURE.md",
+            "                                       Status: drafted | specified | planned | progressed | implemented",
+            "  /adr help                          Show this help",
+          ].join("\n"),
+          "info",
+        );
         return;
       }
 
@@ -136,13 +155,14 @@ async function handleAdrStatus(
  *   /spec list <adrNumber>              — list specs for an ADR
  *   /spec archive <path>                — archive a spec file
  *   /spec <adrNumber> <title> [body]    — create a new spec
+ *   /spec help                            — show detailed help
  *
  * @param pi - ExtensionAPI reference.
  */
 export function registerSpecCommand(pi: ExtensionAPI): void {
   pi.registerCommand("spec", {
     description:
-      "Manage specs. Usage: /spec <adrNumber> <title> [body]",
+      "Manage specs. Usage: /spec help for details",
     handler: async (args, ctx) => {
       const parts = args.trim().split(/\s+/);
       const cmd = parts[0]?.toLowerCase();
@@ -173,6 +193,26 @@ export function registerSpecCommand(pi: ExtensionAPI): void {
         return;
       }
 
+      if (cmd === "help" || cmd === "--help" || cmd === "-h") {
+        ctx.ui.notify(
+          [
+            "━━━ /spec — Specification management ━━━",
+            "",
+            "  /spec <adrNumber> <title> [body]    Create a new spec linked to an ADR",
+            "  /spec list <adrNumber>              List specs for an ADR",
+            "  /spec archive <path>                Archive a spec file",
+            "  /spec help                          Show this help",
+            "",
+            "Examples:",
+            "  /spec 1.1 User Authentication       Create spec for ADR1",
+            "  /spec list 1.1                       List specs for ADR1 task 1",
+            "  /spec archive docs/specs/001-auth.md",
+          ].join("\n"),
+          "info",
+        );
+        return;
+      }
+
       // Default: create a spec
       const adrNum = parseInt(cmd, 10);
       if (!adrNum) {
@@ -199,13 +239,14 @@ export function registerSpecCommand(pi: ExtensionAPI): void {
  *   /plan archive <path>                 — archive a plan file
  *   /plan done <path> <taskIndex>        — mark a task as completed
  *   /plan <specNumber> <title> [body]    — create a new plan
+ *   /plan help                            — show detailed help
  *
  * @param pi - ExtensionAPI reference.
  */
 export function registerPlanCommand(pi: ExtensionAPI): void {
   pi.registerCommand("plan", {
     description:
-      "Manage plans. Usage: /plan <specNumber> <title> [body]",
+      "Manage plans. Usage: /plan help for details",
     handler: async (args, ctx) => {
       const parts = args.trim().split(/\s+/);
       const cmd = parts[0]?.toLowerCase();
@@ -245,6 +286,27 @@ export function registerPlanCommand(pi: ExtensionAPI): void {
         }
         await completeTask(planPath, taskIndex);
         ctx.ui.notify(`Task ${taskIndex} marked done in ${planPath}.`, "info");
+        return;
+      }
+
+      if (cmd === "help" || cmd === "--help" || cmd === "-h") {
+        ctx.ui.notify(
+          [
+            "━━━ /plan — Plan management ━━━",
+            "",
+            "  /plan <specNumber> <title> [body]    Create a new plan linked to a spec",
+            "  /plan list <specNumber>              List plans for a spec",
+            "  /plan archive <path>                 Archive a plan file",
+            "  /plan done <path> <taskIndex>        Mark a task as completed",
+            "  /plan help                           Show this help",
+            "",
+            "Examples:",
+            "  /plan 1.1 Implement API              Create plan for spec 1.1",
+            "  /plan list 1.1                       List plans for spec 1.1",
+            "  /plan done docs/plans/003-api.md 0   Mark task 0 done",
+          ].join("\n"),
+          "info",
+        );
         return;
       }
 

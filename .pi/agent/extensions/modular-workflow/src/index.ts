@@ -1,6 +1,7 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { loadState, updateUi, type WorkflowState } from "./state.ts";
 import { runBrainstorming, buildPhasePrompt } from "./brainstorm.ts";
+import { archivePlan } from "./plan.ts";
 import { startTdd, buildTddPrompt } from "./implement.ts";
 import { readLatestAdr } from "./adr.ts";
 import { getAdrContext } from "./adr-detect.ts";
@@ -116,6 +117,12 @@ export default function (pi: ExtensionAPI): void {
             );
           }
           const spec = resolved.content || fileContents.join("\n\n---\n\n");
+
+          // Archive the plan file now that it's being consumed
+          const planAbs = isAbsolute(planRef) ? planRef : resolve(ctx.cwd, planRef);
+          await archivePlan(planAbs, ctx.cwd);
+          ctx.ui.notify(`Plan archived: ${planAbs}`, "info");
+
           await startTdd(spec, pi, ctx);
           return;
         }
