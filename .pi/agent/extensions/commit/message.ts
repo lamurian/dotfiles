@@ -136,14 +136,10 @@ function humanName(file: string): string {
 }
 
 /**
- * Generate an imperative description from changed files and diff stats.
+ * Pick the most representative directory name from a list of file paths.
+ * Prefers the deepest common directory that isn't hidden or a single file.
  */
-function generateDescription(
-	files: string[],
-	type: string,
-	addLines: number,
-	delLines: number,
-): string {
+function summarizeSubject(files: string[], type: string, addLines: number, delLines: number): string {
 	const verb = (t: string): string => {
 		switch (t) {
 			case "feat":     return "add";
@@ -157,34 +153,93 @@ function generateDescription(
 			case "ci":       return "update";
 			case "chore":    return "update";
 			case "revert":   return "revert";
-			default:         return "update";
+			default:          return "update";
 		}
 	};
 
 	const v = verb(type);
 
+	// ── Single file: use filename with directory context ──
 	if (files.length === 1) {
-		const base = humanName(files[0]);
+		const path = files[0];
+		const name = path.split("/").pop() || path;
+		const base = name.replace(/\.\w+$/, "").replace(/[-_]/g, " ").toLowerCase();
+
+		// For generic names like "index", "main", "app", add directory context
+		const genericNames = new Set(["index", "main", "app", "cli", "lib"]);
+		if (genericNames.has(base) || base.length < 3) {
+			const dir = path.split("/").slice(0, -1).pop();
+			if (dir) {
+				const dirHuman = dir.replace(/[-_]/g, " ").toLowerCase();
+				return `${v} ${dirHuman} ${base}`;
+			}
+		}
 		return `${v} ${base}`;
 	}
 
+	// ── 2-3 files: list names ──
 	if (files.length <= 3) {
-		const names = files.map(humanName).join(", ");
+		const names = files.map((f) => humanName(f)).join(", ");
 		return `${v} ${names}`;
 	}
 
-	// Many files: summarize by directory
+	// ── Many files: describe the nature of the change ──
+	// Check if this is primarily a refactor (many deletions relative to additions)
+	if (type === "refactor" && delLines > addLines * 0.5) {
+		// Find the directory with the most deletions
+		return `${v} ${files.length} files`;
+	}
+
+	// Find the common directory prefix across files
+	const parts = files.map((f) => f.split("/"));
+	const commonDir = findCommonDir(parts);
+	if (commonDir) {
+		const dirHuman = commonDir.replace(/[-_]/g, " ").toLowerCase();
+		if (type === "feat") {
+			const newFiles = files.filter((f) => f.endsWith(".ts") || f.endsWith(".js") || f.endsWith(".py"));
+			if (newFiles.length >= files.length * 0.5) return `${v} ${dirHuman} modules`;
+			return `${v} ${dirHuman} files`;
+		}
+		return `${v} ${dirHuman}`;
+	}
+
+	// Fall back to counting by top-level directory
 	const dirs = [...new Set(
-		files.map((f) => f.split("/")[0]).filter((d) => !d.startsWith(".")),
+		parts.map((p) => p[0]).filter((d) => !d.startsWith(".")),
 	)];
-	if (dirs.length <= 2) {
-		const scope = dirs.join(" and ");
-		if (type === "feat") return `${v} ${scope} features`;
-		if (type === "test") return `${v} ${scope}`;
-		return `${v} ${scope}`;
+	if (dirs.length === 1) {
+		return `${v} ${dirs[0].replace(/[-_]/g, " ").toLowerCase()}`;
 	}
 
 	return `${v} ${files.length} files`;
+}
+
+/**
+ * Find the longest common directory prefix from split file paths.
+ * Returns "" if files share no parent directory.
+ */
+function findCommonDir(parts: string[][]): string {
+	if (parts.length === 0) return "";
+	let common = parts[0].slice(0, -1); // exclude filename
+	for (let i = 1; i < parts.length; i++) {
+		const end = Math.min(common.length, parts[i].length - 1);
+		let j = 0;
+		while (j < end && common[j] === parts[i][j]) j++;
+		common = common.slice(0, j);
+	}
+	return common.join("/");
+}
+
+/**
+ * Generate an imperative description from changed files and diff stats.
+ */
+function generateDescription(
+	files: string[],
+	type: string,
+	addLines: number,
+	delLines: number,
+): string {
+	return summarizeSubject(files, type, addLines, delLines);
 }
 
 // ─── Main Entry Point ────────────────────────────────────────────────────────

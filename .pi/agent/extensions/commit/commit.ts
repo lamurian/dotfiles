@@ -4,7 +4,7 @@
  */
 
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { execGit, getStagedDiffStat, getWorkingTreeDiffStat, trimSubject } from "./git.ts";
+import { execGit, getStagedDiffStat, getWorkingTreeDiffStat, trimSubject, parseStatusFiles } from "./git.ts";
 import { generateCommitMessage } from "./message.ts";
 import { spawnSubagent } from "./subagent.ts";
 
@@ -68,7 +68,9 @@ export async function performCommit(
 		getStagedDiffStat(pi, signal),
 	]);
 
-	const allChangedFiles = [...new Set([...stagedStat.files, ...unstagedStat.files])];
+	// Untracked files are not shown in diff --stat, capture from status --short
+	const untrackedFiles = parseStatusFiles(statusResult.stdout);
+	const allChangedFiles = [...new Set([...stagedStat.files, ...unstagedStat.files, ...untrackedFiles])];
 
 	// ── Step 3: Stage changes ──
 	if (hasUnstagedChanges) {
