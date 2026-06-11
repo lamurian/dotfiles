@@ -129,7 +129,7 @@ export async function execGitWithStream(
 	signal: AbortSignal | undefined,
 	cwd: string,
 	onChunk: (chunk: string) => void,
-	timeout = 60_000,
+	timeout?: number,
 ): Promise<GitResult> {
 	const escapedArgs = args.map((a) => {
 		if (a.includes("'")) {

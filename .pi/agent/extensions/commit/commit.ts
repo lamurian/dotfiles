@@ -132,7 +132,7 @@ export async function performCommit(
 			}
 			ctx.ui.setWidget("pre-commit", liveLines.slice(-15));
 		},
-		60_000,
+		undefined,
 	);
 	ctx.ui.setWidget("pre-commit", []);
 
@@ -264,7 +264,7 @@ Provide concise:
 			}
 			ctx.ui.setWidget("pre-commit", retryLines.slice(-15));
 		},
-		60_000,
+		undefined,
 	);
 	ctx.ui.setWidget("pre-commit", []);
 
