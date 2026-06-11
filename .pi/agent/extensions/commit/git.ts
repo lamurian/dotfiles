@@ -2,7 +2,7 @@
  * Git helper utilities for the commit extension.
  */
 
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { createLocalBashOperations, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -116,4 +116,49 @@ export function trimSubject(subject: string): string {
 	const full = `${prefix} ${rest}`;
 	if (full.length <= 75) return full;
 	return `${prefix} ${rest.slice(0, 72 - prefix.length - 1).trimEnd()}...`;
+}
+
+/**
+ * Execute a git command with streaming output via bash operations.
+ * Unlike execGit (which buffers all output), this delivers chunks in
+ * real-time via the onChunk callback, useful for long-running commands
+ * like git commit where pre-commit hooks produce incremental progress.
+ */
+export async function execGitWithStream(
+	args: string[],
+	signal: AbortSignal | undefined,
+	cwd: string,
+	onChunk: (chunk: string) => void,
+	timeout = 60_000,
+): Promise<GitResult> {
+	const escapedArgs = args.map((a) => {
+		if (a.includes("'")) {
+			return `"${a.replace(/"/g, '\\"')}"`;
+		}
+		if (a.includes(" ") || a.includes("(") || a.includes(")")) {
+			return `'${a}'`;
+		}
+		return a;
+	});
+	const command = `git ${escapedArgs.join(" ")}`;
+
+	const ops = createLocalBashOperations();
+	let allOutput = "";
+
+	const { exitCode } = await ops.exec(command, cwd, {
+		onData: (data: Buffer) => {
+			const chunk = data.toString();
+			allOutput += chunk;
+			onChunk(chunk);
+		},
+		signal,
+		timeout,
+	});
+
+	return {
+		stdout: allOutput,
+		stderr: allOutput,
+		code: exitCode ?? 1,
+		killed: exitCode === null,
+	};
 }

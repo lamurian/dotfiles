@@ -4,7 +4,7 @@
  */
 
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { execGit, getStagedDiffStat, getWorkingTreeDiffStat, trimSubject, parseStatusFiles } from "./git.ts";
+import { execGit, execGitWithStream, getStagedDiffStat, getWorkingTreeDiffStat, trimSubject, parseStatusFiles } from "./git.ts";
 import { generateCommitMessage } from "./message.ts";
 import { spawnSubagent } from "./subagent.ts";
 
@@ -46,7 +46,7 @@ export async function performCommit(
 	params: CommitParams,
 	signal: AbortSignal | undefined,
 	out: OutputBuilder,
-	_ctx: ExtensionContext,
+	ctx: ExtensionContext,
 ): Promise<CommitResult> {
 	const { addAll, files } = params;
 
@@ -115,19 +115,26 @@ export async function performCommit(
 		commitArgs.push("-m", commitBody);
 	}
 
-	const result = await execGit(pi, commitArgs, signal, 60_000);
-
-	// ── Step 7: Show raw git output ──
-	if (result.stdout.trim()) {
-		for (const line of result.stdout.trimEnd().split("\n")) {
-			out.push(line);
-		}
-	}
-	if (result.stderr.trim()) {
-		for (const line of result.stderr.trimEnd().split("\n")) {
-			out.push(line);
-		}
-	}
+	// ── Step 7: Run commit with streaming output ──
+	// Use bash operations with onData callback so pre-commit hook output
+	// appears in real-time rather than being buffered until completion.
+	const liveLines: string[] = [];
+	ctx.ui.setWidget("pre-commit", ["Running pre-commit hooks..."]);
+	const result = await execGitWithStream(
+		commitArgs,
+		signal,
+		ctx.cwd,
+		(chunk: string) => {
+			const lines = chunk.split("\n").filter((l) => l.length > 0);
+			for (const line of lines) {
+				out.push(line);
+				liveLines.push(line);
+			}
+			ctx.ui.setWidget("pre-commit", liveLines.slice(-15));
+		},
+		60_000,
+	);
+	ctx.ui.setWidget("pre-commit", []);
 
 	if (result.code !== 0) {
 		const errorMsg = result.stderr || `exit code ${result.code}`;
@@ -140,7 +147,7 @@ export async function performCommit(
 			return { content: [{ type: "text", text: out.text }], isError: true, details: { success: false, error: errorMsg } };
 		}
 
-		return handlePreCommitFailure(pi, params, errorMsg, subjectLine, allChangedFiles, signal, out);
+		return handlePreCommitFailure(pi, params, errorMsg, subjectLine, allChangedFiles, signal, out, ctx);
 	}
 
 	return {
@@ -165,6 +172,7 @@ async function handlePreCommitFailure(
 	_allChangedFiles: string[],
 	signal: AbortSignal | undefined,
 	out: OutputBuilder,
+	ctx: ExtensionContext,
 ): Promise<CommitResult> {
 	out.push(""); // blank line before section
 	out.push("# Pre-commit hook failed. Analyzing...");
@@ -242,14 +250,23 @@ Provide concise:
 	if (state.body) retryArgs.push("-m", state.body);
 
 	out.push(`$ git commit -m "${subjectLine}"`);
-	const retryResult = await execGit(pi, retryArgs, signal, 60_000);
-
-	if (retryResult.stdout.trim()) {
-		for (const line of retryResult.stdout.trimEnd().split("\n")) out.push(line);
-	}
-	if (retryResult.stderr.trim()) {
-		for (const line of retryResult.stderr.trimEnd().split("\n")) out.push(line);
-	}
+	const retryLines: string[] = [];
+	ctx.ui.setWidget("pre-commit", ["Retrying commit (pre-commit hooks re-run)..."]);
+	const retryResult = await execGitWithStream(
+		retryArgs,
+		signal,
+		ctx.cwd,
+		(chunk: string) => {
+			const lines = chunk.split("\n").filter((l) => l.length > 0);
+			for (const line of lines) {
+				out.push(line);
+				retryLines.push(line);
+			}
+			ctx.ui.setWidget("pre-commit", retryLines.slice(-15));
+		},
+		60_000,
+	);
+	ctx.ui.setWidget("pre-commit", []);
 
 	if (retryResult.code !== 0) {
 		return { content: [{ type: "text", text: out.text }], isError: true, details: { success: false, error: retryResult.stderr } };
