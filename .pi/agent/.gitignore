@@ -1,0 +1,5 @@
+!*.md
+!*.ts
+!*.js
+!extensions/*.json
+**/node_*/**
