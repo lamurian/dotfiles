@@ -1,7 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { resolve, isAbsolute } from "node:path";
 import { fileURLToPath } from "node:url";
-import { glob } from "fast-glob";
 
 /** Cached absolute path of the package root directory. */
 let _packageRoot: string | undefined;

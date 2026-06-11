@@ -3,6 +3,7 @@ import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-a
 /** Valid phases of the modular workflow state machine. */
 export type WorkflowPhase =
   | "idle"
+  | "discussing"
   | "requirements"
   | "specifying"
   | "planning"

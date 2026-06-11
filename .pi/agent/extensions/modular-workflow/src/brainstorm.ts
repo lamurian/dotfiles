@@ -141,7 +141,7 @@ export async function runBrainstorming(
   );
 
   // Kick off the LLM conversation
-  pi.sendUserMessage(contextText, { deliverAs: "nextTurn" });
+  pi.sendUserMessage(contextText, { deliverAs: "steer" });
 }
 
 /**
