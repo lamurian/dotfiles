@@ -9,6 +9,7 @@ import { readLatestAdr } from "./adr.ts";
 import { getAdrContext } from "./adr-detect.ts";
 import { readArchitecture } from "./architecture.ts";
 import { registerAdrCommand, registerSpecCommand, registerPlanCommand } from "./commands.ts";
+import { registerExploreCommand, registerExploreTool } from "./explore.ts";
 import { parseArgs, getSkillsDir, detectDocType } from "./utils.ts";
 import { setupAutocomplete } from "./autocomplete.ts";
 import { handlePreCompact, handlePostCompact } from "./compaction.ts";
@@ -79,6 +80,8 @@ export default function (pi: ExtensionAPI): void {
   registerAdrCommand(pi);
   registerSpecCommand(pi);
   registerPlanCommand(pi);
+  registerExploreCommand(pi);
+  registerExploreTool(pi);
 
   // ── Phase-based edit restrictions ───────────────────────────
   pi.on("tool_call", async (event, ctx) => {
