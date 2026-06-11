@@ -14,7 +14,6 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { Type } from "typebox";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -355,22 +354,7 @@ export default function commitExtension(pi: ExtensionAPI) {
 		const subjectLine = trimSubject(`${commitType}${scopePart}: ${commitDescription}`);
 		const fullMessage = commitBody ? `${subjectLine}\n\n${commitBody}` : subjectLine;
 
-		// ── Step 6: Confirm commit (5s timeout, auto-deny on no response) ──
-		if (ctx.hasUI) {
-			const confirmed = await ctx.ui.confirm(
-				"Confirm commit",
-				`Commit message:\n\n  ${fullMessage}\n\nProceed?`,
-				{ timeout: 5000 },
-			);
-			if (!confirmed) {
-				return {
-					content: [{ type: "text", text: "⏸ Commit cancelled by user." }],
-					details: { cancelled: true },
-				};
-			}
-		}
-
-		// ── Step 7: Attempt commit ──
+		// ── Step 6: Attempt commit ──
 		onUpdate?.({ content: [{ type: "text", text: "💾 Committing..." }] });
 
 		const commitArgs = ["commit"];
@@ -628,70 +612,7 @@ Provide concise:
 		}
 	}
 
-	// ─── Register the commit tool ─────────────────────────────────────────────
 
-	pi.registerTool({
-		name: "commit",
-		label: "Commit",
-		description:
-			"Stage changes and commit with a conventional commit message. Shows diff stat, " +
-			"prompts for confirmation, generates a commit message, and handles pre-commit hook failures " +
-			"by analyzing the error, applying fixes, and retrying the commit.",
-		promptSnippet: "Stage and commit changes with a conventional commit message",
-		promptGuidelines: [
-			"Use commit when the user asks to commit changes or to stage and commit work.",
-			"commit respects pre-commit hooks: on failure it analyzes the error, proposes a fix plan, applies fixes, and retries automatically.",
-			"Do not use raw git commit; use commit for proper conventional commit formatting and pre-commit handling.",
-		],
-		parameters: Type.Object({
-			type: Type.Optional(
-				Type.Union(
-					[
-						Type.Literal("feat"),
-						Type.Literal("fix"),
-						Type.Literal("docs"),
-						Type.Literal("style"),
-						Type.Literal("refactor"),
-						Type.Literal("perf"),
-						Type.Literal("test"),
-						Type.Literal("build"),
-						Type.Literal("ci"),
-						Type.Literal("chore"),
-						Type.Literal("revert"),
-					],
-					{ description: "Conventional commit type. Auto-detected from changes if omitted." },
-				),
-			),
-			scope: Type.Optional(
-				Type.String({ description: "Optional scope, e.g. component or module name." }),
-			),
-			description: Type.Optional(
-				Type.String({
-					description:
-						"Short imperative description (<75 chars). Auto-generated from diff if omitted.",
-				}),
-			),
-			body: Type.Optional(
-				Type.String({
-					description:
-						"Optional body explaining why (not what). Only include when the reason isn't obvious from the subject.",
-				}),
-			),
-			addAll: Type.Optional(
-				Type.Boolean({
-					description: "Stage all unstaged changes. Default: true.",
-				}),
-			),
-			files: Type.Optional(
-				Type.Array(Type.String(), {
-					description: "Specific files to stage instead of --all.",
-				}),
-			),
-		}),
-		async execute(toolCallId, params, signal, onUpdate, ctx) {
-			return performCommit(toolCallId, params, signal, onUpdate, ctx);
-		},
-	});
 
 	// ─── Register the /commit command ────────────────────────────────────────
 

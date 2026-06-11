@@ -1,0 +1,20 @@
+{
+  "adr": {
+    "path": "docs/ADR",
+    "description": "Primary directory for Architecture Decision Records",
+    "fallbacks": ["docs/adr", "ADR"]
+  },
+  "specs": {
+    "path": "docs/specs",
+    "description": "Directory for specification files"
+  },
+  "plans": {
+    "path": "docs/plans",
+    "description": "Directory for plan files"
+  },
+  "architecture": {
+    "path": "ARCHITECTURE.md",
+    "description": "Architecture document tracking ADR lifecycle status",
+    "fallbacks": ["docs/agents/ARCHITECTURE.md"]
+  }
+}

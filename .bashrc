@@ -77,7 +77,7 @@ book () {
 force_color_prompt=yes
 
 export DATA=$HOME/data
-export DOCS=$HOME/Documents
+export DOCS=$DATA/personal/Documents
 export BLOG=$DOCS/blog
 export BOOK=$DOCS/ebook
 export PROF=$DATA/professional
