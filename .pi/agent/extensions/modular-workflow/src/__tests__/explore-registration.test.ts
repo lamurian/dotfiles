@@ -107,6 +107,40 @@ describe("registerExploreCommand", () => {
     await exploreCmd[1].handler("   ", ctx);
     assert.match(notifiedText, /Usage/);
   });
+
+  it("command sets persistent status via ctx.ui.setStatus during phases", async () => {
+    const { registerExploreCommand } = await import("../explore.ts");
+    const pi = mockPi();
+    const ctx = mockCtx("/tmp/test", {
+      model: null as unknown as ExtensionContext["model"],
+    });
+
+    const statusCalls: Array<[string, string | undefined]> = [];
+    ctx.ui.setStatus = (key: string, text: string | undefined) => {
+      if (key === "explore") statusCalls.push([key, text]);
+    };
+
+    registerExploreCommand(pi);
+    const cmdCalls = pi.calls["registerCommand"] ?? [];
+    const exploreCmd = cmdCalls.find(
+      ([name]: [string]) => name === "explore",
+    ) as [string, { handler: Function }];
+
+    await exploreCmd[1].handler("find config", ctx);
+
+    assert.ok(statusCalls.length >= 2,
+      `should set explore status at least 2 times, got ${statusCalls.length}`);
+
+    // First status should be set during decompose/execution phase
+    const [firstKey, firstText] = statusCalls[0];
+    assert.equal(firstKey, "explore");
+    assert.ok(firstText, "first status should have text");
+
+    // Last status should be undefined (cleared when done)
+    const [lastKey, lastText] = statusCalls[statusCalls.length - 1];
+    assert.equal(lastKey, "explore");
+    assert.equal(lastText, undefined, "last status should be cleared (undefined)");
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -196,6 +230,47 @@ describe("registerExploreTool", () => {
 
     assert.ok(result.content, "should return content");
     assert.ok(result.content[0].text.length > 0, "should return non-empty text");
+  });
+
+  it("tool calls onUpdate with progress text during execution", async () => {
+    const { registerExploreTool } = await import("../explore.ts");
+    const pi = mockPi();
+    const ctx = mockCtx("/tmp/test", {
+      model: null as unknown as ExtensionContext["model"],
+    });
+
+    registerExploreTool(pi);
+    const toolCalls = pi.calls["registerTool"] ?? [];
+    const exploreTool = toolCalls.find(
+      ([def]: [{ name: string }]) => def.name === "explore",
+    ) as [{ execute: Function }];
+
+    const updates: string[] = [];
+    const onUpdate = (partial: { content: Array<{ type: string; text?: string }> }) => {
+      for (const c of partial.content) {
+        if (c.type === "text" && c.text) updates.push(c.text);
+      }
+    };
+
+    await exploreTool[0].execute(
+      "call-3",
+      { instruction: "search src/" },
+      AbortSignal.abort(),
+      onUpdate,
+      ctx,
+    );
+
+    assert.ok(updates.length >= 2,
+      `should send at least 2 progress updates, got ${updates.length}`);
+
+    // First update should reference the decompose/exploration phase
+    assert.match(updates[0], /search|task|explor/i,
+      "first update should report task decomposition");
+
+    // Last update should reference synthesis or completion
+    const lastText = updates[updates.length - 1];
+    assert.match(lastText, /synthesis|synthesiz|complet|result/i,
+      "last update should report synthesis");
   });
 });
 
