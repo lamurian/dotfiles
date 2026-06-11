@@ -138,7 +138,7 @@ Examples:
 			onUpdate: ((update: { content: { type: string; text: string }[] }) => void) | undefined,
 			ctx: { cwd: string; ui: { notify: (msg: string, type: string) => void } },
 		): Promise<CommitResult> {
-			onUpdate?.([{ type: "text", text: "Running git commit..." }]);
+			onUpdate?.({ content: [{ type: "text", text: "Running git commit..." }] });
 
 			const result = await runCommit(pi, params.message, params.body, signal);
 
