@@ -227,3 +227,42 @@ test("commit_changes tool returns isError for genuine errors", async () => {
 	expect(result.isError).toBe(true);
 	expect(result.details.success).toBe(false);
 });
+
+test("commit_changes tool calls onUpdate with correct shape", async () => {
+	let onUpdateCall: unknown = null;
+
+	const localMockPi = {
+		...mockPi,
+		exec: async (cmd: string, args: string[]) => {
+			if (cmd === "git" && args[0] === "commit") {
+				return { stdout: "[main abc123] feat: add test\n 1 file changed", stderr: "", code: 0 };
+			}
+			return { stdout: "", stderr: "", code: 0 };
+		},
+	};
+
+	registeredCommand = null;
+	registeredTool = null;
+	commitExtension(localMockPi);
+
+	expect(registeredTool).not.toBeNull();
+
+	const onUpdate = (update: unknown) => {
+		onUpdateCall = update;
+	};
+
+	await registeredTool!.execute(
+		"call-4",
+		{ message: "feat: add test" },
+		undefined,
+		onUpdate,
+		{ cwd: "/tmp", ui: { notify: () => {} } },
+	);
+
+	// onUpdate must be called with an object containing a content array, not a bare array
+	expect(onUpdateCall).not.toBeNull();
+	expect(Array.isArray(onUpdateCall)).toBe(false);
+	expect(onUpdateCall).toHaveProperty("content");
+	expect(Array.isArray((onUpdateCall as { content: unknown[] }).content)).toBe(true);
+	expect((onUpdateCall as { content: { type: string }[] }).content[0]).toHaveProperty("type", "text");
+});
