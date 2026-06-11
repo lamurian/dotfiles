@@ -65,8 +65,13 @@ describe("explore content files", () => {
     assert.equal(frontmatter.name, "scout");
     assert.ok(frontmatter.description, "scout.md should have a description");
     assert.ok(frontmatter.tools, "scout.md should specify tools");
-    assert.ok(frontmatter.model, "scout.md should specify a model");
+    assert.equal(frontmatter.model, undefined, "scout.md should NOT specify a model — use user's default");
     assert.ok(body.length > 50, "scout.md body should contain system prompt instructions");
+    assert.match(
+      body,
+      /ls.*find.*grep.*read|ls.*grep.*read|ls.*find/is,
+      "strategy should instruct efficient tool order: ls -> find -> grep -> read",
+    );
   });
 
   it("explore-decompose.md exists and is substantial", async () => {
@@ -170,6 +175,130 @@ describe("mapWithConcurrencyLimit", () => {
     const { mapWithConcurrencyLimit } = await import("../subagent-runner.ts");
     const results = await mapWithConcurrencyLimit([1, 2], 10, async (n) => n);
     assert.deepEqual(results, [1, 2]);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// runParallelExploration — progress reporting
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("runParallelExploration", () => {
+  it("calls _onUpdate after each scout completes", async () => {
+    const { runParallelExploration } = await import("../explore-core.ts");
+
+    const tasks = [
+      { agent: "scout", task: "list files in src/" },
+      { agent: "scout", task: "find config files" },
+    ];
+
+    const updates: Array<Array<{ exitCode: number }>> = [];
+    const signal = AbortSignal.abort();
+
+    await runParallelExploration(
+      tasks,
+      process.cwd(),
+      signal,
+      (partial) => {
+        updates.push([...partial]);
+      },
+    );
+
+    assert.equal(updates.length, 2, "should call _onUpdate once per task");
+
+    // First update: exactly 1 task completed (exitCode >= 0)
+    const firstDone = updates[0].filter((r) => r.exitCode >= 0).length;
+    assert.equal(firstDone, 1, "first callback should report 1 completed task");
+
+    // Last (second) update: all tasks completed
+    const lastDone = updates[updates.length - 1].filter((r) => r.exitCode >= 0).length;
+    assert.equal(lastDone, 2, "last callback should report all tasks completed");
+  });
+
+  it("returns results for all tasks even when _onUpdate not provided", async () => {
+    const { runParallelExploration } = await import("../explore-core.ts");
+
+    const tasks = [
+      { agent: "scout", task: "find auth handlers" },
+    ];
+
+    const results = await runParallelExploration(
+      tasks,
+      process.cwd(),
+      AbortSignal.abort(),
+    );
+
+    assert.equal(results.length, 1, "should return result for the task");
+    assert.ok(results[0].exitCode !== undefined, "result should have an exitCode");
+  });
+
+  it("returns empty array for empty tasks", async () => {
+    const { runParallelExploration } = await import("../explore-core.ts");
+    const results = await runParallelExploration(
+      [],
+      process.cwd(),
+      AbortSignal.abort(),
+      () => {},
+    );
+    assert.deepEqual(results, []);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// createLoader — progress indicator
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("createLoader", () => {
+  it("update writes spinner text to stderr", async () => {
+    const { createLoader } = await import("../explore-core.ts");
+
+    const written: string[] = [];
+    const origWrite = process.stderr.write.bind(process.stderr);
+    process.stderr.write = (chunk: any) => {
+      written.push(String(chunk));
+      return true;
+    };
+
+    try {
+      const loader = createLoader("test exploration");
+      loader.update("3/5 scouts complete");
+      loader.done();
+
+      assert.ok(written.length >= 1, "should have written to stderr at least once");
+      assert.match(written[0], /scouts complete/, "output should contain progress text");
+    } finally {
+      process.stderr.write = origWrite;
+    }
+  });
+
+  it("done clears the interval and writes final newline", async () => {
+    const { createLoader } = await import("../explore-core.ts");
+
+    const written: string[] = [];
+    const origWrite = process.stderr.write.bind(process.stderr);
+    process.stderr.write = (chunk: any) => {
+      written.push(String(chunk));
+      return true;
+    };
+
+    try {
+      const loader = createLoader("test");
+      loader.update("processing");
+      loader.done();
+
+      // After done(), the last write should contain a newline
+      const lastWrite = written[written.length - 1];
+      assert.ok(lastWrite?.endsWith("\n"), "done() should write a final newline");
+    } finally {
+      process.stderr.write = origWrite;
+    }
+  });
+
+  it("returns spinner loader object with update and done methods", async () => {
+    const { createLoader } = await import("../explore-core.ts");
+    const loader = createLoader("test");
+
+    assert.equal(typeof loader.update, "function");
+    assert.equal(typeof loader.done, "function");
   });
 });
 
