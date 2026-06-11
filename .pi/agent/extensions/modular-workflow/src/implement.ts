@@ -48,7 +48,7 @@ export async function startTdd(
   ctx.ui.notify("Starting TDD implementation.", "info");
 
   // Send the TDD prompt as a user message to kick off the agent
-  pi.sendUserMessage(tddPrompt, { deliverAs: "nextTurn" });
+  pi.sendUserMessage(tddPrompt, { deliverAs: "steer" });
 }
 
 /**

@@ -1,6 +1,8 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { isToolCallEventType } from "@earendil-works/pi-coding-agent";
 import { loadState, updateUi, type WorkflowState } from "./state.ts";
 import { runBrainstorming, buildPhasePrompt } from "./brainstorm.ts";
+import { runDiscussion } from "./discuss.ts";
 import { archivePlan } from "./plan.ts";
 import { startTdd, buildTddPrompt } from "./implement.ts";
 import { readLatestAdr } from "./adr.ts";
@@ -48,13 +50,17 @@ export default function (pi: ExtensionAPI): void {
       systemExtra += `\n\n### Project Documents\n${adrContext}`;
     }
 
-    if (!state || state.phase === "idle") {
+    // Always read fresh state from session to avoid stale module-level cache
+    // after transitionTo() calls from brainstorm/discuss command handlers.
+    const currentState = loadState(ctx);
+
+    if (!currentState || currentState.phase === "idle") {
       if (systemExtra) return { systemPrompt: `${event.systemPrompt}${systemExtra}` };
       return;
     }
 
     // Phase-specific protocol prompt
-    const phase = state.phase;
+    const phase = currentState.phase;
     const phasePrompt = await buildPhasePrompt(
       phase,
       phase === "requirements"
@@ -62,7 +68,7 @@ export default function (pi: ExtensionAPI): void {
         : true, // only requirements phase has questionnaire
     );
 
-    const topic = state.specText ? `\n\nTopic: ${state.specText}` : "";
+    const topic = currentState.specText ? `\n\nTopic: ${currentState.specText}` : "";
 
     return {
       systemPrompt: `${event.systemPrompt}\n\n${phasePrompt}${topic}${systemExtra}`,
@@ -73,6 +79,57 @@ export default function (pi: ExtensionAPI): void {
   registerAdrCommand(pi);
   registerSpecCommand(pi);
   registerPlanCommand(pi);
+
+  // ── Phase-based edit restrictions ───────────────────────────
+  pi.on("tool_call", async (event, ctx) => {
+    const currentState = loadState(ctx);
+    if (!currentState || currentState.phase === "idle") return;
+
+    if (currentState.phase === "discussing") {
+      // /discuss: no file edits allowed
+      if (isToolCallEventType("write", event) || isToolCallEventType("edit", event)) {
+        return {
+          block: true,
+          reason: "The /discuss command does not allow file editing. " +
+            "Discuss the approach first, then use /implement to execute the agreed plan."
+        };
+      }
+      return;
+    }
+
+    // /brainstorm phases (requirements, specifying, planning): only .md files
+    if (isToolCallEventType("write", event)) {
+      const path: string = event.input.path ?? "";
+      if (!path.endsWith(".md")) {
+        return {
+          block: true,
+          reason: `During /brainstorm you can only write .md files (ADRs, specs, plans). ` +
+            `Blocked write to "${path}". Use /implement for code changes.`
+        };
+      }
+    }
+
+    if (isToolCallEventType("edit", event)) {
+      const path: string = event.input.path ?? "";
+      if (!path.endsWith(".md")) {
+        return {
+          block: true,
+          reason: `During /brainstorm you can only edit .md files (ADRs, specs, plans). ` +
+            `Blocked edit to "${path}". Use /implement for code changes.`
+        };
+      }
+    }
+  });
+
+  // ── /discuss ───────────────────────────────────────────────
+  pi.registerCommand("discuss", {
+    description:
+      "Discuss an issue, bug, chore, or small fix with the engineer. " +
+      "Usage: /discuss <topic>",
+    handler: async (args, ctx) => {
+      await runDiscussion(args, pi, ctx);
+    },
+  });
 
   // ── /brainstorm ─────────────────────────────────────────────
   pi.registerCommand("brainstorm", {
@@ -136,6 +193,19 @@ export default function (pi: ExtensionAPI): void {
       }
 
       if (!topic && fileContents.length === 0) {
+        // If there's an active discussion, use that as the plan
+        const discussionState = loadState(ctx);
+        if (discussionState && discussionState.phase === "discussing") {
+          await startTdd(
+            `Discussion topic: ${discussionState.specText}\n\n` +
+              "The user and you agreed on an implementation strategy during " +
+              "the discussion. Refer to the conversation history for the full plan.",
+            pi,
+            ctx,
+          );
+          return;
+        }
+
         const latestAdr = await readLatestAdr(ctx.cwd);
         if (latestAdr) {
           const spec = [
@@ -164,7 +234,7 @@ export default function (pi: ExtensionAPI): void {
   pi.registerCommand("status", {
     description: "Show current workflow phase and document status",
     handler: async (_args, ctx) => {
-      const current = state ?? loadState(ctx);
+      const current = loadState(ctx) ?? state;
       if (!current || current.phase === "idle") {
         const entries = await readArchitecture(ctx.cwd);
         if (entries.length > 0) {
