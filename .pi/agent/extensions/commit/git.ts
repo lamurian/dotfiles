@@ -79,6 +79,23 @@ export async function getWorkingTreeDiffStat(
 }
 
 /**
+ * Parse untracked and modified file paths from `git status --short` output.
+ * Lines starting with `??` are untracked files; ` M` / `M ` are modified.
+ */
+export function parseStatusFiles(stdout: string): string[] {
+	const files: string[] = [];
+	for (const line of stdout.trim().split("\n")) {
+		const trimmed = line.trim();
+		if (!trimmed) continue;
+		// Match: "?? path/to/file" or " M path/to/file" or "M  path/to/file"
+		// After the two status columns, everything else is the path
+		const pathMatch = line.match(/^\S\S\s+(.+)$/);
+		if (pathMatch) files.push(pathMatch[1].trim());
+	}
+	return files;
+}
+
+/**
  * Trim a commit subject to fit within 75 characters.
  * Ensures lowercase after colon and no trailing period.
  */
