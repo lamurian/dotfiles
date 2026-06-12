@@ -140,9 +140,10 @@ Examples:
 		): Promise<CommitResult> {
 			onUpdate?.({ content: [{ type: "text", text: "Running git commit..." }] });
 
-			// Capture HEAD before commit to verify the commit actually happens
+			// Capture HEAD before commit to verify the commit actually happens.
+			// Use --short for consistent format with the after-commit check.
 			const { stdout: before, code: beforeCode } = await execGit(
-				pi, ["rev-parse", "HEAD"], signal,
+				pi, ["rev-parse", "--short", "HEAD"], signal,
 			);
 			const hashBefore = beforeCode === 0 ? before.trim() : "";
 
