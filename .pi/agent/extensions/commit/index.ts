@@ -161,25 +161,16 @@ Examples:
 				result.output.toLowerCase().includes("hook failed");
 
 			if (isPreCommitFailure) {
-				return {
-					content: [
-						{
-							type: "text",
-							text: `Commit failed due to pre-commit hooks:\n\n${result.output}\n\nFix the reported issues, stage fixes with \`git add\`, then call \`commit_changes\` again with the same message.`,
-						},
-					],
-					isError: true,
-					details: { success: false, isPreCommitFailure, message: params.message },
-				};
+				ctx.ui.notify(`✗ Commit failed due to pre-commit hooks: ${params.message}`, "error");
+				throw new Error(
+					`Commit failed due to pre-commit hooks:\n\n${result.output}\n\n` +
+						`Fix the reported issues, stage fixes with \`git add\`, then call \`commit_changes\` again with the same message.`,
+				);
 			}
 
 			// Genuine error
 			ctx.ui.notify(`✗ Commit failed: ${params.message}`, "error");
-			return {
-				content: [{ type: "text", text: `Commit failed:\n${result.output}` }],
-				isError: true,
-				details: { success: false, error: result.output },
-			};
+			throw new Error(`Commit failed:\n${result.output}`);
 		},
 	});
 }
