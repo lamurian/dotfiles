@@ -159,7 +159,7 @@ test("commit_changes tool runs git commit and returns result", async () => {
 	expect(result.details.hash).toBe("def5678");
 });
 
-test("commit_changes tool returns isError for pre-commit failures", async () => {
+test("commit_changes tool throws on pre-commit hook failure", async () => {
 	const localMockPi = {
 		...mockPi,
 		exec: async (cmd: string, args: string[]) => {
@@ -180,21 +180,20 @@ test("commit_changes tool returns isError for pre-commit failures", async () => 
 
 	expect(registeredTool).not.toBeNull();
 
-	const result = await registeredTool!.execute(
-		"call-2",
-		{ message: "feat: add test" },
-		undefined,
-		undefined,
-		{ cwd: "/tmp", ui: { notify: () => {} } },
-	);
-
-	// Pre-commit failures should signal error so the AI knows to fix and retry
-	expect(result.isError).toBe(true);
-	expect(result.details.success).toBe(false);
-	expect(result.details.isPreCommitFailure).toBe(true);
+	// Should throw so the framework properly signals isError to the LLM
+	const ctx = { cwd: "/tmp", ui: { notify: () => {} } };
+	await expect(
+		registeredTool!.execute(
+			"call-2",
+			{ message: "feat: add test" },
+			undefined,
+			undefined,
+			ctx,
+		),
+	).rejects.toThrow(/pre-commit hook/i);
 });
 
-test("commit_changes tool returns isError for genuine errors", async () => {
+test("commit_changes tool throws on genuine git errors", async () => {
 	const localMockPi = {
 		...mockPi,
 		exec: async (cmd: string, args: string[]) => {
@@ -215,17 +214,16 @@ test("commit_changes tool returns isError for genuine errors", async () => {
 
 	expect(registeredTool).not.toBeNull();
 
-	const result = await registeredTool!.execute(
-		"call-3",
-		{ message: "feat: add test" },
-		undefined,
-		undefined,
-		{ cwd: "/tmp", ui: { notify: () => {} } },
-	);
-
-	// Genuine git errors should be isError
-	expect(result.isError).toBe(true);
-	expect(result.details.success).toBe(false);
+	const ctx = { cwd: "/tmp", ui: { notify: () => {} } };
+	await expect(
+		registeredTool!.execute(
+			"call-3",
+			{ message: "feat: add test" },
+			undefined,
+			undefined,
+			ctx,
+		),
+	).rejects.toThrow(/commit failed/i);
 });
 
 test("commit_changes tool calls onUpdate with correct shape", async () => {

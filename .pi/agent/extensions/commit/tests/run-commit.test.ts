@@ -4,7 +4,7 @@
  */
 import { expect, test, mock, beforeAll, afterAll } from "bun:test";
 import { randomUUID } from "node:crypto";
-import { mkdtempSync, rmSync, writeFileSync, realpathSync } from "node:fs";
+import { chmodSync, mkdtempSync, rmSync, writeFileSync, realpathSync } from "node:fs";
 import { join } from "node:path";
 import { execSync } from "node:child_process";
 
@@ -117,6 +117,67 @@ test("returns non-zero code when nothing to commit", async () => {
 
 	expect(result.code).not.toBe(0);
 	expect(result.output).toMatch(/nothing to commit|nothing added/);
+
+	destroyTestRepo(repo);
+});
+
+test("runCommit fails on pre-commit hook failure", async () => {
+	const repo = createTestRepo();
+	stageFile(repo, "test.txt", "hello");
+
+	// Install a failing pre-commit hook that simulates real frameworks
+	// (e.g., husky outputs "husky - pre-commit hook exited with code 1")
+	const hookPath = join(repo.dir, ".git", "hooks", "pre-commit");
+	writeFileSync(
+		hookPath,
+		"#!/bin/sh\necho 'pre-commit hook failure: eslint --fix found errors' >&2\nexit 1\n",
+		"utf-8",
+	);
+	chmodSync(hookPath, 0o755);
+
+	const result = await runCommit(repo.pi, "feat: add test");
+
+	expect(result.code).not.toBe(0);
+	// The hook's stderr output is captured in result.output
+	expect(result.output).toContain("pre-commit");
+
+	destroyTestRepo(repo);
+});
+
+test("runCommit retry scenario — fix, re-stage, retry succeeds", async () => {
+	const repo = createTestRepo();
+	const filePath = join(repo.dir, "test.txt");
+
+	// File containing "BAD" — simulates a formatting issue that the hook fixes
+	writeFileSync(filePath, "BAD FILE\n", "utf-8");
+	execSync("git add test.txt", { cwd: repo.dir, stdio: "pipe" });
+
+	// Pre-commit hook: if file contains "BAD", rewrite to "GOOD" and fail
+	const hookPath = join(repo.dir, ".git", "hooks", "pre-commit");
+	writeFileSync(
+		hookPath,
+		"#!/bin/sh\nif grep -q 'BAD' test.txt; then\n\tsed -i 's/BAD/GOOD/' test.txt\n\techo 'pre-commit hook failure: found BAD content' >&2\n\texit 1\nfi\nexit 0\n",
+		"utf-8",
+	);
+	chmodSync(hookPath, 0o755);
+
+	// First commit fails due to pre-commit hook
+	const first = await runCommit(repo.pi, "feat: add test");
+	expect(first.code).not.toBe(0);
+	expect(first.output).toContain("pre-commit");
+
+	// Re-stage the fixed file (simulating AI step after running formatter)
+	execSync("git add test.txt", { cwd: repo.dir, stdio: "pipe" });
+
+	// Second commit passes because file is now clean
+	const second = await runCommit(repo.pi, "feat: add test");
+	expect(second.code).toBe(0);
+	expect(second.output).toMatch(/1 file changed/);
+	expect(second.output).toContain("feat: add test");
+
+	// Verify the commit was actually created
+	const log = execSync("git log --oneline", { cwd: repo.dir, encoding: "utf-8" });
+	expect(log).toContain("feat: add test");
 
 	destroyTestRepo(repo);
 });
