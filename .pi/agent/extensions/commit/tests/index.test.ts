@@ -272,6 +272,41 @@ test("commit_changes tool handles initial commit (no prior HEAD)", async () => {
 	expect(result.details.hash).toBe("abc1234");
 });
 
+test("commit_changes tool throws when HEAD did not change despite full vs short hash formats", async () => {
+	const localMockPi = {
+		...mockPi,
+		exec: async (cmd: string, args: string[]) => {
+			if (cmd === "git" && args[0] === "rev-parse") {
+				const isShort = args.includes("--short");
+				// Simulate real git: same commit but different format (full 40-char vs short 7-char)
+				const hash = isShort ? "9c9f975" : "9c9f9753e4038d2d26a8b0e6b3aa761c22e50fd8";
+				return { stdout: hash + "\n", stderr: "", code: 0 };
+			}
+			if (cmd === "git" && args[0] === "commit") {
+				return { stdout: "nothing to commit", stderr: "", code: 0 };
+			}
+			return { stdout: "", stderr: "", code: 0 };
+		},
+	};
+
+	registeredCommand = null;
+	registeredTool = null;
+	commitExtension(localMockPi);
+
+	expect(registeredTool).not.toBeNull();
+
+	const ctx = { cwd: "/tmp", ui: { notify: () => {} } };
+	await expect(
+		registeredTool!.execute(
+			"call-1",
+			{ message: "feat: nothing" },
+			undefined,
+			undefined,
+			ctx,
+		),
+	).rejects.toThrow(/HEAD did not change/i);
+});
+
 test("commit_changes tool throws when HEAD did not change despite exit code 0", async () => {
 	const localMockPi = {
 		...mockPi,
