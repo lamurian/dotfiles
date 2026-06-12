@@ -144,6 +144,30 @@ test("runCommit fails on pre-commit hook failure", async () => {
 	destroyTestRepo(repo);
 });
 
+test("commits on branch with a slash", async () => {
+	const repo = createTestRepo();
+
+	// Create and switch to a branch with a slash
+	execSync("git checkout -b feat/phase-based-modules", { cwd: repo.dir, stdio: "pipe" });
+	stageFile(repo, "test.txt", "hello");
+
+	const result = await runCommit(repo.pi, "feat: add test file");
+
+	expect(result.code).toBe(0);
+	expect(result.output).toMatch(/1 file changed/);
+	expect(result.output).toContain("feat: add test file");
+
+	// Verify the commit was actually created
+	const log = execSync("git log --oneline", { cwd: repo.dir, encoding: "utf-8" });
+	expect(log).toContain("feat: add test file");
+
+	// Verify we're still on the branch with slash
+	const branch = execSync("git rev-parse --abbrev-ref HEAD", { cwd: repo.dir, encoding: "utf-8" }).trim();
+	expect(branch).toBe("feat/phase-based-modules");
+
+	destroyTestRepo(repo);
+});
+
 test("runCommit retry scenario — fix, re-stage, retry succeeds", async () => {
 	const repo = createTestRepo();
 	const filePath = join(repo.dir, "test.txt");

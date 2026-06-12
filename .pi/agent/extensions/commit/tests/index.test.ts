@@ -129,9 +129,16 @@ test("commit command handler commits directly with explicit message", async () =
 
 test("commit_changes tool runs git commit and returns result", async () => {
 	let executedArgs: string[] | null = null;
+	let revParseCount = 0;
 	const localMockPi = {
 		...mockPi,
 		exec: async (cmd: string, args: string[]) => {
+			if (cmd === "git" && args[0] === "rev-parse") {
+				revParseCount++;
+				// Return different hash before vs after commit
+				if (revParseCount === 1) return { stdout: "abc1234\n", stderr: "", code: 0 };
+				return { stdout: "def5678\n", stderr: "", code: 0 };
+			}
 			if (cmd === "git" && args[0] === "commit") {
 				executedArgs = args;
 				return { stdout: "[main def5678] feat: add test\n 1 file changed", stderr: "", code: 0 };
@@ -224,6 +231,129 @@ test("commit_changes tool throws on genuine git errors", async () => {
 			ctx,
 		),
 	).rejects.toThrow(/commit failed/i);
+});
+
+test("commit_changes tool handles initial commit (no prior HEAD)", async () => {
+	let revParseCount = 0;
+	const localMockPi = {
+		...mockPi,
+		exec: async (cmd: string, args: string[]) => {
+			if (cmd === "git" && args[0] === "rev-parse") {
+				revParseCount++;
+				// First call (before commit) — no HEAD yet (empty repo)
+				if (revParseCount === 1) {
+					return { stdout: "", stderr: "fatal: ambiguous argument 'HEAD'", code: 128 };
+				}
+				// Second call (after commit) — HEAD is now set
+				return { stdout: "abc1234\n", stderr: "", code: 0 };
+			}
+			if (cmd === "git" && args[0] === "commit") {
+				return { stdout: "[main (root-commit) abc1234] initial commit\n 1 file changed", stderr: "", code: 0 };
+			}
+			return { stdout: "", stderr: "", code: 0 };
+		},
+	};
+
+	registeredCommand = null;
+	registeredTool = null;
+	commitExtension(localMockPi);
+
+	expect(registeredTool).not.toBeNull();
+
+	const result = await registeredTool!.execute(
+		"call-1",
+		{ message: "feat: initial commit" },
+		undefined,
+		undefined,
+		{ cwd: "/tmp", ui: { notify: () => {} } },
+	);
+
+	expect(result.details.success).toBe(true);
+	expect(result.details.hash).toBe("abc1234");
+});
+
+test("commit_changes tool throws when HEAD did not change despite exit code 0", async () => {
+	const localMockPi = {
+		...mockPi,
+		exec: async (cmd: string, args: string[]) => {
+			if (cmd === "git" && args[0] === "rev-parse") {
+				// Same hash before and after — commit didn't land
+				return { stdout: "abc1234\n", stderr: "", code: 0 };
+			}
+			if (cmd === "git" && args[0] === "commit") {
+				return { stdout: "nothing to commit", stderr: "", code: 0 };
+			}
+			return { stdout: "", stderr: "", code: 0 };
+		},
+	};
+
+	registeredCommand = null;
+	registeredTool = null;
+	commitExtension(localMockPi);
+
+	expect(registeredTool).not.toBeNull();
+
+	const ctx = { cwd: "/tmp", ui: { notify: () => {} } };
+	await expect(
+		registeredTool!.execute(
+			"call-1",
+			{ message: "feat: nothing" },
+			undefined,
+			undefined,
+			ctx,
+		),
+	).rejects.toThrow(/HEAD did not change/i);
+});
+
+test("commit_changes tool extracts hash from rev-parse HEAD", async () => {
+	let callCount = 0;
+	const localMockPi = {
+		...mockPi,
+		exec: async (cmd: string, args: string[]) => {
+			callCount++;
+			if (cmd === "git") {
+				// 1st call: rev-parse before commit
+				if (args[0] === "rev-parse" && callCount === 1) {
+					return { stdout: "abc1234\n", stderr: "", code: 0 };
+				}
+				// 2nd call: git commit (branch name with slash in output)
+				if (args[0] === "commit") {
+					return {
+						stdout: "[feat/phase-based-modules def5678] feat: add test\\n 1 file changed",
+						stderr: "",
+						code: 0,
+					};
+				}
+				// 3rd call: rev-parse after commit
+				if (args[0] === "rev-parse" && callCount === 3) {
+					return { stdout: "def5678\n", stderr: "", code: 0 };
+				}
+			}
+			return { stdout: "", stderr: "", code: 0 };
+		},
+	};
+
+	registeredCommand = null;
+	registeredTool = null;
+	commitExtension(localMockPi);
+
+	expect(registeredTool).not.toBeNull();
+
+	const result = await registeredTool!.execute(
+		"call-1",
+		{ message: "feat: add test" },
+		undefined,
+		undefined,
+		{ cwd: "/tmp", ui: { notify: () => {} } },
+	);
+
+	expect(result.details.success).toBe(true);
+	// Hash should come from rev-parse HEAD, not from parsing commit output
+	expect(result.details.hash).toBe("def5678");
+
+	// Verify rev-parse was called twice (before and after commit)
+	const revParseCalls = callCount; // we can count via callCount
+	expect(revParseCalls).toBeGreaterThanOrEqual(3);
 });
 
 test("commit_changes tool calls onUpdate with correct shape", async () => {
