@@ -140,19 +140,37 @@ Examples:
 		): Promise<CommitResult> {
 			onUpdate?.({ content: [{ type: "text", text: "Running git commit..." }] });
 
+			// Capture HEAD before commit to verify the commit actually happens
+			const { stdout: before, code: beforeCode } = await execGit(
+				pi, ["rev-parse", "HEAD"], signal,
+			);
+			const hashBefore = beforeCode === 0 ? before.trim() : "";
+
 			const result = await runCommit(pi, params.message, params.body, signal);
 
 			if (result.code === 0) {
-				// Extract hash from output: "[branch hash] ..."
-				const hashMatch = result.output.match(/\[[\w-]+ ([a-f0-9]+)\]/);
-				const hash = hashMatch?.[1] || "unknown";
+				// Get the actual commit hash via rev-parse — robust across all branch
+				// names, root commits, and detached HEAD states.
+				const { stdout: after, code: afterCode } = await execGit(
+					pi, ["rev-parse", "--short", "HEAD"], signal,
+				);
+				const hashAfter = afterCode === 0 ? after.trim() : "unknown";
 
-				ctx.ui.notify(`✓ ${params.message}`, "info");
+				// Verify the commit actually happened by checking HEAD changed
+				if (hashBefore !== hashAfter || !hashBefore) {
+					ctx.ui.notify(`✓ ${params.message}`, "info");
 
-				return {
-					content: [{ type: "text", text: `Commit successful. Hash: ${hash}` }],
-					details: { success: true, hash, message: params.message },
-				};
+					return {
+						content: [{ type: "text", text: `Commit successful. Hash: ${hashAfter}` }],
+						details: { success: true, hash: hashAfter, message: params.message },
+					};
+				}
+
+				// HEAD didn't change — commit was a no-op despite exit code 0
+				throw new Error(
+					`Commit reported success but HEAD did not change.\n\n${result.output}\n\n` +
+						`Ensure changes are staged and try again.`,
+				);
 			}
 
 			// Check if pre-commit hook failure
