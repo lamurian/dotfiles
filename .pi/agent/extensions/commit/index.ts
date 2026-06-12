@@ -168,6 +168,7 @@ Examples:
 							text: `Commit failed due to pre-commit hooks:\n\n${result.output}\n\nFix the reported issues, stage fixes with \`git add\`, then call \`commit_changes\` again with the same message.`,
 						},
 					],
+					isError: true,
 					details: { success: false, isPreCommitFailure, message: params.message },
 				};
 			}

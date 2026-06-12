@@ -159,7 +159,7 @@ test("commit_changes tool runs git commit and returns result", async () => {
 	expect(result.details.hash).toBe("def5678");
 });
 
-test("commit_changes tool returns pre-commit failure as content not error", async () => {
+test("commit_changes tool returns isError for pre-commit failures", async () => {
 	const localMockPi = {
 		...mockPi,
 		exec: async (cmd: string, args: string[]) => {
@@ -188,8 +188,8 @@ test("commit_changes tool returns pre-commit failure as content not error", asyn
 		{ cwd: "/tmp", ui: { notify: () => {} } },
 	);
 
-	// Pre-commit failures should NOT be isError — AI needs to iterate
-	expect(result.isError).not.toBe(true);
+	// Pre-commit failures should signal error so the AI knows to fix and retry
+	expect(result.isError).toBe(true);
 	expect(result.details.success).toBe(false);
 	expect(result.details.isPreCommitFailure).toBe(true);
 });
