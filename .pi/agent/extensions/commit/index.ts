@@ -12,12 +12,26 @@
  * For explicit messages (`/commit type: description`) → commits directly.
  */
 
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI, ToolCallEvent } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { execGit, trimSubject } from "./git.ts";
 import { runCommit, type CommitResult } from "./commit.ts";
 
 export default function commitExtension(pi: ExtensionAPI): void {
+	// ── Guardrail: block git commit via bash ──────────────────────────────
+	pi.on("tool_call", async (event: ToolCallEvent, _ctx) => {
+		if (event.toolName !== "bash") return;
+		const cmd = (event.input as { command?: string }).command ?? "";
+		// Block "git commit" (with word boundary to avoid false matches like "git log | grep commit")
+		if (/\bgit\s+commit\b/.test(cmd)) {
+			return {
+				block: true,
+				reason:
+					"Use the commit_changes tool instead of running git commit directly via bash. " +
+					"The commit_changes tool verifies the commit actually landed and handles pre-commit hook failures correctly.",
+			};
+		}
+	});
 	// ── /commit command ────────────────────────────────────────────────────
 	pi.registerCommand("commit", {
 		description:
@@ -167,7 +181,21 @@ Examples:
 					};
 				}
 
-				// HEAD didn't change — commit was a no-op despite exit code 0
+				// HEAD didn't change — check if pre-commit hooks ran (code 0 + hook output)
+				const output = result.output.toLowerCase();
+				const hasPreCommitOutput =
+					output.includes("pre-commit") ||
+					output.includes("running pre-commit");
+
+				if (hasPreCommitOutput) {
+					throw new Error(
+						`Commit was blocked by pre-commit hooks.\n\n${result.output}\n\n` +
+							`Fix the reported issues, re-stage with \`git add\`, ` +
+							`then call \`commit_changes\` again with the same message.`,
+					);
+				}
+
+				// HEAD didn't change with no hook output — staging issue
 				throw new Error(
 					`Commit reported success but HEAD did not change.\n\n${result.output}\n\n` +
 						`Ensure changes are staged and try again.`,

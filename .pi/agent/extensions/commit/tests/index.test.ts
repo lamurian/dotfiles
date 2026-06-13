@@ -28,6 +28,7 @@ const mockPi = {
 	sendUserMessage: (content: string, opts?: any) => {
 		// no-op in test
 	},
+	on: () => {}, // no-op in default mock
 };
 
 beforeAll(async () => {
@@ -272,6 +273,44 @@ test("commit_changes tool handles initial commit (no prior HEAD)", async () => {
 	expect(result.details.hash).toBe("abc1234");
 });
 
+test("commit_changes tool detects pre-commit hook interference when code is 0", async () => {
+	const localMockPi = {
+		...mockPi,
+		exec: async (cmd: string, args: string[]) => {
+			if (cmd === "git" && args[0] === "rev-parse") {
+				// Same hash before and after — commit didn't land
+				return { stdout: "abc1234\n", stderr: "", code: 0 };
+			}
+			if (cmd === "git" && args[0] === "commit") {
+				// Exit code 0 but pre-commit hook output present and HEAD unchanged
+				return {
+					stdout: "",
+					stderr: "==> Running pre-commit checks...\\npixi run prettify\\nAll done!",
+					code: 0,
+				};
+			}
+			return { stdout: "", stderr: "", code: 0 };
+		},
+	};
+
+	registeredCommand = null;
+	registeredTool = null;
+	commitExtension(localMockPi);
+
+	expect(registeredTool).not.toBeNull();
+
+	const ctx = { cwd: "/tmp", ui: { notify: () => {} } };
+	await expect(
+		registeredTool!.execute(
+			"call-1",
+			{ message: "feat: add test" },
+			undefined,
+			undefined,
+			ctx,
+		),
+	).rejects.toThrow(/pre-commit hook/i);
+});
+
 test("commit_changes tool throws when HEAD did not change despite full vs short hash formats", async () => {
 	const localMockPi = {
 		...mockPi,
@@ -389,6 +428,80 @@ test("commit_changes tool extracts hash from rev-parse HEAD", async () => {
 	// Verify rev-parse was called twice (before and after commit)
 	const revParseCalls = callCount; // we can count via callCount
 	expect(revParseCalls).toBeGreaterThanOrEqual(3);
+});
+
+test("blocks git commit command in bash tool call", async () => {
+	const toolCallHandlers: ((event: any, ctx: any) => Promise<any>)[] = [];
+	const localMockPi = {
+		...mockPi,
+		on: (event: string, handler: Function) => {
+			if (event === "tool_call") toolCallHandlers.push(handler as any);
+		},
+	};
+
+	registeredCommand = null;
+	registeredTool = null;
+	commitExtension(localMockPi);
+
+	expect(toolCallHandlers.length).toBe(1);
+
+	const ctx = { cwd: "/tmp", ui: { notify: () => {} } };
+
+	// Should block git commit
+	const event1 = {
+		toolName: "bash",
+		toolCallId: "call-1",
+		input: { command: "git commit -m 'test'" },
+	};
+	const result1 = await toolCallHandlers[0](event1, ctx);
+	expect(result1).toEqual({ block: true, reason: expect.stringContaining("commit_changes") });
+
+	// Should also block git commit --no-verify
+	const event2 = {
+		toolName: "bash",
+		toolCallId: "call-2",
+		input: { command: "git commit --no-verify -m 'bypass'" },
+	};
+	const result2 = await toolCallHandlers[0](event2, ctx);
+	expect(result2).toEqual({ block: true, reason: expect.stringContaining("commit_changes") });
+});
+
+test("allows other git commands in bash", async () => {
+	const toolCallHandlers: ((event: any, ctx: any) => Promise<any>)[] = [];
+	const localMockPi = {
+		...mockPi,
+		on: (event: string, handler: Function) => {
+			if (event === "tool_call") toolCallHandlers.push(handler as any);
+		},
+	};
+
+	registeredCommand = null;
+	registeredTool = null;
+	commitExtension(localMockPi);
+
+	expect(toolCallHandlers.length).toBe(1);
+
+	const ctx = { cwd: "/tmp", ui: { notify: () => {} } };
+
+	// These should not be blocked
+	const safeCommands = [
+		"git status",
+		"git log --oneline -3",
+		"git diff --cached",
+		"git add -A",
+		"git push origin main",
+		"echo hello",
+	];
+
+	for (const cmd of safeCommands) {
+		const event = {
+			toolName: "bash",
+			toolCallId: "call-safe",
+			input: { command: cmd },
+		};
+		const result = await toolCallHandlers[0](event, ctx);
+		expect(result).toBeUndefined();
+	}
 });
 
 test("commit_changes tool calls onUpdate with correct shape", async () => {
