@@ -144,6 +144,27 @@ test("runCommit fails on pre-commit hook failure", async () => {
 	destroyTestRepo(repo);
 });
 
+test("runCommit does not set a hard timeout", async () => {
+	const repo = createTestRepo();
+	stageFile(repo, "test.txt", "hello");
+
+	// Wrap exec to capture the timeout value
+	let capturedTimeout: number | undefined = undefined;
+	const originalExec = repo.pi.exec.bind(repo.pi);
+	repo.pi.exec = async (cmd: string, args: string[], opts?: any) => {
+		capturedTimeout = opts?.timeout;
+		return originalExec(cmd, args, opts);
+	};
+
+	await runCommit(repo.pi, "feat: no hard timeout");
+
+	// Timeout should be undefined (no hard timeout), allowing git hooks to
+	// run as long as needed instead of being killed mid-hook.
+	expect(capturedTimeout).toBeUndefined();
+
+	destroyTestRepo(repo);
+});
+
 test("commits on branch with a slash", async () => {
 	const repo = createTestRepo();
 

@@ -18,14 +18,23 @@ export interface GitResult {
 /**
  * Execute a git command via pi.exec.
  * Returns { stdout, stderr, code, killed } — does NOT throw on non-zero exit.
+ *
+ * @param pi      - ExtensionAPI for executing commands.
+ * @param args    - Git arguments.
+ * @param signal  - Optional AbortSignal to cancel the command.
+ * @param timeout - Optional timeout in ms. If undefined, no hard timeout is set,
+ *                  so long-running operations (e.g. pre-commit hooks with tests)
+ *                  are not killed prematurely.
  */
 export async function execGit(
 	pi: ExtensionAPI,
 	args: string[],
 	signal?: AbortSignal,
-	timeout = 30_000,
+	timeout?: number,
 ): Promise<GitResult> {
-	return pi.exec("git", args, { signal, timeout }) as unknown as GitResult;
+	const opts: { signal?: AbortSignal; timeout?: number } = { signal };
+	if (timeout !== undefined) opts.timeout = timeout;
+	return pi.exec("git", args, opts) as unknown as GitResult;
 }
 
 /**

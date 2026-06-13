@@ -38,7 +38,9 @@ export async function runCommit(
 		args.push("-m", body);
 	}
 
-	const result = await execGit(pi, args, signal, 120_000);
+	// No hard timeout — let git hooks run as long as needed.
+	// The LLM's AbortSignal (passed via signal) is the right way to cancel a stuck commit.
+	const result = await execGit(pi, args, signal);
 
 	return {
 		output: (result.stdout + result.stderr).trim(),
