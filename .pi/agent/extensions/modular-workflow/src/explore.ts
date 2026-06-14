@@ -39,11 +39,11 @@ export function registerExploreCommand(pi: ExtensionAPI): void {
         ctx.ui.setStatus("explore", text);
       };
 
-      setStatus("🔍 Decomposing exploration into parallel searches...");
+      setStatus("✦ Decomposing exploration into parallel searches...");
 
       // Phase 1: Decompose
       const tasks = await decomposeInstruction(instruction, ctx, ctx.signal);
-      setStatus(`🔍 Running ${tasks.length} parallel search${tasks.length > 1 ? "es" : ""}...`);
+      setStatus(`✦ Running ${tasks.length} parallel search${tasks.length > 1 ? "es" : ""}...`);
 
       // Phase 2: Execute in parallel
       const loader = createLoader(instruction);
@@ -55,13 +55,13 @@ export function registerExploreCommand(pi: ExtensionAPI): void {
         (partial) => {
           const done = partial.filter((r) => r.exitCode >= 0).length;
           const msg = `${done}/${partial.length} scouts complete`;
-          setStatus(`🔍 ${msg}`);
+          setStatus(`✦ ${msg}`);
           loader.update(msg);
         },
       );
 
       const successCount = results.filter((r) => r.exitCode === 0).length;
-      setStatus(`🔍 Synthesis: ${successCount}/${results.length} tasks succeeded`);
+      setStatus(`✦ Synthesis: ${successCount}/${results.length} tasks succeeded`);
       loader.done();
 
       // Phase 3: Synthesize
@@ -117,9 +117,9 @@ export function registerExploreTool(pi: ExtensionAPI): void {
       };
 
       // Phase 1: Decompose
-      sendProgress(`🔍 Decomposing instruction into search tasks...`);
+      sendProgress(`✦ Decomposing instruction into search tasks...`);
       const tasks = await decomposeInstruction(instruction, ctx, signal);
-      sendProgress(`🔍 Split into ${tasks.length} parallel search task${tasks.length > 1 ? "s" : ""}`);
+      sendProgress(`✦ Split into ${tasks.length} parallel search task${tasks.length > 1 ? "s" : ""}`);
 
       // Phase 2: Execute with per-scout progress
       const results = await runParallelExploration(
@@ -128,12 +128,12 @@ export function registerExploreTool(pi: ExtensionAPI): void {
         signal,
         (partial) => {
           const done = partial.filter((r) => r.exitCode >= 0).length;
-          sendProgress(`🔍 Scout progress: ${done}/${partial.length} complete`);
+          sendProgress(`✦ Scout progress: ${done}/${partial.length} complete`);
         },
       );
 
       // Phase 3: Synthesize
-      sendProgress(`🔍 Synthesizing ${results.length} scout result${results.length > 1 ? "s" : ""}...`);
+      sendProgress(`✦ Synthesizing ${results.length} scout result${results.length > 1 ? "s" : ""}...`);
       const summary = await synthesizeResults(instruction, results, ctx, signal);
 
       return {

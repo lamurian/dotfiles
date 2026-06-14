@@ -466,7 +466,7 @@ export default function (pi: ExtensionAPI) {
 		const netMode = needsNetwork ? "filtered" : "isolated";
 		ctx.ui.setStatus(
 			"sandbox",
-			ctx.ui.theme.fg("accent", `🔒 bwrap: ${writeCount} writable, ${denyCount} denied, net=${netMode}`),
+			ctx.ui.theme.fg("accent", `✚ bwrap: ${writeCount} writable, ${denyCount} denied, net=${netMode}`),
 		);
 		ctx.ui.notify("Sandbox active (direct bwrap, no anthropic-ai dependency)", "info");
 	});

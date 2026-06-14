@@ -272,6 +272,44 @@ describe("registerExploreTool", () => {
     assert.match(lastText, /synthesis|synthesiz|complet|result/i,
       "last update should report synthesis");
   });
+
+  it("tool progress updates use Dingbat glyph ✦ (U+2726) instead of 🔍 emoji", async () => {
+    const { registerExploreTool } = await import("../explore.ts");
+    const pi = mockPi();
+    const ctx = mockCtx("/tmp/test", {
+      model: null as unknown as ExtensionContext["model"],
+    });
+
+    registerExploreTool(pi);
+    const toolCalls = pi.calls["registerTool"] ?? [];
+    const exploreTool = toolCalls.find(
+      ([def]: [{ name: string }]) => def.name === "explore",
+    ) as [{ execute: Function }];
+
+    const updates: string[] = [];
+    const onUpdate = (partial: { content: Array<{ type: string; text?: string }> }) => {
+      for (const c of partial.content) {
+        if (c.type === "text" && c.text) updates.push(c.text);
+      }
+    };
+
+    await exploreTool[0].execute(
+      "call-emoji-test",
+      { instruction: "search src/" },
+      AbortSignal.abort(),
+      onUpdate,
+      ctx,
+    );
+
+    assert.ok(updates.length >= 2,
+      `should send at least 2 progress updates, got ${updates.length}`);
+
+    // All progress updates must use ✦ Dingbat instead of 🔍 emoji
+    assert.ok(!updates.some(u => u.includes("🔍")),
+      "progress updates should not contain 🔍 emoji");
+    assert.ok(updates.some(u => u.includes("✦")),
+      "progress updates should use ✦ (U+2726) Dingbat glyph");
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
