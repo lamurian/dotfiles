@@ -33,6 +33,7 @@ setlocal cursorlineopt=both
 setlocal define=
 setlocal dictionary=
 setlocal nodiff
+setlocal diffanchors=
 setlocal equalprg=
 setlocal errorformat=
 setlocal eventignorewin=
@@ -47,7 +48,7 @@ setlocal foldcolumn=0
 setlocal foldenable
 setlocal foldexpr=0
 setlocal foldignore=#
-setlocal foldlevel=0
+setlocal foldlevel=1
 setlocal foldmarker={{{,}}}
 setlocal foldmethod=manual
 setlocal foldminlines=1
@@ -57,6 +58,7 @@ setlocal formatexpr=
 setlocal formatlistpat=^\\s*\\d\\+[\\]:.)}\\t\ ]\\s*
 setlocal formatoptions=tcq
 setlocal formatprg=
+setlocal grepformat=
 setlocal grepprg=
 setlocal iminsert=0
 setlocal imsearch=-1
@@ -67,6 +69,7 @@ setlocal indentkeys=0{,0},0),0],:,0#,!^F,o,O,e
 setlocal noinfercase
 setlocal iskeyword=@,48-57,_,192-255
 setlocal keywordprg=
+setlocal lhistory=10
 setlocal nolinebreak
 setlocal nolisp
 setlocal lispoptions=
@@ -92,6 +95,7 @@ setlocal norightleft
 setlocal rightleftcmd=search
 setlocal noscrollbind
 setlocal scrolloff=-1
+setlocal scrolloffpad=-1
 setlocal shiftwidth=8
 setlocal noshortname
 setlocal showbreak=
@@ -106,6 +110,7 @@ setlocal spellfile=
 setlocal spelllang=en,id
 setlocal spelloptions=
 setlocal statusline=%!airline#statusline(1)
+setlocal statuslineopt=
 setlocal suffixesadd=
 setlocal swapfile
 setlocal synmaxcol=3000
@@ -131,23 +136,46 @@ setlocal wincolor=
 setlocal nowinfixbuf
 setlocal nowinfixheight
 setlocal nowinfixwidth
+setlocal winhighlight=
 setlocal wrap
 setlocal wrapmargin=0
 silent! normal! zE
-7,17fold
-18,28fold
-29,31fold
-32,38fold
-39,42fold
-43,45fold
-46,49fold
-50,53fold
+sil! 7,17fold
+sil! 18,28fold
+sil! 29,32fold
+sil! 33,37fold
+sil! 38,41fold
+sil! 42,44fold
+sil! 45,48fold
+sil! 49,52fold
+sil! 75,83fold
+sil! 84,90fold
 let &fdl = &fdl
-let s:l = 32 - ((31 * winheight(0) + 35) / 71)
+7
+sil! normal! zc
+18
+sil! normal! zc
+29
+sil! normal! zc
+33
+sil! normal! zc
+38
+sil! normal! zc
+42
+sil! normal! zc
+45
+sil! normal! zc
+49
+sil! normal! zc
+75
+sil! normal! zc
+84
+sil! normal! zc
+let s:l = 33 - ((32 * winheight(0) + 28) / 57)
 if s:l < 1 | let s:l = 1 | endif
 keepjumps exe s:l
 normal! zt
-keepjumps 32
+keepjumps 33
 normal! 0
 let &g:so = s:so_save | let &g:siso = s:siso_save
 nohlsearch
