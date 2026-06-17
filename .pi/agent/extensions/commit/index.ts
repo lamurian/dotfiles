@@ -22,8 +22,8 @@ export default function commitExtension(pi: ExtensionAPI): void {
 	pi.on("tool_call", async (event: ToolCallEvent, _ctx) => {
 		if (event.toolName !== "bash") return;
 		const cmd = (event.input as { command?: string }).command ?? "";
-		// Block "git commit" (with word boundary to avoid false matches like "git log | grep commit")
-		if (/\bgit\s+commit\b/.test(cmd)) {
+		// Block "git commit" (including bypass patterns like git -c core.hooksPath=/dev/null commit)
+		if (/\bgit\s+(?:-\S+(?:\s+\S+)?\s+)*commit\b/.test(cmd)) {
 			return {
 				block: true,
 				reason:
