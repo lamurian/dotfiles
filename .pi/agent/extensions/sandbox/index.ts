@@ -8,19 +8,13 @@
  * - ~/.pi/agent/extensions/sandbox.json (global)
  * - <cwd>/.pi/sandbox.json (project-local)
  *
- * Example .pi/sandbox.json:
- * ```json
- * {
- *   "enabled": true,
- *   "network": {
- *     "allowedDomains": ["github.com", "*.github.com"]
- *   },
- *   "filesystem": {
- *     "denyRead": ["~/.ssh", "~/.aws"],
- *     "allowWrite": ["."]
- *   }
- * }
- * ```
+ * Tool guardrail (glob patterns, applied before tool execution):
+ *   denyRead → blocks ALL access (no read, no write)
+ *   denyWrite → blocks write access only (read still allowed)
+ *   Tools not configured have no restriction. Built-in defaults for
+ *   standard tools (read, write, edit, grep, find, ls).
+ *   Custom tools with non-standard path params:
+ *     "my-tool": { "access": ["read"], "pathParams": ["targetFile"] }
  *
  * Network: `--unshare-net` isolates the sandbox completely.
  *   If allowedDomains is non-empty, a minimal socat proxy bridge is set up.
@@ -38,8 +32,13 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { randomBytes } from "node:crypto";
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI, ToolCallEvent } from "@earendil-works/pi-coding-agent";
 import { type BashOperations, createBashTool, getAgentDir } from "@earendil-works/pi-coding-agent";
+import {
+	mergeToolConfigs,
+	evaluateToolCall,
+	type ToolsConfig,
+} from "./guardrail.ts";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -54,6 +53,7 @@ interface SandboxConfig {
 		allowWrite?: string[];
 		denyWrite?: string[];
 	};
+	tools?: ToolsConfig;
 }
 
 // ─── Defaults & Constants ────────────────────────────────────────────────────
@@ -113,6 +113,9 @@ function deepMerge(base: SandboxConfig, overrides: Partial<SandboxConfig>): Sand
 	}
 	if (overrides.filesystem) {
 		result.filesystem = { ...base.filesystem, ...overrides.filesystem };
+	}
+	if (overrides.tools) {
+		result.tools = { ...base.tools, ...overrides.tools };
 	}
 	return result;
 }
@@ -422,6 +425,27 @@ export default function (pi: ExtensionAPI) {
 		return { operations: createSandboxedBashOps(config) };
 	});
 
+	// ── Tool guardrail: block read/write/edit on denied paths ────────────
+	pi.on("tool_call", async (event: ToolCallEvent, ctx) => {
+		if (!sandboxEnabled) return;
+		// bash is already sandboxed by bwrap at the OS level
+		if (event.toolName === "bash") return;
+
+		const config = loadConfig(ctx.cwd);
+		const toolAccess = mergeToolConfigs(config.tools);
+		const result = evaluateToolCall(
+			event.toolName,
+			event.input as Record<string, unknown>,
+			toolAccess,
+			config.filesystem ?? {},
+			ctx.cwd,
+		);
+
+		if (result) {
+			return { block: true, reason: result.reason };
+		}
+	});
+
 	pi.on("session_start", async (_event, ctx) => {
 		disableSandbox();
 
@@ -484,6 +508,11 @@ export default function (pi: ExtensionAPI) {
 			}
 
 			const config = loadConfig(ctx.cwd);
+			const toolAccess = mergeToolConfigs(config.tools);
+			const guardedTools = Object.entries(toolAccess)
+				.filter(([_, cfg]) => cfg.access.length > 0)
+				.map(([name, cfg]) => `  ${name}: [${cfg.access.join(", ")}]`);
+
 			const lines = [
 				"Sandbox (direct bwrap):",
 				"",
@@ -496,6 +525,9 @@ export default function (pi: ExtensionAPI) {
 				`  Allow Write: ${config.filesystem?.allowWrite?.join(", ") || "(read-only)"}`,
 				`  Deny Write: ${config.filesystem?.denyWrite?.join(", ") || "(none)"}`,
 				`  Deny Read: ${config.filesystem?.denyRead?.join(", ") || "(none)"}`,
+				"",
+				"Tool Guardrail:",
+				...(guardedTools.length > 0 ? guardedTools : ["  (no tools configured)"]),
 			];
 			ctx.ui.notify(lines.join("\n"), "info");
 		},
