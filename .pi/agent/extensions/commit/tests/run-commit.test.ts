@@ -14,7 +14,7 @@ mock.module("@earendil-works/pi-coding-agent", () => ({
 	}),
 }));
 
-import { runCommit } from "../commit.ts";
+import { runCommit, runCommitStreaming } from "../commit.ts";
 
 interface TestRepo {
 	dir: string;
@@ -223,6 +223,96 @@ test("runCommit retry scenario — fix, re-stage, retry succeeds", async () => {
 	// Verify the commit was actually created
 	const log = execSync("git log --oneline", { cwd: repo.dir, encoding: "utf-8" });
 	expect(log).toContain("feat: add test");
+
+	destroyTestRepo(repo);
+});
+
+// ─── runCommitStreaming tests ──────────────────────────────────────────────────
+
+test("runCommitStreaming commits successfully and calls progress callback", async () => {
+	const repo = createTestRepo();
+	stageFile(repo, "test.txt", "hello");
+
+	const progressCalls: string[] = [];
+	const onProgress = (update: { content: { type: string; text: string }[] }) => {
+		progressCalls.push(update.content[0].text);
+	};
+
+	const result = await runCommitStreaming(repo.pi, "feat: add test file", undefined, undefined, onProgress, repo.dir);
+
+	expect(result.code).toBe(0);
+	expect(result.output).toMatch(/1 file changed/);
+	expect(result.output).toContain("feat: add test file");
+
+	// Progress callback should have been called at least once
+	expect(progressCalls.length).toBeGreaterThanOrEqual(1);
+	// The final progress should contain commit info
+	expect(progressCalls[progressCalls.length - 1]).toContain("feat: add test file");
+
+	// Verify the commit was actually created
+	const log = execSync("git log --oneline", { cwd: repo.dir, encoding: "utf-8" });
+	expect(log).toContain("feat: add test file");
+
+	destroyTestRepo(repo);
+});
+
+test("runCommitStreaming streams pre-commit hook output", async () => {
+	const repo = createTestRepo();
+	stageFile(repo, "test.txt", "hello");
+
+	// Install a pre-commit hook that produces output and fails
+	const hookPath = join(repo.dir, ".git", "hooks", "pre-commit");
+	writeFileSync(
+		hookPath,
+		"#!/bin/sh\necho 'running eslint...'\necho 'found 2 errors' >&2\nexit 1\n",
+		"utf-8",
+	);
+	chmodSync(hookPath, 0o755);
+
+	const progressCalls: string[] = [];
+	const onProgress = (update: { content: { type: string; text: string }[] }) => {
+		progressCalls.push(update.content[0].text);
+	};
+
+	const result = await runCommitStreaming(repo.pi, "feat: will fail", undefined, undefined, onProgress, repo.dir);
+
+	expect(result.code).not.toBe(0);
+	// Hook output should be captured in the result
+	expect(result.output).toContain("running eslint");
+	expect(result.output).toContain("found 2 errors");
+
+	// Progress should have captured the hook output
+	expect(progressCalls.length).toBeGreaterThanOrEqual(1);
+	const allProgress = progressCalls.join(" ");
+	expect(allProgress).toContain("running eslint");
+
+	destroyTestRepo(repo);
+});
+
+test("runCommitStreaming respects abort signal", async () => {
+	const repo = createTestRepo();
+	stageFile(repo, "test.txt", "hello");
+
+	// Install a slow pre-commit hook that takes 5 seconds
+	const hookPath = join(repo.dir, ".git", "hooks", "pre-commit");
+	writeFileSync(
+		hookPath,
+		"#!/bin/sh\necho 'starting long check...'\nsleep 5\necho 'done'\nexit 0\n",
+		"utf-8",
+	);
+	chmodSync(hookPath, 0o755);
+
+	const abortController = new AbortController();
+
+	// Abort after 200ms
+	const abortPromise = runCommitStreaming(
+		repo.pi, "feat: slow hook", undefined, abortController.signal, undefined, repo.dir,
+	);
+
+	await new Promise<void>((resolve) => setTimeout(resolve, 200));
+	abortController.abort();
+
+	await expect(abortPromise).rejects.toThrow();
 
 	destroyTestRepo(repo);
 });
