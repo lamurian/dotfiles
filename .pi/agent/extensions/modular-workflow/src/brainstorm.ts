@@ -7,9 +7,79 @@ import { detectExistingHooks } from "./detect-hooks.ts";
 import { loadWorkflowConfig } from "./paths.ts";
 import { resolveCrossReferences } from "./cross-ref.ts";
 import { relative } from "node:path";
+import { existsSync } from "node:fs";
 
 /** Default brainstorming topic when none is provided. */
 const DEFAULT_TOPIC = "Let's discuss the implementation requirements for this project.";
+
+/** Maximum allowed lines for generated .md files. */
+const MAX_DOC_LINES = 100;
+
+/**
+ * Maximum number of lines for generated markdown files.
+ */
+export const MAX_DOCUMENT_LINES = MAX_DOC_LINES;
+
+/**
+ * Check if a file path is within a protected document directory (ADR, spec, or plan).
+ *
+ * During brainstorming, the LLM should use commands (/adr new, /spec, /plan)
+ * instead of writing directly to these directories. This ensures proper
+ * sequential numbering and cross-referencing.
+ *
+ * Recognized directories:
+ *   - docs/ADR/, docs/adr/ (any case)
+ *   - ADR/ at project root
+ *   - docs/specs/
+ *   - docs/plans/
+ *
+ * @param filePath - Absolute or relative file path.
+ * @returns "adr" | "spec" | "plan" if the path is in a document directory, or null.
+ */
+export function isDocumentDir(filePath: string): "adr" | "spec" | "plan" | null {
+  const normal = filePath.replace(/\\/g, "/").toLowerCase();
+
+  // Standard paths
+  if (/\/docs\/specs\//.test(normal)) return "spec";
+  if (/\/docs\/plans\//.test(normal)) return "plan";
+
+  // ADR: match docs/adr/ or root-level adr/ as a path segment
+  if (/\/docs\/adr\//.test(normal)) return "adr";
+  const parts = normal.split("/");
+  const adrIdx = parts.indexOf("adr");
+  if (adrIdx !== -1 && adrIdx < parts.length - 1) {
+    return "adr";
+  }
+
+  return null;
+}
+
+/**
+ * Count the number of lines in a string.
+ *
+ * @param content - String content to count lines in.
+ * @returns The number of lines.
+ */
+export function countLines(content: string): number {
+  if (content.length === 0) return 0;
+  return content.split("\n").length;
+}
+
+/**
+ * Check if content exceeds the maximum allowed line count.
+ *
+ * @param content  - File content to check.
+ * @param filePath - File path for error message context.
+ * @returns A block reason string if over limit, or null if within limits.
+ */
+export function checkLineLimit(content: string, filePath: string): string | null {
+  const lines = countLines(content);
+  if (lines > MAX_DOC_LINES) {
+    return `File "${filePath}" has ${lines} lines, exceeding the ${MAX_DOC_LINES}-line limit. ` +
+      `Please split the content into multiple files or trim it down.`;
+  }
+  return null;
+}
 
 /**
  * Phase determined by the type of @file the user passes.
@@ -60,10 +130,62 @@ async function detectPhaseFromArgs(
 }
 
 /**
+ * Check whether the project needs initiation (AGENTS.md and directory structure).
+ *
+ * Returns a context string describing what's missing, or null if everything is in place.
+ *
+ * @param cwd - Project working directory.
+ * @returns Initiation context string, or null if none needed.
+ */
+async function checkProjectInitiation(cwd: string): Promise<string | null> {
+  const parts: string[] = [];
+
+  // Check for root AGENTS.md
+  if (!existsSync(`${cwd}/AGENTS.md`)) {
+    parts.push(
+      "- **AGENTS.md** is missing. Create a root AGENTS.md (≤100 lines) describing the " +
+        "project purpose, language conventions (casual business English), and agent instructions. " +
+        "Then add per-directory AGENTS.md files (e.g., src/AGENTS.md, tests/AGENTS.md) to explain " +
+        "what each directory contains for agent navigation. The root AGENTS.md should " +
+        "cross-reference these subdirectory AGENTS.md files.",
+    );
+  }
+
+  // Check key project directories
+  const keyDirs = ["src", "tests", "docs/ADR", "docs/specs", "docs/plans"];
+  const missingDirs: string[] = [];
+  for (const dir of keyDirs) {
+    const absDir = `${cwd}/${dir}`;
+    if (!existsSync(absDir)) {
+      missingDirs.push(dir);
+    }
+  }
+
+  if (missingDirs.length > 0) {
+    parts.push(
+      `- The following project directories are missing: ${missingDirs.join(", ")}. ` +
+        "Discuss the directory layout with the user, agree on structure, then scaffold them.",
+    );
+  }
+
+  if (parts.length === 0) return null;
+
+  return [
+    "## Project Initiation Needed",
+    "",
+    "Before we dive into requirements, we need to set up the project foundation:",
+    "",
+    ...parts,
+    "",
+    "Walk through this with the user before proceeding to the ADR.",
+  ].join("\n");
+}
+
+/**
  * Run a brainstorming session.
  *
  * Phase is determined by what the user references:
- * - No @file or topic string → requirements phase
+ * - No @file or topic string → requirements phase (with optional project initiation)
  * - @docs/ADR/xxx.md        → specifying phase
  * - @docs/specs/xxx.md      → planning phase
  *
@@ -97,6 +219,14 @@ export async function runBrainstorming(
       contextText = resolved.chain.length > 1
         ? `Referenced document: ${filePath}\n\nFull context:\n${resolved.content}`
         : `Referenced document: ${filePath}\n\n${resolved.content}`;
+    }
+  }
+
+  // Check project initiation in requirements phase
+  if (phase === "requirements") {
+    const initiationContext = await checkProjectInitiation(ctx.cwd);
+    if (initiationContext) {
+      contextText = `${initiationContext}\n\n---\n\n${contextText}`;
     }
   }
 

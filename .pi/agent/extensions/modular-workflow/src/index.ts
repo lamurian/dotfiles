@@ -1,7 +1,7 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { isToolCallEventType } from "@earendil-works/pi-coding-agent";
 import { loadState, updateUi, type WorkflowState } from "./state.ts";
-import { runBrainstorming, buildPhasePrompt } from "./brainstorm.ts";
+import { runBrainstorming, buildPhasePrompt, isDocumentDir, checkLineLimit } from "./brainstorm.ts";
 import { runDiscussion } from "./discuss.ts";
 import { archivePlan } from "./plan.ts";
 import { startTdd, buildTddPrompt } from "./implement.ts";
@@ -116,6 +116,38 @@ export default function (pi: ExtensionAPI): void {
             `Blocked write to "${path}". Use /implement for code changes.`
         };
       }
+
+      // Block direct writes to ADR/spec/plan directories — use commands instead
+      const docType = isDocumentDir(path);
+      if (docType === "adr") {
+        return {
+          block: true,
+          reason: `During /brainstorm, do NOT write ADR files directly. ` +
+            `Use /adr new <title> instead to create "${path}". ` +
+            `This ensures proper sequential numbering (001-slug.md) and cross-referencing.`
+        };
+      }
+      if (docType === "spec") {
+        return {
+          block: true,
+          reason: `During /brainstorm, do NOT write spec files directly. ` +
+            `Use /spec <adrNumber> <title> instead to create "${path}".`
+        };
+      }
+      if (docType === "plan") {
+        return {
+          block: true,
+          reason: `During /brainstorm, do NOT write plan files directly. ` +
+            `Use /plan <specNumber> <title> instead to create "${path}".`
+        };
+      }
+
+      // Enforce line count limit for .md files
+      const content: string = event.input.content ?? "";
+      const lineLimitReason = checkLineLimit(content, path);
+      if (lineLimitReason) {
+        return { block: true, reason: lineLimitReason };
+      }
     }
 
     if (isToolCallEventType("edit", event)) {
@@ -126,6 +158,27 @@ export default function (pi: ExtensionAPI): void {
           reason: `During /brainstorm you can only edit .md files (ADRs, specs, plans). ` +
             `Blocked edit to "${path}". Use /implement for code changes.`
         };
+      }
+
+      // Block editing documents in ADR/spec/plan directories
+      const docType = isDocumentDir(path);
+      if (docType) {
+        return {
+          block: true,
+          reason: `During /brainstorm, do NOT edit document files directly. ` +
+            `Use the appropriate command (/adr, /spec, /plan) or wait until the implementing phase.`
+        };
+      }
+
+      // Enforce line count limit for .md edits
+      // For edits, we check the new text — the combined old/new isn't directly available,
+      // so we check each edit's newText
+      const edits: Array<{ newText: string }> = event.input.edits ?? [];
+      for (const edit of edits) {
+        const lineLimitReason = checkLineLimit(edit.newText, path);
+        if (lineLimitReason) {
+          return { block: true, reason: lineLimitReason };
+        }
       }
     }
 
