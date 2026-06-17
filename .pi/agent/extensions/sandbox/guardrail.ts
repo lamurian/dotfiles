@@ -9,7 +9,7 @@
  * Built-in defaults for standard pi tools; users can add/override for custom tools.
  */
 
-import { matchesGlob, resolve } from "node:path";
+import { matchesGlob, relative, resolve } from "node:path";
 import { homedir } from "node:os";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -142,6 +142,36 @@ export function mergeToolConfigs(
 	return result;
 }
 
+// ─── Deny pattern normalization (for OS-level enforcement) ─────────────────
+
+/**
+ * Normalize a deny pattern for filesystem resolution by stripping trailing
+ * glob characters that would prevent existsSync from working at the OS level.
+ *
+ * Patterns without glob chars are returned as-is (e.g. \".env\").
+ * Patterns ending with a trailing glob segment have that segment stripped
+ * (e.g. \".githooks/*\" becomes \".githooks\").
+ * Leading star-star-slash is also stripped if present.
+ * Patterns with non-trailing globs return null (can't resolve to a single path).
+ */
+export function normalizeDenyPattern(pattern: string): string | null {
+	if (!pattern.includes("*") && !pattern.includes("?")) {
+		return pattern;
+	}
+
+	// Strip trailing /* or /**
+	let result = pattern.replace(/\/\*+$/, "");
+	if (result === pattern) {
+		// No trailing /* or /** — can't resolve this pattern
+		return null;
+	}
+
+	// Strip leading **/ if present
+	result = result.replace(/^\*\*\//, "");
+
+	return result;
+}
+
 // ─── Path extraction ─────────────────────────────────────────────────────────
 
 /**
@@ -209,7 +239,17 @@ export function evaluateToolCall(
 		// Resolve relative paths against cwd
 		const absolutePath = resolve(cwd, rawPath);
 
-		const reason = checkToolAccess(config.access, absolutePath, fsConfig);
+		// Check against absolute path (for patterns like /etc/passwd, ~/.ssh/**)
+		let reason = checkToolAccess(config.access, absolutePath, fsConfig);
+
+		// Also check against path relative to cwd (for cwd-relative patterns like .githooks/*, .env)
+		if (reason === null) {
+			const relativePath = relative(cwd, absolutePath);
+			if (relativePath !== absolutePath) {
+				reason = checkToolAccess(config.access, relativePath, fsConfig);
+			}
+		}
+
 		if (reason !== null) {
 			return {
 				block: true,

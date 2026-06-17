@@ -9,6 +9,7 @@ import {
 	mergeToolConfigs,
 	getToolPaths,
 	evaluateToolCall,
+	normalizeDenyPattern,
 	type FilesystemConfig,
 	type ToolConfig,
 	type ToolAccess,
@@ -247,6 +248,43 @@ describe("getToolPaths", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// normalizeDenyPattern — strip glob chars for OS-level enforcement
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("normalizeDenyPattern", () => {
+	it("should return simple paths without glob chars as-is", () => {
+		assert.equal(normalizeDenyPattern(".env"), ".env");
+		assert.equal(normalizeDenyPattern("/etc/passwd"), "/etc/passwd");
+		assert.equal(normalizeDenyPattern("~/.aws"), "~/.aws");
+	});
+
+	it("should strip trailing /* from directory glob patterns", () => {
+		assert.equal(normalizeDenyPattern(".githooks/*"), ".githooks");
+		assert.equal(normalizeDenyPattern("node_modules/*"), "node_modules");
+	});
+
+	it("should strip trailing /** from directory glob patterns", () => {
+		assert.equal(normalizeDenyPattern(".githooks/**"), ".githooks");
+		assert.equal(normalizeDenyPattern("secrets/**"), "secrets");
+	});
+
+	it("should strip both leading **/ and trailing /*", () => {
+		assert.equal(normalizeDenyPattern("**/.githooks/*"), ".githooks");
+		assert.equal(normalizeDenyPattern("**/node_modules/**"), "node_modules");
+	});
+
+	it("should return null for patterns with non-trailing glob chars", () => {
+		assert.equal(normalizeDenyPattern("*.log"), null);
+		assert.equal(normalizeDenyPattern("**/*.lock"), null);
+		assert.equal(normalizeDenyPattern("src/**/*.pyc"), null);
+	});
+
+	it("should return null for empty string", () => {
+		assert.equal(normalizeDenyPattern(""), "");
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // evaluateToolCall — end-to-end guardrail evaluation
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -322,5 +360,73 @@ describe("evaluateToolCall", () => {
 		const result = evaluateToolCall("read", { path: "secrets/db.txt" }, toolAccess, fsConfig, CWD);
 		assert.ok(result !== null);
 		assert.ok(result.reason.includes("secrets/db.txt"));
+	});
+
+	// ── Relative pattern matching (cwd-relative globs) ─────────────────────
+
+	it("should block edit with relative denyWrite pattern matching cwd-relative path", () => {
+		const cfg: FilesystemConfig = {
+			denyWrite: [".githooks/*", ".env"],
+		};
+		const result = evaluateToolCall("edit", { path: ".githooks/pre-commit" }, toolAccess, cfg, CWD);
+		assert.ok(result !== null);
+		assert.ok(result.block);
+		assert.ok(result.reason.includes("denyWrite"));
+	});
+
+	it("should block write with relative denyWrite pattern .env", () => {
+		const cfg: FilesystemConfig = {
+			denyWrite: [".githooks/*", ".env"],
+		};
+		const result = evaluateToolCall("write", { path: ".env" }, toolAccess, cfg, CWD);
+		assert.ok(result !== null);
+		assert.ok(result.block);
+		assert.ok(result.reason.includes("denyWrite"));
+	});
+
+	it("should block edit with absolute path matching relative denyWrite pattern", () => {
+		// Tool provides absolute path, pattern is relative — should still match via relative fallback
+		const cfg: FilesystemConfig = {
+			denyWrite: [".githooks/*"],
+		};
+		const absolutePath = resolve(CWD, ".githooks/pre-commit");
+		const result = evaluateToolCall("edit", { path: absolutePath }, toolAccess, cfg, CWD);
+		assert.ok(result !== null);
+		assert.ok(result.block);
+		assert.ok(result.reason.includes("denyWrite"));
+	});
+
+	it("should not block files outside the relative pattern scope", () => {
+		const cfg: FilesystemConfig = {
+			denyWrite: [".githooks/*"],
+		};
+		const result = evaluateToolCall("edit", { path: "src/index.ts" }, toolAccess, cfg, CWD);
+		assert.equal(result, null);
+	});
+
+	it("should not block files in nested .githooks dir (pattern is root-relative)", () => {
+		const cfg: FilesystemConfig = {
+			denyWrite: [".githooks/*"],
+		};
+		// "src/.githooks/foo" relative to CWD should NOT match ".githooks/*"
+		const result = evaluateToolCall("edit", { path: "src/.githooks/foo" }, toolAccess, cfg, CWD);
+		assert.equal(result, null);
+	});
+
+	it("should not block paths outside cwd with relative pattern", () => {
+		const cfg: FilesystemConfig = {
+			denyWrite: [".githooks/*"],
+		};
+		// Path outside CWD — relative becomes "../other/.githooks/hook" which shouldn't match ".githooks/*"
+		const result = evaluateToolCall("edit", { path: "../other/.githooks/hook" }, toolAccess, cfg, CWD);
+		assert.equal(result, null);
+	});
+
+	it("should still block with **/-prefixed patterns on absolute paths", () => {
+		// Existing behavior must not regress
+		const result = evaluateToolCall("write", { path: "yarn.lock" }, toolAccess, fsConfig, CWD);
+		assert.ok(result !== null);
+		assert.ok(result.block);
+		assert.ok(result.reason.includes("denyWrite"));
 	});
 });
