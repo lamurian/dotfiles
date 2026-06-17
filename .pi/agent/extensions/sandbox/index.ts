@@ -37,6 +37,7 @@ import { type BashOperations, createBashTool, getAgentDir } from "@earendil-work
 import {
 	mergeToolConfigs,
 	evaluateToolCall,
+	normalizeDenyPattern,
 	type ToolsConfig,
 } from "./guardrail.ts";
 
@@ -136,6 +137,19 @@ function resolvePath(cwd: string, raw: string): string {
 	return resolve(cwd, raw);
 }
 
+/**
+ * Resolve a deny pattern to an existing filesystem path for OS-level enforcement.
+ * Strips glob characters that would prevent existsSync from working.
+ * Returns null if no path can be resolved.
+ */
+function resolveDenyPath(cwd: string, pattern: string): string | null {
+	const base = normalizeDenyPattern(pattern);
+	if (base === null) return null;
+	const absPath = resolvePath(cwd, base);
+	if (existsSync(absPath)) return absPath;
+	return null;
+}
+
 // ─── Bwrap arg builder ───────────────────────────────────────────────────────
 
 function buildBwrapArgs(
@@ -168,8 +182,8 @@ function buildBwrapArgs(
 	// Deny-write within allowed paths: remount as read-only
 	const denyWrite = config.filesystem?.denyWrite ?? [];
 	for (const raw of denyWrite) {
-		const absPath = resolvePath(cwd, raw);
-		if (!existsSync(absPath)) continue;
+		const absPath = resolveDenyPath(cwd, raw);
+		if (!absPath) continue;
 		const st = statSync(absPath);
 		if (st.isDirectory()) {
 			args.push("--ro-bind", absPath, absPath);
@@ -181,8 +195,8 @@ function buildBwrapArgs(
 	// Deny-read: mount /dev/null over sensitive paths
 	const denyRead = config.filesystem?.denyRead ?? [];
 	for (const raw of denyRead) {
-		const absPath = resolvePath(cwd, raw);
-		if (!existsSync(absPath)) continue;
+		const absPath = resolveDenyPath(cwd, raw);
+		if (!absPath) continue;
 		const st = statSync(absPath);
 		if (st.isDirectory()) {
 			// Hide entire directory with an empty tmpfs
