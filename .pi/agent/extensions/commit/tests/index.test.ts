@@ -504,6 +504,79 @@ test("allows other git commands in bash", async () => {
 	}
 });
 
+test("blocks git commit bypass with -c core.hooksPath", async () => {
+	const toolCallHandlers: ((event: any, ctx: any) => Promise<any>)[] = [];
+	const localMockPi = {
+		...mockPi,
+		on: (event: string, handler: Function) => {
+			if (event === "tool_call") toolCallHandlers.push(handler as any);
+		},
+	};
+
+	registeredCommand = null;
+	registeredTool = null;
+	commitExtension(localMockPi);
+
+	expect(toolCallHandlers.length).toBe(1);
+
+	const ctx = { cwd: "/tmp", ui: { notify: () => {} } };
+
+	// These bypass patterns must all be blocked
+	const bypassCommands = [
+		"git -c core.hooksPath=/dev/null commit -m 'test'",
+		"git -c core.hooksPath= commit -m 'test'",
+		"git -C /some/repo commit -m 'test'",
+		"git --git-dir=/other commit -m 'test'",
+	];
+
+	for (const cmd of bypassCommands) {
+		const event = {
+			toolName: "bash",
+			toolCallId: "call-bypass",
+			input: { command: cmd },
+		};
+		const result = await toolCallHandlers[0](event, ctx);
+		expect(result).toBeDefined();
+		expect(result!.block).toBe(true);
+		expect(result!.reason).toContain("commit_changes");
+	}
+});
+
+test("allows git log with 'commit' in the output", async () => {
+	const toolCallHandlers: ((event: any, ctx: any) => Promise<any>)[] = [];
+	const localMockPi = {
+		...mockPi,
+		on: (event: string, handler: Function) => {
+			if (event === "tool_call") toolCallHandlers.push(handler as any);
+		},
+	};
+
+	registeredCommand = null;
+	registeredTool = null;
+	commitExtension(localMockPi);
+
+	expect(toolCallHandlers.length).toBe(1);
+
+	const ctx = { cwd: "/tmp", ui: { notify: () => {} } };
+
+	// These should NOT be blocked — "commit" is not a subcommand of git
+	const safeCommandsWithCommit = [
+		"git log --oneline | grep 'fix:'",
+		"git log --grep=commit",
+		"git log commit",
+	];
+
+	for (const cmd of safeCommandsWithCommit) {
+		const event = {
+			toolName: "bash",
+			toolCallId: "call-safe",
+			input: { command: cmd },
+		};
+		const result = await toolCallHandlers[0](event, ctx);
+		expect(result).toBeUndefined();
+	}
+});
+
 test("commit_changes tool calls onUpdate with correct shape", async () => {
 	let onUpdateCall: unknown = null;
 
