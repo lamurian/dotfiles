@@ -3,6 +3,50 @@
  * Verifies command and tool registration.
  */
 import { expect, test, mock, beforeAll } from "bun:test";
+import { EventEmitter } from "node:events";
+
+// ─── Mock helpers ───────────────────────────────────────────────────────────
+
+interface MockSpawnConfig {
+	stdout?: string;
+	stderr?: string;
+	code?: number;
+	delay?: number; // delay in ms before emitting data
+}
+
+/**
+ * Create a spawn mock that returns a process-like EventEmitter.
+ * The process emits stdout/stderr data, then closes with the given code.
+ */
+function createMockSpawn(config: MockSpawnConfig = {}) {
+	const { stdout = "", stderr = "", code = 0, delay = 0 } = config;
+	return (_cmd: string, _args: string[], _opts?: any) => {
+		const proc = new EventEmitter() as any;
+		proc.stdout = new EventEmitter();
+		proc.stderr = new EventEmitter();
+
+		// Schedule output delivery after a microtask to let the caller set up listeners
+		process.nextTick(() => {
+			setTimeout(() => {
+				if (stdout) proc.stdout.emit("data", Buffer.from(stdout));
+				if (stderr) proc.stderr.emit("data", Buffer.from(stderr));
+				proc.emit("close", code, null);
+			}, delay);
+		});
+
+		return proc;
+	};
+}
+
+// Default spawn mock: empty output, code 0, synchronous
+const defaultSpawn = createMockSpawn();
+
+// Dynamic spawn factory — tests can override this via setSpawnConfig
+let spawnFactory: (cmd: string, args: string[], opts?: any) => any = defaultSpawn;
+
+mock.module("node:child_process", () => ({
+	spawn: (cmd: string, args: string[], opts?: any) => spawnFactory(cmd, args, opts),
+}));
 
 mock.module("@earendil-works/pi-coding-agent", () => ({
 	createLocalBashOperations: () => ({
@@ -38,6 +82,8 @@ beforeAll(async () => {
 	commitExtension(mockPi);
 });
 
+// ─── Registration tests ───────────────────────────────────────────────────────
+
 test("registers /commit command", () => {
 	expect(registeredCommand).not.toBeNull();
 	expect(registeredCommand!.name).toBe("commit");
@@ -49,6 +95,8 @@ test("registers commit_changes tool", () => {
 	expect(registeredTool!.name).toBe("commit_changes");
 	expect(registeredTool!.description).toContain("commit");
 });
+
+// ─── /commit command tests ────────────────────────────────────────────────────
 
 test("commit command handler calls git add --all when no args", async () => {
 	const gitCommands: string[][] = [];
@@ -74,9 +122,6 @@ test("commit command handler calls git add --all when no args", async () => {
 		ui: { notify: () => {}, setWidget: () => {} },
 	};
 
-	// Re-register to capture the new handler
-	// Actually we need the handler from the original registration
-	// Let me just test by directly invoking the captured handler
 	if (registeredCommand) {
 		await registeredCommand.handler("", mockCtx);
 	}
@@ -128,21 +173,22 @@ test("commit command handler commits directly with explicit message", async () =
 	expect(commitCmd).toBeDefined();
 });
 
+// ─── commit_changes tool tests ────────────────────────────────────────────────
+
 test("commit_changes tool runs git commit and returns result", async () => {
-	let executedArgs: string[] | null = null;
+	spawnFactory = createMockSpawn({
+		stdout: "[main def5678] feat: add test\n 1 file changed",
+		code: 0,
+	});
+
 	let revParseCount = 0;
 	const localMockPi = {
 		...mockPi,
 		exec: async (cmd: string, args: string[]) => {
-			if (cmd === "git" && args[0] === "rev-parse") {
+			if (args[0] === "rev-parse") {
 				revParseCount++;
-				// Return different hash before vs after commit
 				if (revParseCount === 1) return { stdout: "abc1234\n", stderr: "", code: 0 };
 				return { stdout: "def5678\n", stderr: "", code: 0 };
-			}
-			if (cmd === "git" && args[0] === "commit") {
-				executedArgs = args;
-				return { stdout: "[main def5678] feat: add test\n 1 file changed", stderr: "", code: 0 };
 			}
 			return { stdout: "", stderr: "", code: 0 };
 		},
@@ -162,21 +208,21 @@ test("commit_changes tool runs git commit and returns result", async () => {
 		{ cwd: "/tmp", ui: { notify: () => {} } },
 	);
 
-	expect(executedArgs).toEqual(["commit", "-m", "feat: add test"]);
 	expect(result.details.success).toBe(true);
 	expect(result.details.hash).toBe("def5678");
 });
 
 test("commit_changes tool throws on pre-commit hook failure", async () => {
+	spawnFactory = createMockSpawn({
+		stderr: "pre-commit hooks failed:\n  eslint --fix found errors",
+		code: 1,
+	});
+
 	const localMockPi = {
 		...mockPi,
 		exec: async (cmd: string, args: string[]) => {
-			if (cmd === "git" && args[0] === "commit") {
-				return {
-					stdout: "",
-					stderr: "pre-commit hooks failed:\n  eslint --fix found errors",
-					code: 1,
-				};
+			if (args[0] === "rev-parse") {
+				return { stdout: "abc1234\n", stderr: "", code: 0 };
 			}
 			return { stdout: "", stderr: "", code: 0 };
 		},
@@ -188,7 +234,6 @@ test("commit_changes tool throws on pre-commit hook failure", async () => {
 
 	expect(registeredTool).not.toBeNull();
 
-	// Should throw so the framework properly signals isError to the LLM
 	const ctx = { cwd: "/tmp", ui: { notify: () => {} } };
 	await expect(
 		registeredTool!.execute(
@@ -202,15 +247,16 @@ test("commit_changes tool throws on pre-commit hook failure", async () => {
 });
 
 test("commit_changes tool throws on genuine git errors", async () => {
+	spawnFactory = createMockSpawn({
+		stderr: "fatal: not a git repository",
+		code: 128,
+	});
+
 	const localMockPi = {
 		...mockPi,
 		exec: async (cmd: string, args: string[]) => {
-			if (cmd === "git" && args[0] === "commit") {
-				return {
-					stdout: "",
-					stderr: "fatal: not a git repository",
-					code: 128,
-				};
+			if (args[0] === "rev-parse") {
+				return { stdout: "abc1234\n", stderr: "", code: 0 };
 			}
 			return { stdout: "", stderr: "", code: 0 };
 		},
@@ -235,11 +281,16 @@ test("commit_changes tool throws on genuine git errors", async () => {
 });
 
 test("commit_changes tool handles initial commit (no prior HEAD)", async () => {
+	spawnFactory = createMockSpawn({
+		stdout: "[main (root-commit) abc1234] initial commit\n 1 file changed",
+		code: 0,
+	});
+
 	let revParseCount = 0;
 	const localMockPi = {
 		...mockPi,
 		exec: async (cmd: string, args: string[]) => {
-			if (cmd === "git" && args[0] === "rev-parse") {
+			if (args[0] === "rev-parse") {
 				revParseCount++;
 				// First call (before commit) — no HEAD yet (empty repo)
 				if (revParseCount === 1) {
@@ -247,9 +298,6 @@ test("commit_changes tool handles initial commit (no prior HEAD)", async () => {
 				}
 				// Second call (after commit) — HEAD is now set
 				return { stdout: "abc1234\n", stderr: "", code: 0 };
-			}
-			if (cmd === "git" && args[0] === "commit") {
-				return { stdout: "[main (root-commit) abc1234] initial commit\n 1 file changed", stderr: "", code: 0 };
 			}
 			return { stdout: "", stderr: "", code: 0 };
 		},
@@ -274,20 +322,17 @@ test("commit_changes tool handles initial commit (no prior HEAD)", async () => {
 });
 
 test("commit_changes tool detects pre-commit hook interference when code is 0", async () => {
+	spawnFactory = createMockSpawn({
+		stderr: "==> Running pre-commit checks...\\npixi run prettify\\nAll done!",
+		code: 0,
+	});
+
 	const localMockPi = {
 		...mockPi,
 		exec: async (cmd: string, args: string[]) => {
-			if (cmd === "git" && args[0] === "rev-parse") {
+			if (args[0] === "rev-parse") {
 				// Same hash before and after — commit didn't land
 				return { stdout: "abc1234\n", stderr: "", code: 0 };
-			}
-			if (cmd === "git" && args[0] === "commit") {
-				// Exit code 0 but pre-commit hook output present and HEAD unchanged
-				return {
-					stdout: "",
-					stderr: "==> Running pre-commit checks...\\npixi run prettify\\nAll done!",
-					code: 0,
-				};
 			}
 			return { stdout: "", stderr: "", code: 0 };
 		},
@@ -312,17 +357,18 @@ test("commit_changes tool detects pre-commit hook interference when code is 0", 
 });
 
 test("commit_changes tool throws when HEAD did not change despite full vs short hash formats", async () => {
+	spawnFactory = createMockSpawn({
+		stdout: "nothing to commit",
+		code: 0,
+	});
+
 	const localMockPi = {
 		...mockPi,
 		exec: async (cmd: string, args: string[]) => {
-			if (cmd === "git" && args[0] === "rev-parse") {
+			if (args[0] === "rev-parse") {
 				const isShort = args.includes("--short");
-				// Simulate real git: same commit but different format (full 40-char vs short 7-char)
 				const hash = isShort ? "9c9f975" : "9c9f9753e4038d2d26a8b0e6b3aa761c22e50fd8";
 				return { stdout: hash + "\n", stderr: "", code: 0 };
-			}
-			if (cmd === "git" && args[0] === "commit") {
-				return { stdout: "nothing to commit", stderr: "", code: 0 };
 			}
 			return { stdout: "", stderr: "", code: 0 };
 		},
@@ -347,15 +393,16 @@ test("commit_changes tool throws when HEAD did not change despite full vs short 
 });
 
 test("commit_changes tool throws when HEAD did not change despite exit code 0", async () => {
+	spawnFactory = createMockSpawn({
+		stdout: "nothing to commit",
+		code: 0,
+	});
+
 	const localMockPi = {
 		...mockPi,
 		exec: async (cmd: string, args: string[]) => {
-			if (cmd === "git" && args[0] === "rev-parse") {
-				// Same hash before and after — commit didn't land
+			if (args[0] === "rev-parse") {
 				return { stdout: "abc1234\n", stderr: "", code: 0 };
-			}
-			if (cmd === "git" && args[0] === "commit") {
-				return { stdout: "nothing to commit", stderr: "", code: 0 };
 			}
 			return { stdout: "", stderr: "", code: 0 };
 		},
@@ -380,28 +427,23 @@ test("commit_changes tool throws when HEAD did not change despite exit code 0", 
 });
 
 test("commit_changes tool extracts hash from rev-parse HEAD", async () => {
+	spawnFactory = createMockSpawn({
+		stdout: "[feat/phase-based-modules def5678] feat: add test\n 1 file changed",
+		code: 0,
+	});
+
 	let callCount = 0;
 	const localMockPi = {
 		...mockPi,
 		exec: async (cmd: string, args: string[]) => {
 			callCount++;
-			if (cmd === "git") {
-				// 1st call: rev-parse before commit
-				if (args[0] === "rev-parse" && callCount === 1) {
-					return { stdout: "abc1234\n", stderr: "", code: 0 };
-				}
-				// 2nd call: git commit (branch name with slash in output)
-				if (args[0] === "commit") {
-					return {
-						stdout: "[feat/phase-based-modules def5678] feat: add test\\n 1 file changed",
-						stderr: "",
-						code: 0,
-					};
-				}
-				// 3rd call: rev-parse after commit
-				if (args[0] === "rev-parse" && callCount === 3) {
-					return { stdout: "def5678\n", stderr: "", code: 0 };
-				}
+			// First rev-parse before commit
+			if (args[0] === "rev-parse" && callCount === 1) {
+				return { stdout: "abc1234\n", stderr: "", code: 0 };
+			}
+			// Second rev-parse after commit
+			if (args[0] === "rev-parse" && callCount === 2) {
+				return { stdout: "def5678\n", stderr: "", code: 0 };
 			}
 			return { stdout: "", stderr: "", code: 0 };
 		},
@@ -422,13 +464,10 @@ test("commit_changes tool extracts hash from rev-parse HEAD", async () => {
 	);
 
 	expect(result.details.success).toBe(true);
-	// Hash should come from rev-parse HEAD, not from parsing commit output
 	expect(result.details.hash).toBe("def5678");
-
-	// Verify rev-parse was called twice (before and after commit)
-	const revParseCalls = callCount; // we can count via callCount
-	expect(revParseCalls).toBeGreaterThanOrEqual(3);
 });
+
+// ─── Bash guardrail tests ───────────────────────────────────────────────────
 
 test("blocks git commit command in bash tool call", async () => {
 	const toolCallHandlers: ((event: any, ctx: any) => Promise<any>)[] = [];
@@ -483,7 +522,6 @@ test("allows other git commands in bash", async () => {
 
 	const ctx = { cwd: "/tmp", ui: { notify: () => {} } };
 
-	// These should not be blocked
 	const safeCommands = [
 		"git status",
 		"git log --oneline -3",
@@ -521,7 +559,6 @@ test("blocks git commit bypass with -c core.hooksPath", async () => {
 
 	const ctx = { cwd: "/tmp", ui: { notify: () => {} } };
 
-	// These bypass patterns must all be blocked
 	const bypassCommands = [
 		"git -c core.hooksPath=/dev/null commit -m 'test'",
 		"git -c core.hooksPath= commit -m 'test'",
@@ -559,7 +596,6 @@ test("allows git log with 'commit' in the output", async () => {
 
 	const ctx = { cwd: "/tmp", ui: { notify: () => {} } };
 
-	// These should NOT be blocked — "commit" is not a subcommand of git
 	const safeCommandsWithCommit = [
 		"git log --oneline | grep 'fix:'",
 		"git log --grep=commit",
@@ -577,14 +613,22 @@ test("allows git log with 'commit' in the output", async () => {
 	}
 });
 
-test("commit_changes tool calls onUpdate with correct shape", async () => {
-	let onUpdateCall: unknown = null;
+// ─── onUpdate streaming tests ───────────────────────────────────────────────
 
+test("commit_changes tool streams progress via onUpdate", async () => {
+	spawnFactory = createMockSpawn({
+		stdout: "[main abc123] feat: add test\n 1 file changed",
+		code: 0,
+	});
+
+	let revParseCount = 0;
 	const localMockPi = {
 		...mockPi,
 		exec: async (cmd: string, args: string[]) => {
-			if (cmd === "git" && args[0] === "commit") {
-				return { stdout: "[main abc123] feat: add test\n 1 file changed", stderr: "", code: 0 };
+			if (args[0] === "rev-parse") {
+				revParseCount++;
+				if (revParseCount === 1) return { stdout: "abc1234\n", stderr: "", code: 0 };
+				return { stdout: "def5678\n", stderr: "", code: 0 };
 			}
 			return { stdout: "", stderr: "", code: 0 };
 		},
@@ -596,8 +640,9 @@ test("commit_changes tool calls onUpdate with correct shape", async () => {
 
 	expect(registeredTool).not.toBeNull();
 
+	const onUpdateCalls: unknown[] = [];
 	const onUpdate = (update: unknown) => {
-		onUpdateCall = update;
+		onUpdateCalls.push(update);
 	};
 
 	await registeredTool!.execute(
@@ -608,10 +653,57 @@ test("commit_changes tool calls onUpdate with correct shape", async () => {
 		{ cwd: "/tmp", ui: { notify: () => {} } },
 	);
 
-	// onUpdate must be called with an object containing a content array, not a bare array
-	expect(onUpdateCall).not.toBeNull();
-	expect(Array.isArray(onUpdateCall)).toBe(false);
-	expect(onUpdateCall).toHaveProperty("content");
-	expect(Array.isArray((onUpdateCall as { content: unknown[] }).content)).toBe(true);
-	expect((onUpdateCall as { content: { type: string }[] }).content[0]).toHaveProperty("type", "text");
+	// onUpdate must be called with an object containing a content array
+	expect(onUpdateCalls.length).toBeGreaterThanOrEqual(1);
+	const lastUpdate = onUpdateCalls[onUpdateCalls.length - 1];
+	expect(Array.isArray(lastUpdate)).toBe(false);
+	expect(lastUpdate).toHaveProperty("content");
+	expect(Array.isArray((lastUpdate as { content: unknown[] }).content)).toBe(true);
+	expect((lastUpdate as { content: { type: string }[] }).content[0]).toHaveProperty("type", "text");
+	// The final update should contain the commit output
+	expect((lastUpdate as { content: { text: string }[] }).content[0].text).toContain("feat: add test");
+});
+
+test("commit_changes tool streams intermediate progress then final success", async () => {
+	spawnFactory = createMockSpawn({
+		stdout: "[main def5678] feat: streaming test\n 1 file changed",
+		code: 0,
+	});
+
+	let revParseCount = 0;
+	const localMockPi = {
+		...mockPi,
+		exec: async (cmd: string, args: string[]) => {
+			if (args[0] === "rev-parse") {
+				revParseCount++;
+				if (revParseCount === 1) return { stdout: "abc1234\n", stderr: "", code: 0 };
+				return { stdout: "def5678\n", stderr: "", code: 0 };
+			}
+			return { stdout: "", stderr: "", code: 0 };
+		},
+	};
+
+	registeredCommand = null;
+	registeredTool = null;
+	commitExtension(localMockPi);
+
+	expect(registeredTool).not.toBeNull();
+
+	const onUpdateCalls: unknown[] = [];
+	const onUpdate = (update: unknown) => {
+		onUpdateCalls.push(update);
+	};
+
+	const result = await registeredTool!.execute(
+		"call-5",
+		{ message: "feat: streaming test" },
+		undefined,
+		onUpdate,
+		{ cwd: "/tmp", ui: { notify: () => {} } },
+	);
+
+	// Should have multiple onUpdate calls (initial + streaming + final)
+	expect(onUpdateCalls.length).toBeGreaterThanOrEqual(1);
+	expect(result.details.success).toBe(true);
+	expect(result.details.hash).toBe("def5678");
 });

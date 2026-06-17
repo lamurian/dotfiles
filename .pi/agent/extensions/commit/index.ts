@@ -15,7 +15,7 @@
 import type { ExtensionAPI, ToolCallEvent } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { execGit, trimSubject } from "./git.ts";
-import { runCommit, type CommitResult } from "./commit.ts";
+import { runCommit, runCommitStreaming, type CommitResult } from "./commit.ts";
 
 export default function commitExtension(pi: ExtensionAPI): void {
 	// ── Guardrail: block git commit via bash ──────────────────────────────
@@ -161,7 +161,7 @@ Examples:
 			);
 			const hashBefore = beforeCode === 0 ? before.trim() : "";
 
-			const result = await runCommit(pi, params.message, params.body, signal);
+			const result = await runCommitStreaming(pi, params.message, params.body, signal, onUpdate, ctx.cwd);
 
 			if (result.code === 0) {
 				// Get the actual commit hash via rev-parse — robust across all branch
