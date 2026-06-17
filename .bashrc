@@ -136,3 +136,4 @@ eval "$(pyenv init -)"
 # Created by `pipx` on 2023-01-19 08:18:24
 export PATH="$PATH:/home/lam/.local/bin"
 export PATH="$PATH:$(go env GOPATH)/bin"
+eval "$(~/.local/bin/mise activate bash)"
