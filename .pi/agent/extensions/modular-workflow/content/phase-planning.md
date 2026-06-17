@@ -13,7 +13,13 @@ The user referenced a spec file. Read it and its cross-referenced ADR for full c
 5. When confirmed, create a plan file: run /plan <title> <body>.
    The body must follow the plan format documented in the adr skill.
 6. Include an @path cross-reference to the spec in the plan content, e.g.: This plan implements @docs/specs/002-bar.md
-7. When done, suggest: run /implement @docs/plans/<file> to implement.
+7. **Summarize the project**: Output a concise summary covering:
+   - What this project is about
+   - Key architectural decisions made (ADRs)
+   - What was specified (specs)
+   - What was planned (plans)
+   - Suggested next step
+8. When done, suggest: run /implement @docs/plans/<file> to implement.
 
 ## Rules
 
