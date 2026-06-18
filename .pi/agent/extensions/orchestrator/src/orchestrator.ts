@@ -1,47 +1,42 @@
 /**
  * Orchestration engine for sequential plan implementation.
  *
- * For each plan file, spawns a pi session, detects completion via JSON events,
- * and handles timeouts with retries and continuation.
+ * For each plan file:
+ * 1. Record HEAD hash before
+ * 2. Build full context (plan content + cross-refs) and spawn pi session
+ * 3. After subprocess exits (any reason): check if HEAD changed
+ * 4. If HEAD changed → git mv to archive + git commit --amend --no-edit
+ * 5. If HEAD unchanged → failure, plan stays in place
+ *
+ * Single-pass per plan. No retry loop. No continuation prompts.
+ * Completion is detected by HEAD change, not by agent_end events.
  */
 
-import { listPlanFiles } from "./plan.ts";
-import {
-  renderPlanPrompt,
-  renderContinuationPrompt,
-  spawnPiSession,
-} from "./session.ts";
+import { readFile } from "node:fs/promises";
+import { listPlanFiles, gitMoveToArchive } from "./plan.ts";
+import { renderPlanPrompt, spawnPiSession } from "./session.ts";
 import { getPlanTimeoutMs } from "./session-types.ts";
-import type { SpawnResult } from "./session-types.ts";
-import {
-  handleSessionOutcome,
-  handleTimeoutWithCommit,
-  handleTimeoutExhausted,
-  handleSpawnError,
-  buildSummary,
-} from "./orchestration-handlers.ts";
-import type { PlanResult, OrchestrationSummary, Ctx } from "./orchestration-handlers.ts";
-import { getHeadHashFull, isWorkingTreeClean } from "./git.ts";
+import { getHeadHashFull, amendLastCommit } from "./git.ts";
 import { basename } from "node:path";
+import type { Ctx } from "./orchestration-handlers.ts";
+import { buildSummary, type PlanResult, type OrchestrationSummary } from "./orchestration-handlers.ts";
 
 // Re-export types for consumers
 export type { PlanResult, OrchestrationSummary };
 export type { Ctx };
 
-/** Maximum number of retries for a timed-out plan. */
-const MAX_RETRIES = 3;
-
 /**
  * Run orchestration for all plan files in a directory.
  *
  * For each plan file:
- * 1. Record HEAD hash before
- * 2. Spawn a pi session with the plan prompt
- * 3. Parse JSON events to detect completion (agent_end)
- * 4. If timed out with no commit: retry up to MAX_RETRIES with continuation context
- * 5. If timed out with commit: archive and treat as completed
- * 6. If clean completion: check git state, archive, amend
- * 7. On non-zero exit or user kill: analyze, report, stop
+ * 1. Read plan content and build context prompt (plan text is embedded inline)
+ * 2. Record HEAD_BEFORE
+ * 3. Spawn pi session with timeout and log forwarding
+ * 4. After subprocess exits (any reason):
+ *    a. If HEAD changed → git mv to .archive, git commit --amend --no-edit
+ *    b. If HEAD unchanged → failure
+ * 5. On failure, stop processing further plans
+ * 6. Continue to next plan on success
  *
  * @param plansDir - Absolute path to the plans directory.
  * @param ctx      - Extension context (for cwd and UI).
@@ -73,111 +68,69 @@ export async function runOrchestration(
       "info",
     );
 
-    // ── Retry loop ─────────────────────────────────────────────
-    let retries = 0;
-    let previousMessages: string[] = [];
-    let planResult: PlanResult | null = null;
-
-    while (retries <= MAX_RETRIES) {
-      const headBefore = getHeadHashFull(ctx.cwd);
-
-      // Determine prompt based on retry count
-      const prompt =
-        retries === 0
-          ? await renderPlanPrompt(filePath)
-          : await renderContinuationPrompt(filePath, previousMessages);
-
-      // Spawn pi session with timeout and log forwarding
-      const spawnResult = await spawnPiSession(prompt, ctx.cwd, {
-        timeoutMs: getPlanTimeoutMs(),
-        onLog: ctx.logLine,
-      });
-
-      // Collect assistant messages for potential continuation
-      if (spawnResult.assistantMessages.length > 0) {
-        previousMessages = spawnResult.assistantMessages;
-      }
-
-      // ── Case 1: Killed by user / non-timeout kill ──────────
-      if (spawnResult.killed && !spawnResult.timedOut) {
-        planResult = {
-          file: fileName,
-          success: false,
-          error: "Pi session was killed (cancelled).",
-        };
-        break;
-      }
-
-      // ── Case 2: Clean completion (agent_end received) ─────
-      if (spawnResult.completed) {
-        planResult = await handleSessionOutcome(
-          filePath, plansDir, fileName,
-          headBefore, spawnResult, ctx,
-        );
-        break;
-      }
-
-      // ── Case 3: Timeout ────────────────────────────────────
-      if (spawnResult.timedOut) {
-        const headAfter = getHeadHashFull(ctx.cwd);
-        const headChanged = headAfter !== "" && headBefore !== headAfter;
-        const treeClean = isWorkingTreeClean(ctx.cwd);
-
-        if (headChanged) {
-          planResult = await handleTimeoutWithCommit(
-            filePath, plansDir, fileName, headAfter, ctx,
-          );
-          break;
-        }
-
-        retries++;
-
-        if (retries <= MAX_RETRIES) {
-          ctx.ui.notify(
-            `⏱ ${fileName} timed out (attempt ${retries}/${MAX_RETRIES}). Retrying...`,
-            "warning",
-          );
-          continue;
-        }
-
-        planResult = await handleTimeoutExhausted(
-          filePath, plansDir, fileName, ctx,
-        );
-        break;
-      }
-
-      // ── Case 4: Non-zero exit (spawn failed) ───────────────
-      if (spawnResult.exitCode !== 0 && !spawnResult.completed) {
-        planResult = await handleSpawnError(
-          filePath, fileName, spawnResult, ctx,
-        );
-        break;
-      }
-
-      // ── Case 5: No agent_end but exitCode=0 ───────────────
-      retries++;
-      if (retries <= MAX_RETRIES) {
-        ctx.ui.notify(
-          `⏱ ${fileName} did not complete (attempt ${retries}/${MAX_RETRIES}). Retrying...`,
-          "warning",
-        );
-        continue;
-      }
-
-      planResult = await handleTimeoutExhausted(
-        filePath, plansDir, fileName, ctx,
-      );
+    // ── Read plan content and build prompt ───────────────────
+    let planContent: string;
+    try {
+      planContent = await readFile(filePath, "utf-8");
+    } catch (err) {
+      const errorMsg = `Failed to read plan file: ${(err as Error).message}`;
+      ctx.ui.notify(`✗ ${fileName}: ${errorMsg}`, "error");
+      results.push({ file: fileName, success: false, error: errorMsg });
       break;
     }
 
-    // ── Process result ────────────────────────────────────────
-    if (planResult) {
-      results.push(planResult);
+    // Resolve cross-references (plan → spec → ADR)
+    // In the future, cross-ref resolution can be added here.
+    // For now, plan content is used as-is.
 
-      if (!planResult.success && !planResult.error?.includes("timed out")) {
-        ctx.ui.notify(`✗ ${fileName}: ${planResult.error}`, "error");
-        break;
+    // Render prompt with plan content embedded
+    const prompt = await renderPlanPrompt(planContent);
+
+    // Record HEAD before spawning
+    const headBefore = getHeadHashFull(ctx.cwd);
+
+    // Spawn pi session with timeout and log forwarding
+    const spawnResult = await spawnPiSession(prompt, ctx.cwd, {
+      timeoutMs: getPlanTimeoutMs(),
+      onLog: ctx.logLine,
+    });
+
+    // ── Check HEAD after subprocess exits (any reason) ──────
+    const headAfter = getHeadHashFull(ctx.cwd);
+    const headChanged = headAfter !== "" && headBefore !== headAfter;
+
+    if (headChanged) {
+      // ── Success: archive using git mv and amend last commit ──
+      try {
+        const archived = await gitMoveToArchive(filePath, plansDir, ctx.cwd);
+        ctx.ui.notify(`🗄  Archived: ${basename(archived)}`, "info");
+      } catch (err) {
+        ctx.ui.notify(
+          `  Warning: Archive failed: ${(err as Error).message}`,
+          "warning",
+        );
       }
+
+      const amendResult = amendLastCommit(ctx.cwd);
+      if (amendResult.success) {
+        ctx.ui.notify(`  Amended commit`, "info");
+      } else {
+        ctx.ui.notify(
+          `  Warning: Amend failed: ${amendResult.error ?? "unknown"}`,
+          "warning",
+        );
+      }
+
+      results.push({ file: fileName, success: true });
+    } else {
+      // ── Failure: no changes committed ──────────────────────
+      const errorMsg = spawnResult.stderr
+        ? `No commits made. Stderr: ${spawnResult.stderr.slice(0, 200)}`
+        : "No commits were made during the session.";
+
+      ctx.ui.notify(`✗ ${fileName}: ${errorMsg}`, "error");
+      results.push({ file: fileName, success: false, error: errorMsg });
+      break;
     }
   }
 

@@ -1,8 +1,8 @@
 /**
  * Session management for pi subprocess spawning.
  *
- * Spawns pi in JSON mode, parses events to detect completion,
- * and forwards progress via callback or stdout.
+ * Spawns pi in JSON mode with the plan context embedded in the prompt,
+ * forwards progress via callback or stdout.
  */
 
 import { spawn } from "node:child_process";
@@ -44,44 +44,19 @@ export async function loadPlanPrompt(): Promise<string> {
 }
 
 /**
- * Render the plan prompt template with plan file reference.
+ * Render the plan prompt template with plan content embedded inline.
  *
- * @param planFile - Path to the plan file.
- * @returns The rendered prompt string.
+ * Unlike the old renderPlanPrompt which took a file path, this function
+ * takes the actual plan content string and embeds it directly in the
+ * prompt. The subprocess no longer needs to call implement_plan to
+ * get context — everything is provided upfront.
+ *
+ * @param planContent - The full content of the plan file.
+ * @returns The rendered prompt string with plan content substituted.
  */
-export async function renderPlanPrompt(planFile: string): Promise<string> {
+export async function renderPlanPrompt(planContent: string): Promise<string> {
   const template = await loadPlanPrompt();
-  return template.replaceAll("{{planFile}}", planFile);
-}
-
-/**
- * Load the continuation prompt template from the content directory.
- *
- * @returns The prompt template string.
- */
-export async function loadContinuationPrompt(): Promise<string> {
-  const promptPath = resolve(getContentDir(), "continuation-prompt.md");
-  return readFile(promptPath, "utf-8");
-}
-
-/**
- * Render the continuation prompt template with plan file and previous messages.
- *
- * @param planFile          - Path to the plan file.
- * @param previousMessages  - Text content from previous assistant turns.
- * @returns The rendered prompt string.
- */
-export async function renderContinuationPrompt(
-  planFile: string,
-  previousMessages: string[],
-): Promise<string> {
-  const template = await loadContinuationPrompt();
-  const messagesText = previousMessages.length > 0
-    ? previousMessages.map((m) => `  > ${m.replaceAll("\n", "\n  > ")}`).join("\n\n")
-    : "No output was captured from the previous session.";
-  return template
-    .replaceAll("{{planFile}}", planFile)
-    .replaceAll("{{previousMessages}}", messagesText);
+  return template.replaceAll("{{planContent}}", planContent);
 }
 
 /**
