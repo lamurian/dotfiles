@@ -140,6 +140,16 @@ export async function runOrchestration(
       const archived = await moveToArchive(filePath, plansDir);
       ctx.ui.notify(`  Archived: ${basename(archived)}`, "info");
 
+      // Track implementation progress: decrement spec/ADR remaining counts
+      try {
+        const { onPlanImplemented } = await import(
+          "../../modular-workflow/src/plan.ts"
+        );
+        await onPlanImplemented(archived, ctx.cwd);
+      } catch {
+        // Modular-workflow not available; skip tracking
+      }
+
       // Git add the archived file
       const staged = stageFile(archived, ctx.cwd);
       if (!staged) {
@@ -165,6 +175,17 @@ export async function runOrchestration(
       // HEAD unchanged and tree clean — might mean the plan was already implemented
       // or the pi session did nothing. Archive anyway.
       const archived = await moveToArchive(filePath, plansDir);
+
+      // Track implementation progress
+      try {
+        const { onPlanImplemented } = await import(
+          "../../modular-workflow/src/plan.ts"
+        );
+        await onPlanImplemented(archived, ctx.cwd);
+      } catch {
+        // Modular-workflow not available; skip tracking
+      }
+
       const staged = stageFile(archived, ctx.cwd);
       if (staged) {
         amendLastCommit(ctx.cwd);

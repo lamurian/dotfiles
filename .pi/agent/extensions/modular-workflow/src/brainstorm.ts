@@ -327,8 +327,14 @@ export async function createAdrFromBrainstorm(
   cwd: string,
 ): Promise<string> {
   const fullAdr: Adr = {
-    ...adr,
+    title: adr.title,
+    description: adr.description,
     status: "proposed",
+    remaining: adr.remaining ?? 0,
+    date: adr.date,
+    context: adr.context,
+    decision: adr.decision,
+    impact: adr.impact,
   };
 
   const adrPath = await createAdr(fullAdr, cwd);

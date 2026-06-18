@@ -103,6 +103,8 @@ export async function createSpec(
   const fullContent = renderTemplate(template, {
     title,
     description: description ?? title,
+    status: "proposed",
+    remaining: "0",
     date: formatDate(),
     content: body,
   });
@@ -151,4 +153,102 @@ export async function archiveSpec(
   await rm(specPath);
 
   return archivePath;
+}
+
+/**
+ * Update a field in the spec file's YAML frontmatter.
+ *
+ * Replaces a key: value line in the frontmatter.
+ *
+ * @param filePath - Absolute path to the spec file.
+ * @param key      - Frontmatter field name.
+ * @param value    - New value (converted to string).
+ */
+export async function updateSpecField(
+  filePath: string,
+  key: string,
+  value: string | number,
+): Promise<void> {
+  const content = await readFile(filePath, "utf-8");
+  const regex = new RegExp(`^${key}:\\s*.+`, "m");
+  const updated = content.replace(regex, `${key}: ${value}`);
+  await writeFile(filePath, updated, "utf-8");
+}
+
+/**
+ * Compute and update the `remaining` field for a spec.
+ *
+ * Scans all active (non-archived) plan files in the project and counts
+ * how many reference this spec via `@docs/specs/XXX-*`. Updates the spec's
+ * frontmatter `remaining` field and sets `status` to `proposed` if not set.
+ *
+ * @param specNumber - Spec number in 3-digit format (e.g. "001").
+ * @param cwd        - Project working directory.
+ * @returns The new remaining count and status.
+ */
+export async function computeAndUpdateSpecRemaining(
+  specNumber: string,
+  cwd: string,
+): Promise<{ remaining: number; status: string }> {
+  const config = await loadDirectoriesConfig(cwd);
+  const plansDir = join(cwd, config.plans.path);
+  const paddedNum = String(parseInt(specNumber, 10)).padStart(3, "0");
+  const refPattern = `@docs/specs/${paddedNum}`;
+
+  let count = 0;
+  if (existsSync(plansDir)) {
+    const files = await readdir(plansDir);
+    for (const file of files) {
+      // Skip archived files
+      if (file === ".archive") continue;
+      if (!file.endsWith(".md")) continue;
+
+      const filePath = join(plansDir, file);
+      const content = await readFile(filePath, "utf-8");
+      if (content.includes(refPattern)) {
+        count++;
+      }
+    }
+  }
+
+  // Update spec file
+  const specsDir = await specsDirPath(cwd);
+  if (existsSync(specsDir)) {
+    const files = await readdir(specsDir);
+    for (const file of files) {
+      if (!file.endsWith(".md")) continue;
+      if (!file.startsWith(paddedNum)) continue;
+
+      const specPath = join(specsDir, file);
+      await updateSpecField(specPath, "remaining", count);
+
+      // Set status to proposed if not already progressed/implemented
+      const content = await readFile(specPath, "utf-8");
+      const currentStatus = content.match(/^status:\s*(\S+)/m)?.[1] ?? "";
+      if (!["progressed", "implemented"].includes(currentStatus)) {
+        const updated = content.replace(/^status:\s*.+/m, "status: proposed");
+        await writeFile(specPath, updated, "utf-8");
+      }
+      break;
+    }
+  }
+
+  return { remaining: count, status: "proposed" };
+}
+
+/**
+ * Extract the ADR number referenced by a spec file.
+ *
+ * Parses the spec file and looks for `@docs/ADR/XXX-*` to extract
+ * the ADR number.
+ *
+ * @param specPath - Absolute path to the spec file.
+ * @returns The ADR number, or null if not found.
+ */
+export async function extractAdrRefFromSpec(
+  specPath: string,
+): Promise<number | null> {
+  const content = await readFile(specPath, "utf-8");
+  const match = content.match(/@docs\/ADR\/(\d{3})/);
+  return match ? parseInt(match[1], 10) : null;
 }
