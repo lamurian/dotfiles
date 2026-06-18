@@ -136,21 +136,31 @@ export function formatDate(date: Date = new Date()): string {
 }
 
 /**
- * Generate a short slug from a title, truncated to maxLen characters.
+ * Generate a short slug from a title.
  *
  * Used for uniform file naming: xxx-short-slug.md
+ * Throws when the slug exceeds maxLen so the caller (LLM) re-prompts
+ * with a shorter title instead of silently truncating.
  *
  * @param title  - The title to slugify.
- * @param maxLen - Maximum length of the slug (default 20).
+ * @param maxLen - Maximum length of the slug (default 60).
  * @returns Slug suitable for filenames.
+ * @throws {Error} If the slug exceeds maxLen characters.
  */
-export function shortSlug(title: string, maxLen = 20): string {
-  return title
+export function shortSlug(title: string, maxLen = 60): string {
+  const slug = title
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, maxLen)
-    .replace(/-+$/, "");
+    .replace(/^-|-$/g, "");
+
+  if (slug.length > maxLen) {
+    throw new Error(
+      `Title too long: slug "${slug}" exceeds ${maxLen} characters. ` +
+      "Use a shorter title (fewer words).",
+    );
+  }
+
+  return slug;
 }
 
 /**
