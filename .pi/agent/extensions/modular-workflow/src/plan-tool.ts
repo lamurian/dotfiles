@@ -3,6 +3,9 @@ import { Type } from "typebox";
 import { createPlan, listPlans } from "./plan.ts";
 import { relative } from "node:path";
 
+/** Maximum words allowed in a plan title for atomicity. */
+const MAX_TITLE_WORDS = 5;
+
 /**
  * Register the `plan_create` AI tool so the agent can write complete plan files.
  *
@@ -17,12 +20,13 @@ export function registerPlanTool(pi: ExtensionAPI): void {
     label: "Create Plan",
     description:
       "Create a complete plan file linked to a spec. " +
+      "Each plan must be atomic — one task with a clear Definition of Done for one spec. " +
       "Use this to write finished plans with implementation steps, risks, and UAT. " +
       "Returns the created file path.",
 
     parameters: Type.Object({
       specNumber: Type.String({
-        description: "Full spec number this plan implements (e.g. '1.1' for spec 001 task 1)",
+        description: "Spec number this plan implements (e.g. '001' for spec 001)",
       }),
       title: Type.String({
         description: "Short descriptive title (<5 words), e.g. 'Implement Auth Endpoints'",
@@ -57,6 +61,46 @@ export function registerPlanTool(pi: ExtensionAPI): void {
           ],
           isError: true,
         };
+      }
+
+      // ── Atomicity guardrails ─────────────────────────────────
+
+      // Title word count check
+      const wordCount = title.trim().split(/\s+/).length;
+      if (wordCount > MAX_TITLE_WORDS) {
+        return {
+          content: [
+            {
+              type: "text",
+              text:
+                `Error: Plan title "${title}" has ${wordCount} words, exceeding the ` +
+                `${MAX_TITLE_WORDS}-word atomicity limit. ` +
+                `Keep titles focused on one task (≤${MAX_TITLE_WORDS} words).`,
+            },
+          ],
+          isError: true,
+        };
+      }
+
+      // Single spec reference check
+      const specRefs = content.match(/@docs\/specs\/(\d{3})/gi);
+      if (specRefs) {
+        const uniqueSpecs = new Set(specRefs.map((r: string) => r.toLowerCase()));
+        if (uniqueSpecs.size > 1) {
+          return {
+            content: [
+              {
+                type: "text",
+                text:
+                  `Error: Plan references ${uniqueSpecs.size} different specs ` +
+                  `([${[...uniqueSpecs].join(", ")}]). ` +
+                  `Each plan must be atomic and implement only one spec. ` +
+                  `Create separate plans for each spec.`,
+            },
+          ],
+          isError: true,
+        };
+      }
       }
 
       try {

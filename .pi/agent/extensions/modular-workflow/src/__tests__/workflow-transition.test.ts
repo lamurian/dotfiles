@@ -10,11 +10,10 @@ import type { ExtensionAPI, ExtensionContext, ToolDefinition } from "@earendil-w
  * Tests for the workflow_transition AI tool.
  *
  * Spec (discussion):
- * - The workflow_transition tool lets the agent automatically progress
- *   through workflow phases without user intervention.
- * - It persists the new phase via the workflow state machine.
- * - After all ADRs are drafted, the agent calls this to enter specifying.
- * - After all specs are created, the agent calls this to enter planning.
+ * - The workflow_transition tool lets the agent progress through workflow phases.
+ * - It now requires user confirmation via the `confirmed` parameter.
+ * - Without confirmed: true, it returns a message asking for confirmation.
+ * - Only with confirmed: true does it actually transition and persist state.
  */
 
 let tmpDir: string;
@@ -65,7 +64,7 @@ describe("workflow_transition tool", () => {
     await rm(tmpDir, { recursive: true, force: true });
   });
 
-  it("transitions to specifying phase when called", async () => {
+  it("refuses transition without confirmed flag", async () => {
     const pi = mockPi();
     const { registerWorkflowTransitionTool } = await import("../workflow-transition.ts");
     registerWorkflowTransitionTool(pi);
@@ -73,10 +72,37 @@ describe("workflow_transition tool", () => {
     const tool = pi.tools.find((t) => t.name === "workflow_transition");
     assert.ok(tool, "workflow_transition tool should be registered");
 
-    // Register the tool again and keep a ref to pi for state tracking
     const result = await tool.execute(
       "call-1",
       { phase: "specifying" },
+      new AbortController().signal,
+      () => {},
+      mockCtx(),
+    );
+
+    assert.ok(result, "Should return a result");
+    assert.ok(!result.isError, "Missing confirmation should not be an error message");
+    const text = result.content?.[0]?.text ?? "";
+    assert.ok(
+      text.includes("confirm") || text.includes("confirmation"),
+      `Should ask for confirmation, got: ${text}`,
+    );
+
+    // State should NOT be persisted since the transition was not confirmed
+    assert.equal(pi.stateEntries.length, 0, "State should not be persisted without confirmation");
+  });
+
+  it("transitions with confirmed flag", async () => {
+    const pi = mockPi();
+    const { registerWorkflowTransitionTool } = await import("../workflow-transition.ts");
+    registerWorkflowTransitionTool(pi);
+
+    const tool = pi.tools.find((t) => t.name === "workflow_transition");
+    assert.ok(tool, "workflow_transition tool should be registered");
+
+    const result = await tool.execute(
+      "call-2",
+      { phase: "specifying", confirmed: true },
       new AbortController().signal,
       () => {},
       mockCtx(),
@@ -94,7 +120,7 @@ describe("workflow_transition tool", () => {
     assert.equal(latestState.phase, "specifying");
   });
 
-  it("transitions to planning phase", async () => {
+  it("transitions to planning phase with confirmed flag", async () => {
     const pi = mockPi();
     const { registerWorkflowTransitionTool } = await import("../workflow-transition.ts");
     registerWorkflowTransitionTool(pi);
@@ -103,8 +129,8 @@ describe("workflow_transition tool", () => {
     assert.ok(tool);
 
     const result = await tool.execute(
-      "call-2",
-      { phase: "planning" },
+      "call-3",
+      { phase: "planning", confirmed: true },
       new AbortController().signal,
       () => {},
       mockCtx(),
@@ -126,8 +152,8 @@ describe("workflow_transition tool", () => {
     assert.ok(tool);
 
     const result = await tool.execute(
-      "call-3",
-      { phase: "invalid_phase" },
+      "call-4",
+      { phase: "invalid_phase", confirmed: true },
       new AbortController().signal,
       () => {},
       mockCtx(),
@@ -136,7 +162,7 @@ describe("workflow_transition tool", () => {
     assert.ok(result.isError, "Invalid phase should return an error");
   });
 
-  it("transitions to implementing phase", async () => {
+  it("transitions to implementing phase with confirmed flag", async () => {
     const pi = mockPi();
     const { registerWorkflowTransitionTool } = await import("../workflow-transition.ts");
     registerWorkflowTransitionTool(pi);
@@ -145,8 +171,8 @@ describe("workflow_transition tool", () => {
     assert.ok(tool);
 
     const result = await tool.execute(
-      "call-4",
-      { phase: "implementing" },
+      "call-5",
+      { phase: "implementing", confirmed: true },
       new AbortController().signal,
       () => {},
       mockCtx(),

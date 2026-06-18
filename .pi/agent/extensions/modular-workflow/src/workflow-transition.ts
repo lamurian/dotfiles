@@ -30,9 +30,11 @@ export function registerWorkflowTransitionTool(pi: ExtensionAPI): void {
     label: "Transition Phase",
     description:
       "Progress the workflow to the next phase. " +
-      "Call this after completing ALL documents in the current phase. " +
+      "Ask the user for confirmation before calling this tool. " +
+      "Call this after completing ALL documents in the current phase AND " +
+      "the user has explicitly confirmed the transition. " +
       "Valid transitions: requirements → specifying → planning → implementing. " +
-      "The agent should NOT prompt the user to run this — use it autonomously.",
+      "Pass confirmed: true only after the user has approved.",
 
     parameters: Type.Object({
       phase: Type.String({
@@ -43,10 +45,17 @@ export function registerWorkflowTransitionTool(pi: ExtensionAPI): void {
           "planning → after all plans created. " +
           "implementing → ready to start implementing.",
       }),
+      confirmed: Type.Optional(
+        Type.Boolean({
+          description:
+            "Set to true only after the user has explicitly confirmed the transition. " +
+            "When omitted or false, the tool will ask for confirmation without transitioning.",
+        }),
+      ),
     }),
 
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
-      const { phase } = params;
+      const { phase, confirmed } = params;
 
       // Validate phase
       if (!VALID_PHASES.includes(phase as typeof VALID_PHASES[number])) {
@@ -60,6 +69,21 @@ export function registerWorkflowTransitionTool(pi: ExtensionAPI): void {
             },
           ],
           isError: true,
+        };
+      }
+
+      // Require user confirmation before transitioning
+      if (confirmed !== true) {
+        return {
+          content: [
+            {
+              type: "text",
+              text:
+                `Transition to "${phase}" requested. ` +
+                `Please confirm with the user before proceeding. ` +
+                `Call again with confirmed: true once they approve.`,
+            },
+          ],
         };
       }
 

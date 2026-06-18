@@ -23,7 +23,7 @@ If the user's message already contains project initiation context (look for "## 
 2. **Identify all ADRs needed.** Each ADR captures one architectural decision. List them all before drafting any.
 3. **For each ADR**: Propose a technical approach, loop for feedback, get user confirmation.
 4. **When confirmed, write the complete ADR** using the `adr_create` tool. Fill in all fields — context, decision, and impact must be complete and substantive (no TBD).
-5. **After ALL ADRs are drafted and confirmed**, call `workflow_transition({ phase: "specifying" })` to move to the next phase. Do NOT ask the user to run this — use the tool autonomously.
+5. **After ALL ADRs are drafted and confirmed**, present a summary of all ADRs created to the user and ask for their confirmation to proceed to the specifying phase. Once the user confirms, call `workflow_transition({ phase: "specifying", confirmed: true })` to move to the next phase.
 
 ## Rules
 - All generated .md files must be ≤100 lines. Count lines before writing.

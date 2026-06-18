@@ -13,13 +13,10 @@ import type { ExtensionAPI, ExtensionContext, ToolDefinition } from "@earendil-w
  * - The spec_create tool lets the agent write complete specification files.
  * - It calls createSpec which handles numbering and ADR cross-referencing.
  * - The tool requires adrNumber, title, and content.
+ * - Atomicity guardrails: title ≤5 words, references only one ADR.
  */
 
 let tmpDir: string;
-
-function t(...parts: string[]): string {
-  return join(tmpDir, ...parts);
-}
 
 /** Mock ExtensionAPI that captures tool registrations. */
 function mockPi(): ExtensionAPI & { tools: ToolDefinition[] } {
@@ -155,5 +152,63 @@ describe("spec_create tool", () => {
     const listTool = pi.tools.find((t) => t.name === "spec_list");
     assert.ok(createTool, "spec_create should be registered");
     assert.ok(listTool, "spec_list should be registered");
+  });
+
+  it("rejects spec with title exceeding 5 words for atomicity", async () => {
+    const pi = mockPi();
+    const { registerSpecTool } = await import("../spec-tool.ts");
+    registerSpecTool(pi);
+
+    const tool = pi.tools.find((t) => t.name === "spec_create");
+    assert.ok(tool);
+
+    const result = await tool.execute(
+      "call-3",
+      {
+        adrNumber: 1,
+        title: "User Authentication and Authorization Module Overhaul",
+        content:
+          "# Requirements Specification\n\n- Users must log in\n\n# Design Principles\n\n- JWT-based\n\n# References\n\n",
+      },
+      new AbortController().signal,
+      () => {},
+      mockCtx(),
+    );
+
+    assert.ok(result.isError, "Title >5 words should return an error");
+    const text = result.content?.[0]?.text ?? "";
+    assert.ok(
+      text.includes("5 words") || text.includes("atomic"),
+      `Error should mention atomicity or word limit, got: ${text}`,
+    );
+  });
+
+  it("rejects spec referencing multiple ADRs for atomicity", async () => {
+    const pi = mockPi();
+    const { registerSpecTool } = await import("../spec-tool.ts");
+    registerSpecTool(pi);
+
+    const tool = pi.tools.find((t) => t.name === "spec_create");
+    assert.ok(tool);
+
+    const result = await tool.execute(
+      "call-4",
+      {
+        adrNumber: 1,
+        title: "Mixed Concerns",
+        content:
+          "# Requirements Specification\n\n- Cross-ADR feature\n\n# Design Principles\n\n- Integrates multiple ADRs\n\n# References\n\n@docs/ADR/001-dummy.md @docs/ADR/002-nonexistent.md",
+      },
+      new AbortController().signal,
+      () => {},
+      mockCtx(),
+    );
+
+    assert.ok(result.isError, "Multi-ADR spec should return an error");
+    const text = result.content?.[0]?.text ?? "";
+    assert.ok(
+      text.includes("ADR") && (text.includes("different") || text.includes("atomic")),
+      `Error should mention multiple ADRs, got: ${text}`,
+    );
   });
 });

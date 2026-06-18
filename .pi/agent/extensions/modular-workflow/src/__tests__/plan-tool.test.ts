@@ -13,13 +13,11 @@ import type { ExtensionAPI, ExtensionContext, ToolDefinition } from "@earendil-w
  * - The plan_create tool lets the agent write complete plan files.
  * - It calls createPlan which handles numbering and spec cross-referencing.
  * - The tool requires specNumber, title, and content.
+ * - Atomicity guardrails: title ≤5 words, references only one spec.
+ * - specNumber uses 3-digit format (e.g. "001"), not dotted "1.1".
  */
 
 let tmpDir: string;
-
-function t(...parts: string[]): string {
-  return join(tmpDir, ...parts);
-}
 
 function mockPi(): ExtensionAPI & { tools: ToolDefinition[] } {
   const tools: ToolDefinition[] = [];
@@ -59,8 +57,7 @@ describe("plan_create tool", () => {
     await mkdir(join(tmpDir, "docs", "plans"), { recursive: true });
     await mkdir(join(tmpDir, "docs", "specs"), { recursive: true });
 
-    // Create a dummy spec so plan creation can reference it
-    // First create an ADR
+    // Create a dummy ADR
     const { createAdr } = await import("../adr.ts");
     await createAdr(
       {
@@ -94,7 +91,7 @@ describe("plan_create tool", () => {
     const result = await tool.execute(
       "call-1",
       {
-        specNumber: "1.1",
+        specNumber: "001",
         title: "Implement Auth API",
         content:
           "# Overview\n\nImplement the user authentication API endpoints.\n\n" +
@@ -127,7 +124,10 @@ describe("plan_create tool", () => {
     const content = await readFile(planFile, "utf-8");
     assert.ok(content.includes("title: Implement Auth API"), "Should have title in frontmatter");
     assert.ok(content.includes("Create auth middleware"), "Should have implementation steps");
-    assert.ok(content.includes("@docs/specs/"), "Should cross-reference the spec");
+    assert.ok(
+      content.includes("@docs/specs/001-"),
+      `Should cross-reference spec 001, got content:\n${content}`,
+    );
     assert.ok(content.includes("- [ ]"), "Should have task checkboxes");
     assert.ok(content.includes("UAT"), "Should have UAT section");
     assert.ok(content.includes("Risks"), "Should have risks section");
@@ -165,5 +165,63 @@ describe("plan_create tool", () => {
     const listTool = pi.tools.find((t) => t.name === "plan_list");
     assert.ok(createTool, "plan_create should be registered");
     assert.ok(listTool, "plan_list should be registered");
+  });
+
+  it("rejects plan with title exceeding 5 words for atomicity", async () => {
+    const pi = mockPi();
+    const { registerPlanTool } = await import("../plan-tool.ts");
+    registerPlanTool(pi);
+
+    const tool = pi.tools.find((t) => t.name === "plan_create");
+    assert.ok(tool);
+
+    const result = await tool.execute(
+      "call-3",
+      {
+        specNumber: "001",
+        title: "Implement Auth API and Database Migration Plan",
+        content:
+          "# Overview\n\nTest\n\n# Goals\n\n- Goal\n\n# Implementation Steps\n\n- [ ] Step 1\n\n# Risks\n\n| L | I | M |\n| --- | --- | --- |\n| Low | High | Review |\n\n# UAT\n\n1. Test\n\n# References\n\n",
+      },
+      new AbortController().signal,
+      () => {},
+      mockCtx(),
+    );
+
+    assert.ok(result.isError, "Title >5 words should return an error");
+    const text = result.content?.[0]?.text ?? "";
+    assert.ok(
+      text.includes("5 words") || text.includes("atomic"),
+      `Error should mention atomicity or word limit, got: ${text}`,
+    );
+  });
+
+  it("rejects plan referencing multiple specs for atomicity", async () => {
+    const pi = mockPi();
+    const { registerPlanTool } = await import("../plan-tool.ts");
+    registerPlanTool(pi);
+
+    const tool = pi.tools.find((t) => t.name === "plan_create");
+    assert.ok(tool);
+
+    const result = await tool.execute(
+      "call-4",
+      {
+        specNumber: "001",
+        title: "Cross-Spec Task",
+        content:
+          "# Overview\n\nMultiple specs\n\n# Goals\n\n- Goal\n\n# Implementation Steps\n\n- [ ] Step 1\n\n# Risks\n\n| L | I | M |\n| --- | --- | --- |\n| Low | High | Review |\n\n# UAT\n\n1. Test\n\n# References\n\n@docs/specs/001-dummy @docs/specs/002-other",
+      },
+      new AbortController().signal,
+      () => {},
+      mockCtx(),
+    );
+
+    assert.ok(result.isError, "Multi-spec plan should return an error");
+    const text = result.content?.[0]?.text ?? "";
+    assert.ok(
+      text.includes("spec") && (text.includes("different") || text.includes("atomic")),
+      `Error should mention multiple specs, got: ${text}`,
+    );
   });
 });
