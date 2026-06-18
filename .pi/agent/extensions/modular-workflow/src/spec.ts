@@ -89,7 +89,7 @@ export async function createSpec(
   await ensureSpecsDir(cwd);
 
   const specNum = await nextSpecNumber(adrNumber, cwd);
-  const slug = shortSlug(title, 20);
+  const slug = shortSlug(title, 60);
   const filename = `${String(specNum).padStart(3, "0")}-${slug}.md`;
   const filePath = join(await specsDirPath(cwd), filename);
 

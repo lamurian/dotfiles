@@ -121,7 +121,7 @@ export async function createAdr(adr: Adr, cwd: string): Promise<string> {
   }
 
   const number = await nextAdrNumber(cwd);
-  const slug = shortSlug(adr.title, 20);
+  const slug = shortSlug(adr.title, 60);
   const filename = `${String(number).padStart(3, "0")}-${slug}.md`;
   const filePath = join(adrDir, filename);
 

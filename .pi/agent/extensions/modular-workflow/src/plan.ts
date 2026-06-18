@@ -89,7 +89,7 @@ export async function createPlan(
   await ensurePlansDir(cwd);
 
   const planNum = await nextPlanNumber(specNumber, cwd);
-  const slug = shortSlug(title, 20);
+  const slug = shortSlug(title, 60);
   const filename = `${String(planNum).padStart(3, "0")}-${slug}.md`;
   const filePath = join(await plansDirPath(cwd), filename);
 
