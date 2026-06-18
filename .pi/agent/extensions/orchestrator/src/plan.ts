@@ -1,6 +1,6 @@
-import { readdir, mkdir, rename, stat } from "node:fs/promises";
-import { join, basename } from "node:path";
-import { existsSync } from "node:fs";
+import { readdir, mkdir, rename } from "node:fs/promises";
+import { join, basename, relative } from "node:path";
+import { execSync } from "node:child_process";
 
 /**
  * List all markdown plan files in a directory, sorted by filename.
@@ -49,6 +49,7 @@ export async function ensureArchiveDir(plansDir: string): Promise<string> {
  * Move a plan file to the archive directory.
  *
  * Creates the archive directory if it doesn't exist.
+ * Uses filesystem rename (not git-aware).
  *
  * @param filePath - Absolute path to the plan file.
  * @param plansDir - Absolute path to the plans directory.
@@ -61,5 +62,39 @@ export async function moveToArchive(
   const archive = await ensureArchiveDir(plansDir);
   const dest = join(archive, basename(filePath));
   await rename(filePath, dest);
+  return dest;
+}
+
+/**
+ * Move a plan file to the archive directory using git mv.
+ *
+ * Unlike moveToArchive (which uses raw rename), this function uses
+ * `git mv` so git tracks the rename properly (not as delete+add).
+ * The archived file stays tracked in git after the move.
+ *
+ * Creates the archive directory if it doesn't exist.
+ * Uses execSync internally (not the bash tool) to avoid commit-extension
+ * interception of git commands.
+ *
+ * @param filePath - Absolute path to the plan file.
+ * @param plansDir - Absolute path to the plans directory.
+ * @param cwd      - Git working directory (repo root).
+ * @returns Absolute path to the archived file.
+ */
+export async function gitMoveToArchive(
+  filePath: string,
+  plansDir: string,
+  cwd: string,
+): Promise<string> {
+  const archive = await ensureArchiveDir(plansDir);
+  const dest = join(archive, basename(filePath));
+  // Convert absolute paths to relative paths from cwd for git mv.
+  // Relative paths avoid issues with git's handling of absolute paths.
+  const relSource = relative(cwd, filePath);
+  const relDest = relative(cwd, dest);
+  execSync(`git mv "${relSource}" "${relDest}"`, {
+    cwd,
+    stdio: "pipe",
+  });
   return dest;
 }
