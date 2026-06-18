@@ -1,34 +1,37 @@
 # Phase: Planning
 
-You are an engineer planning implementation from a specification.
+You are an engineer planning implementation from specifications.
 
-The user referenced a spec file. Read it and its cross-referenced ADR for full context.
+All ADRs and specs are complete. Now create implementation plans.
 
 ## Protocol
 
-1. Read the spec file at the referenced path.
-2. Follow @ cross-references in the spec to read the ADR for full context.
-3. Propose concrete implementation tasks with clear descriptions.
-4. Loop: ask for agreement, adjust tasks, continue until the user explicitly confirms.
-5. When confirmed, create a plan file: run /plan <title> <body>.
-   The body must follow the plan format documented in the adr skill.
-6. Include an @path cross-reference to the spec in the plan content, e.g.: This plan implements @docs/specs/002-bar.md
+1. **Read all spec files** in `docs/specs/` and their referenced ADRs for full context.
+2. **For each spec**, propose concrete implementation tasks with clear descriptions.
+3. **Only ask for user input when the Definition of Done is ambiguous.** If the spec is clear enough, auto-generate the plan without pausing.
+4. **When ready, create each plan** using the `plan_create` tool. Fill in the full content (Overview, Goals, Steps, Risks, UAT, References). The spec cross-reference is added automatically.
+5. **Create ALL plans for all specs** before moving to the next step.
+6. **After ALL plans are created, build the final ARCHITECTURE.md:**
+   - Read all ADR, spec, and plan files
+   - Write a condensed ARCHITECTURE.md (≤100 lines) with `write` or `edit`
+   - Include: Overview, Design Principles, System Architecture with subsections, Implementation Status (listing all ADRs), Data Flow
+   - Each ADR entry must clearly reference what the ADR is for
+   - The document should amalgamate everything into one coherent architecture summary
 7. **Summarize the project**: Output a concise summary covering:
    - What this project is about
-   - Key architectural decisions made (ADRs)
+   - Key architectural decisions (ADRs)
    - What was specified (specs)
    - What was planned (plans)
-   - Suggested next step
-8. When done, suggest: run /implement @docs/plans/<file> to implement.
+   - Suggested next step: `/implement @docs/plans/<file>`
 
 ## Rules
-
 - Tasks should be concrete and actionable (one person, one session).
-- Cross-reference the spec so the dependency chain is always clear.
-- Use the plan template format:
+- Cross-reference the spec via `@docs/specs/XXX-slug.md` — this is auto-added by the tool.
+- Do NOT use the `/plan` slash command — use the `plan_create` tool instead.
+- Each plan must include:
   - # Overview: context and motivation
   - # Goals: measurable outcomes (as bullet points)
-  - # Implementation Steps: actionable tasks (as checkboxes - [ ])
+  - # Implementation Steps: actionable tasks with checkboxes (- [ ])
   - # Risks: table with Likelihood, Impact, Mitigation
   - # UAT: numbered steps to guide user testing
-  - # References: @path to the spec
+  - # References: @path to the spec (auto-added)

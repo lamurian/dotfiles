@@ -159,8 +159,35 @@ export async function addAdrToArchitecture(
     while (insertAt < lines.length && !lines[insertAt].startsWith("# ")) {
       insertAt++;
     }
-    // Insert entry before the next heading with a blank line buffer
-    lines.splice(insertAt, 0, newLine, "");
+
+    // Check for existing ADR entries in the section
+    const contentRange = lines.slice(headingIndex + 1, insertAt);
+    const existingEntryIndices: number[] = [];
+    for (let i = 0; i < contentRange.length; i++) {
+      if (contentRange[i].includes("@docs/ADR/")) {
+        existingEntryIndices.push(headingIndex + 1 + i);
+      }
+    }
+
+    if (existingEntryIndices.length > 0) {
+      // Insert after the last existing entry
+      const lastEntryIdx = existingEntryIndices[existingEntryIndices.length - 1];
+      // Skip past trailing blank lines after the last entry
+      let afterLastEntry = lastEntryIdx + 1;
+      while (afterLastEntry < insertAt && lines[afterLastEntry].trim() === "") {
+        afterLastEntry++;
+      }
+      lines.splice(afterLastEntry, 0, newLine, "");
+    } else {
+      // First entry: strip extra blank lines from the template placeholder,
+      // keeping exactly one blank line after the heading
+      while (insertAt > headingIndex + 2 && lines[insertAt - 1].trim() === "") {
+        lines.splice(insertAt - 1, 1);
+        insertAt--;
+      }
+      // Insert entry before the next heading with a blank line buffer
+      lines.splice(insertAt, 0, newLine, "");
+    }
   }
 
   await writeFile(path, lines.join("\n"), "utf-8");
