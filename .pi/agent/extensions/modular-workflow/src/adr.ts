@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { existsSync } from "node:fs";
 import { loadContent, renderTemplate, formatDate, shortSlug } from "./utils.ts";
 import { findExistingAdrDirs, detectAdrDir } from "./adr-detect.ts";
+import { loadDirectoriesConfig } from "./paths.ts";
 
 /** Architecture Decision Record matching the unified template. */
 export interface Adr {
@@ -11,7 +12,9 @@ export interface Adr {
   /** One sentence summarizing the decision. */
   description: string;
   /** Decision status. */
-  status: "proposed" | "accepted" | "deprecated" | "superseded";
+  status: "proposed" | "progressed" | "implemented" | "accepted" | "deprecated" | "superseded";
+  /** Remaining cross-references (specs) to implement. */
+  remaining: number;
   /** Date in YYYY-MM-DD format (defaults to today). */
   date?: string;
   /** Problem statement or user story. */
@@ -130,6 +133,7 @@ export async function createAdr(adr: Adr, cwd: string): Promise<string> {
     title: adr.title,
     description: adr.description,
     status: adr.status,
+    remaining: String(adr.remaining ?? 0),
     date: adr.date ?? formatDate(),
     context: adr.context || "TBD",
     decision: adr.decision || "TBD",
@@ -212,6 +216,82 @@ export async function updateAdrStatus(
   await writeFile(filePath, updated, "utf-8");
 }
 
+/**
+ * Update a field in the ADR file's YAML frontmatter.
+ *
+ * Replaces or inserts a key: value line in the frontmatter.
+ *
+ * @param filePath - Absolute path to the ADR file.
+ * @param key      - Frontmatter field name.
+ * @param value    - New value (converted to string).
+ */
+export async function updateAdrField(
+  filePath: string,
+  key: string,
+  value: string | number,
+): Promise<void> {
+  const content = await readFile(filePath, "utf-8");
+  const regex = new RegExp(`^${key}:\\s*.+`, "m");
+  const updated = content.replace(regex, `${key}: ${value}`);
+  await writeFile(filePath, updated, "utf-8");
+}
+
+/**
+ * Compute and update the `remaining` field for an ADR.
+ *
+ * Scans all active (non-archived) spec files in the project and counts
+ * how many reference this ADR via `@docs/ADR/XXX-*`. Updates the ADR's
+ * frontmatter `remaining` field and sets `status` to `proposed` if not set.
+ *
+ * @param adrNumber - ADR number (e.g. 1 for ADR 001).
+ * @param cwd       - Project working directory.
+ * @returns The new remaining count and status.
+ */
+export async function computeAndUpdateAdrRemaining(
+  adrNumber: number,
+  cwd: string,
+): Promise<{ remaining: number; status: string }> {
+  const config = await loadDirectoriesConfig(cwd);
+  const specsDir = join(cwd, config.specs.path);
+  const paddedNum = String(adrNumber).padStart(3, "0");
+  const refPattern = `@docs/ADR/${paddedNum}`;
+
+  let count = 0;
+  if (existsSync(specsDir)) {
+    const files = await readdir(specsDir);
+    for (const file of files) {
+      // Skip archived files
+      if (file === ".archive") continue;
+      if (!file.endsWith(".md")) continue;
+
+      const filePath = join(specsDir, file);
+      const content = await readFile(filePath, "utf-8");
+      if (content.includes(refPattern)) {
+        count++;
+      }
+    }
+  }
+
+  // Update ADR file
+  const adrFiles = await listAdrs(cwd);
+  for (const adrPath of adrFiles) {
+    const baseName = adrPath.split("/").pop() ?? "";
+    if (baseName.startsWith(paddedNum)) {
+      await updateAdrField(adrPath, "remaining", count);
+      // Set status to proposed if not already progressed/implemented
+      const content = await readFile(adrPath, "utf-8");
+      const currentStatus = content.match(/^status:\s*(\S+)/m)?.[1] ?? "";
+      if (!["progressed", "implemented"].includes(currentStatus)) {
+        const updated = content.replace(/^status:\s*.+/m, "status: proposed");
+        await writeFile(adrPath, updated, "utf-8");
+      }
+      break;
+    }
+  }
+
+  return { remaining: count, status: "proposed" };
+}
+
 // ── Parsing ────────────────────────────────────────────────
 
 /**
@@ -221,7 +301,7 @@ export async function updateAdrStatus(
  * @param filename - Filename for fallback title.
  * @returns Parsed Adr object.
  */
-function parseAdr(content: string, filename: string): Adr {
+export function parseAdr(content: string, filename: string): Adr {
   const frontmatter = (key: string): string => {
     const regex = new RegExp(`^${key}:\\s*(.+)`, "m");
     const match = content.match(regex);
@@ -238,6 +318,7 @@ function parseAdr(content: string, filename: string): Adr {
     title: frontmatter("title") || filename.replace(/\.md$/, ""),
     description: frontmatter("description") || "",
     status: (frontmatter("status").toLowerCase() as Adr["status"]) || "proposed",
+    remaining: parseInt(frontmatter("remaining"), 10) || 0,
     date: frontmatter("date"),
     context: section("Context"),
     decision: section("Decision"),

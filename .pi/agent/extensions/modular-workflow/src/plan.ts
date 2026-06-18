@@ -3,6 +3,8 @@ import { join, basename } from "node:path";
 import { existsSync } from "node:fs";
 import { loadContent, renderTemplate, formatDate, shortSlug } from "./utils.ts";
 import { loadDirectoriesConfig, ARCHIVE_SUBDIR } from "./paths.ts";
+import { updateSpecField } from "./spec.ts";
+import { listAdrs, updateAdrField } from "./adr.ts";
 
 /**
  * Get absolute path to the plans directory.
@@ -185,4 +187,104 @@ export async function completeTask(
   }
 
   await writeFile(planPath, lines.join("\n"), "utf-8");
+}
+
+/**
+ * Extract the spec number referenced by a plan file.
+ *
+ * Parses the plan file and looks for `@docs/specs/XXX-*` to extract
+ * the 3-digit spec number.
+ *
+ * @param planPath - Absolute path to the plan file.
+ * @returns The 3-digit spec number (e.g. "001"), or null if not found.
+ */
+export async function extractSpecRefFromPlan(
+  planPath: string,
+): Promise<string | null> {
+  const content = await readFile(planPath, "utf-8");
+  const match = content.match(/@docs\/specs\/(\d{3})/);
+  return match ? match[1] : null;
+}
+
+/**
+ * Handle the implementation of a plan — decrements the spec's remaining count
+ * and cascades to the ADR when the spec is fully implemented.
+ *
+ * 1. Extracts the spec reference from the plan file.
+ * 2. Finds the spec file and decrements its `remaining` field.
+ * 3. If spec's remaining reaches 0, sets spec status to `implemented`
+ *    and cascades to the ADR by decrementing the ADR's remaining.
+ * 4. If ADR's remaining reaches 0, sets ADR status to `implemented`.
+ *
+ * @param planPath - Absolute path to the archived (or about-to-be-archived) plan.
+ * @param cwd      - Project working directory.
+ */
+export async function onPlanImplemented(
+  planPath: string,
+  cwd: string,
+): Promise<void> {
+  const specNum = await extractSpecRefFromPlan(planPath);
+  if (!specNum) return;
+
+  const config = await loadDirectoriesConfig(cwd);
+  const specsDir = join(cwd, config.specs.path);
+
+  if (!existsSync(specsDir)) return;
+
+  const files = await readdir(specsDir);
+  for (const file of files) {
+    if (!file.endsWith(".md")) continue;
+    if (!file.startsWith(specNum)) continue;
+
+    const specPath = join(specsDir, file);
+    const specContent = await readFile(specPath, "utf-8");
+
+    // Read current remaining
+    const remainingMatch = specContent.match(/^remaining:\s*(\d+)/m);
+    if (!remainingMatch) return;
+    const currentRemaining = parseInt(remainingMatch[1], 10);
+    if (currentRemaining <= 0) return;
+
+    const newRemaining = currentRemaining - 1;
+    await updateSpecField(specPath, "remaining", newRemaining);
+
+    if (newRemaining === 0) {
+      // Spec is fully implemented — always read fresh content
+      await updateSpecField(specPath, "status", "implemented");
+
+      // Cascade to ADR
+      const adrRef = specContent.match(/@docs\/ADR\/(\d{3})/);
+      if (adrRef) {
+        const adrNum = parseInt(adrRef[1], 10);
+        const adrFiles = await listAdrs(cwd);
+        const paddedAdr = String(adrNum).padStart(3, "0");
+
+        for (const adrPath of adrFiles) {
+          const baseName = adrPath.split("/").pop() ?? "";
+          if (baseName.startsWith(paddedAdr)) {
+            const adrContent = await readFile(adrPath, "utf-8");
+            const adrRemainingMatch = adrContent.match(/^remaining:\s*(\d+)/m);
+            if (!adrRemainingMatch) break;
+
+            const adrRemaining = parseInt(adrRemainingMatch[1], 10);
+            if (adrRemaining <= 0) break;
+
+            const newAdrRemaining = adrRemaining - 1;
+            await updateAdrField(adrPath, "remaining", newAdrRemaining);
+
+            if (newAdrRemaining === 0) {
+              await updateAdrField(adrPath, "status", "implemented");
+            } else {
+              await updateAdrField(adrPath, "status", "progressed");
+            }
+            break;
+          }
+        }
+      }
+    } else {
+      // Spec still has remaining plans — set status to progressed
+      await updateSpecField(specPath, "status", "progressed");
+    }
+    break;
+  }
 }

@@ -1,7 +1,7 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { createAdrFromBrainstorm } from "./brainstorm.ts";
-import { listAdrs } from "./adr.ts";
+import { listAdrs, computeAndUpdateAdrRemaining } from "./adr.ts";
 import { relative } from "node:path";
 
 /**
@@ -135,6 +135,59 @@ export function registerAdrTool(pi: ExtensionAPI): void {
         return {
           content: [
             { type: "text", text: `Failed to list ADRs: ${(err as Error).message}` },
+          ],
+          isError: true,
+        };
+      }
+    },
+  });
+
+  pi.registerTool({
+    name: "adr_update",
+    label: "Update ADR",
+    description:
+      "Compute and update the remaining cross-reference count for an ADR. " +
+      "Scans all specs referencing this ADR and sets the `remaining` field in the ADR frontmatter. " +
+      "Use after creating all specs for an ADR.",
+
+    parameters: Type.Object({
+      adrNumber: Type.Number({
+        description: "ADR number to update (e.g. 1 for ADR 001)",
+      }),
+    }),
+
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+      const { adrNumber } = params;
+
+      if (!adrNumber) {
+        return {
+          content: [{ type: "text", text: "Error: adrNumber is required." }],
+          isError: true,
+        };
+      }
+
+      try {
+        const { remaining, status } = await computeAndUpdateAdrRemaining(
+          adrNumber,
+          ctx.cwd,
+        );
+        return {
+          content: [
+            {
+              type: "text",
+              text:
+                `ADR ${String(adrNumber).padStart(3, "0")} updated: ` +
+                `remaining=${remaining}, status=${status}`,
+            },
+          ],
+        };
+      } catch (err) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Failed to update ADR: ${(err as Error).message}`,
+            },
           ],
           isError: true,
         };

@@ -1,6 +1,6 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
-import { createSpec, listSpecs } from "./spec.ts";
+import { createSpec, listSpecs, computeAndUpdateSpecRemaining } from "./spec.ts";
 import { relative } from "node:path";
 
 /** Maximum words allowed in a spec title for atomicity. */
@@ -167,6 +167,59 @@ export function registerSpecTool(pi: ExtensionAPI): void {
         return {
           content: [
             { type: "text", text: `Failed to list specs: ${(err as Error).message}` },
+          ],
+          isError: true,
+        };
+      }
+    },
+  });
+
+  pi.registerTool({
+    name: "spec_update",
+    label: "Update Spec",
+    description:
+      "Compute and update the remaining cross-reference count for a spec. " +
+      "Scans all plans referencing this spec and sets the `remaining` field in the spec frontmatter. " +
+      "Use after creating all plans for a spec.",
+
+    parameters: Type.Object({
+      specNumber: Type.String({
+        description: "Spec number in 3-digit format (e.g. '001' for spec 001)",
+      }),
+    }),
+
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+      const { specNumber } = params;
+
+      if (!specNumber) {
+        return {
+          content: [{ type: "text", text: "Error: specNumber is required." }],
+          isError: true,
+        };
+      }
+
+      try {
+        const { remaining, status } = await computeAndUpdateSpecRemaining(
+          specNumber,
+          ctx.cwd,
+        );
+        return {
+          content: [
+            {
+              type: "text",
+              text:
+                `Spec ${String(parseInt(specNumber, 10)).padStart(3, "0")} updated: ` +
+                `remaining=${remaining}, status=${status}`,
+            },
+          ],
+        };
+      } catch (err) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Failed to update spec: ${(err as Error).message}`,
+            },
           ],
           isError: true,
         };
