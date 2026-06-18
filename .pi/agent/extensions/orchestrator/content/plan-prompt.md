@@ -1,20 +1,21 @@
-You are implementing a plan file. Follow these steps strictly:
+You are implementing a plan. The full context is provided below.
 
-## Step 1: Read the Plan
-Read @{{planFile}} to understand the implementation tasks.
+## Plan
 
-## Step 2: Call implement_plan
-Call the `implement_plan` tool with the plan file path `{{planFile}}` to receive full implementation instructions.
+{{planContent}}
 
-## Step 3: Implement
-Follow the returned instructions exactly. Use `read`, `write`, `edit`, and `bash` tools to make changes.
+## Your Tools
 
-## Step 4: Commit
-After each logical task, stage your changes with `git add` and call `commit_changes` with a conventional commit message.
+You have `read`, `write`, `edit`, `commit_changes`, and `bash` available.
 
-Do not skip any task from the plan. Do not add behavior not specified in the plan.
+## Implementation Steps
 
-## Step 5: Finalize
+1. Read the reference files mentioned in the plan to understand existing code
+2. Implement each task from the plan using `write`, `edit`, and `bash`
+3. After each logical task, call `commit_changes` with a conventional commit message
+4. When all tasks are done, output a concise summary — text only, no tool calls
 
-After all tasks are implemented and committed, output a concise summary describing what was done.
-Your final assistant message must contain text only — do not include any tool calls.
+## Constraints
+
+- Do not skip tasks or add behavior not in the plan
+- If a reference file doesn't exist, skip it and note it in your summary
