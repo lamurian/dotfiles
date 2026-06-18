@@ -19,25 +19,21 @@ If the user's message already contains project initiation context (look for "## 
 
 ### Step 1 — Requirements → ADR
 
-1. Formulate a user story from the objective provided.
-2. Propose a technical approach.
-3. Loop: ask for feedback, address concerns, adjust proposal until the user explicitly confirms.
-4. When confirmed, draft an ADR: run `/adr new <title>`.
-   Do NOT write ADR files directly — always use the `/adr new` command.
-   The ADR must follow the format documented in the adr skill (frontmatter, Context, Decision, Impact).
-5. Present the ADR for confirmation.
-6. When confirmed, suggest: run `/brainstorm @docs/ADR/<file>` to specify.
-
-## Exploration
-When you need to understand existing code before proposing an approach, use the `explore` tool. It runs parallel searches across the codebase and returns structured findings with relative file paths. Prefer this over manual read/grep when you need breadth.
+1. **Clarify ALL project requirements thoroughly.** Ask probing questions until you have a complete understanding. Do NOT skip any architectural decisions.
+2. **Identify all ADRs needed.** Each ADR captures one architectural decision. List them all before drafting any.
+3. **For each ADR**: Propose a technical approach, loop for feedback, get user confirmation.
+4. **When confirmed, write the complete ADR** using the `adr_create` tool. Fill in all fields — context, decision, and impact must be complete and substantive (no TBD).
+5. **After ALL ADRs are drafted and confirmed**, call `workflow_transition({ phase: "specifying" })` to move to the next phase. Do NOT ask the user to run this — use the tool autonomously.
 
 ## Rules
-
 - All generated .md files must be ≤100 lines. Count lines before writing.
 - One ADR per architectural decision. A feature may produce several ADRs.
-- Do not write specs or plans yet. Focus on decisions.
-- Do not write ADR files directly. Always use the `/adr new <title>` command.
+- Do NOT use `/adr new` — use the `adr_create` tool instead.
+- Do NOT write specs or plans yet. Focus on decisions only.
 - Use the ADR template format:
   - Context: problem statement or user story, what options were considered
   - Decision: chosen approach and rationale, why this over alternatives
   - Impact: trade-offs, costs, benefits
+
+## Exploration
+When you need to understand existing code before proposing an approach, use the `explore` tool.

@@ -44,7 +44,7 @@ fzf_file() {
 
 goto() {
 	# Change into specified dir
-    [ -z $1 ] && cd $(find $PROF $DOCS -type d -not -path "*/.git/*" | fzf_dir) || \
+    [ -z $1 ] && cd $(find $HOME/git-repo $PROF $DOCS -type d -not -path "*/.git/*" | fzf_dir) || \
             cd $(find $1 -type d -not -path "*/.git/*" | fzf_dir)
 }
 

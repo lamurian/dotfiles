@@ -10,6 +10,10 @@ import { getAdrContext } from "./adr-detect.ts";
 import { readArchitecture } from "./architecture.ts";
 import { registerAdrCommand, registerSpecCommand, registerPlanCommand } from "./commands.ts";
 import { registerExploreCommand, registerExploreTool } from "./explore.ts";
+import { registerAdrTool } from "./adr-tool.ts";
+import { registerSpecTool } from "./spec-tool.ts";
+import { registerPlanTool } from "./plan-tool.ts";
+import { registerWorkflowTransitionTool } from "./workflow-transition.ts";
 import { parseArgs, getSkillsDir, detectDocType } from "./utils.ts";
 import { setupAutocomplete } from "./autocomplete.ts";
 import { handlePreCompact, handlePostCompact } from "./compaction.ts";
@@ -82,6 +86,12 @@ export default function (pi: ExtensionAPI): void {
   registerPlanCommand(pi);
   registerExploreCommand(pi);
   registerExploreTool(pi);
+
+  // ─── Register AI Tools ────────────────────────────────────────
+  registerAdrTool(pi);
+  registerSpecTool(pi);
+  registerPlanTool(pi);
+  registerWorkflowTransitionTool(pi);
 
   // ── Phase-based edit restrictions ───────────────────────────
   pi.on("tool_call", async (event, ctx) => {
