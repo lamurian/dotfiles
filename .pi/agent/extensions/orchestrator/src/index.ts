@@ -125,7 +125,36 @@ export default function (pi: ExtensionAPI): void {
       // Ensure archive directory exists
       await ensureArchiveDir(plansDir);
 
-      const summary = await runOrchestration(plansDir, ctx);
+      // ── Live log widget above the editor ────────────────────
+      const MAX_VISIBLE = 15;
+      const MAX_TOTAL = 1000;
+      const logBuffer: string[] = [];
+
+      ctx.ui.setWidget("orchestrator-log", (_tui, theme) => ({
+        render: () => {
+          if (logBuffer.length === 0) return [];
+          const lines = logBuffer.slice(-MAX_VISIBLE);
+          return [
+            theme.fg("accent", theme.bold("── Orchestrator ──")),
+            ...lines.map((l) => theme.fg("dim", l)),
+            theme.fg("muted", `  ${logBuffer.length} events`),
+          ];
+        },
+        invalidate: () => {},
+      }));
+
+      const summary = await runOrchestration(plansDir, {
+        ...ctx,
+        logLine: (line: string) => {
+          logBuffer.push(line);
+          if (logBuffer.length > MAX_TOTAL) {
+            logBuffer.splice(0, logBuffer.length - MAX_VISIBLE * 3);
+          }
+        },
+      });
+
+      // Clear the widget
+      ctx.ui.setWidget("orchestrator-log", undefined);
 
       // Print the summary
       const formatted = formatSummary(summary);

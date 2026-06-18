@@ -1,44 +1,35 @@
-import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { listPlanFiles, moveToArchive } from "./plan.ts";
-import { renderPlanPrompt, spawnPiSession, loadPlanPrompt } from "./session.ts";
+/**
+ * Orchestration engine for sequential plan implementation.
+ *
+ * For each plan file, spawns a pi session, detects completion via JSON events,
+ * and handles timeouts with retries and continuation.
+ */
+
+import { listPlanFiles } from "./plan.ts";
 import {
-  getHeadHash,
-  getHeadHashFull,
-  getLastCommitMessage,
-  isWorkingTreeClean,
-  stageAll,
-  stageFile,
-  amendLastCommit,
-} from "./git.ts";
+  renderPlanPrompt,
+  renderContinuationPrompt,
+  spawnPiSession,
+} from "./session.ts";
+import { getPlanTimeoutMs } from "./session-types.ts";
+import type { SpawnResult } from "./session-types.ts";
+import {
+  handleSessionOutcome,
+  handleTimeoutWithCommit,
+  handleTimeoutExhausted,
+  handleSpawnError,
+  buildSummary,
+} from "./orchestration-handlers.ts";
+import type { PlanResult, OrchestrationSummary, Ctx } from "./orchestration-handlers.ts";
+import { getHeadHashFull, isWorkingTreeClean } from "./git.ts";
 import { basename } from "node:path";
 
-/**
- * Status of a single plan's implementation attempt.
- */
-export interface PlanResult {
-  /** Plan file name (e.g., "001-task.md"). */
-  file: string;
-  /** Whether the plan was successfully implemented. */
-  success: boolean;
-  /** Error message if failed. */
-  error?: string;
-  /** Detailed analysis of failure (set when error analysis ran). */
-  analysis?: string;
-}
+// Re-export types for consumers
+export type { PlanResult, OrchestrationSummary };
+export type { Ctx };
 
-/**
- * Summary of the full orchestration run.
- */
-export interface OrchestrationSummary {
-  /** Per-plan results in order. */
-  results: PlanResult[];
-  /** Total number of plans processed. */
-  total: number;
-  /** Number of successfully implemented plans. */
-  implemented: number;
-  /** Number of failed plans. */
-  failed: number;
-}
+/** Maximum number of retries for a timed-out plan. */
+const MAX_RETRIES = 3;
 
 /**
  * Run orchestration for all plan files in a directory.
@@ -46,10 +37,11 @@ export interface OrchestrationSummary {
  * For each plan file:
  * 1. Record HEAD hash before
  * 2. Spawn a pi session with the plan prompt
- * 3. Wait for completion
- * 4. Check git status and HEAD
- * 5. If successful: archive the plan, git add, amend
- * 6. If failed: analyze, report, stop
+ * 3. Parse JSON events to detect completion (agent_end)
+ * 4. If timed out with no commit: retry up to MAX_RETRIES with continuation context
+ * 5. If timed out with commit: archive and treat as completed
+ * 6. If clean completion: check git state, archive, amend
+ * 7. On non-zero exit or user kill: analyze, report, stop
  *
  * @param plansDir - Absolute path to the plans directory.
  * @param ctx      - Extension context (for cwd and UI).
@@ -57,18 +49,13 @@ export interface OrchestrationSummary {
  */
 export async function runOrchestration(
   plansDir: string,
-  ctx: ExtensionContext,
+  ctx: Ctx,
 ): Promise<OrchestrationSummary> {
   const files = await listPlanFiles(plansDir);
   const results: PlanResult[] = [];
 
   if (files.length === 0) {
-    return {
-      results: [],
-      total: 0,
-      implemented: 0,
-      failed: 0,
-    };
+    return { results: [], total: 0, implemented: 0, failed: 0 };
   }
 
   ctx.ui.notify(`Orchestrating ${files.length} plan(s)...`, "info");
@@ -77,184 +64,125 @@ export async function runOrchestration(
     const filePath = files[i];
     const fileName = basename(filePath);
 
-    ctx.ui.setStatus("orchestrator", `Implementing ${fileName} (${i + 1}/${files.length})`);
-    ctx.ui.notify(`[${i + 1}/${files.length}] Implementing ${fileName}...`, "info");
+    ctx.ui.setStatus(
+      "orchestrator",
+      `Implementing ${fileName} (${i + 1}/${files.length})`,
+    );
+    ctx.ui.notify(
+      `[${i + 1}/${files.length}] Implementing ${fileName}...`,
+      "info",
+    );
 
-    // Record HEAD before
-    const headBefore = getHeadHashFull(ctx.cwd);
+    // ── Retry loop ─────────────────────────────────────────────
+    let retries = 0;
+    let previousMessages: string[] = [];
+    let planResult: PlanResult | null = null;
 
-    // Render prompt and spawn pi session
-    const prompt = await renderPlanPrompt(filePath);
+    while (retries <= MAX_RETRIES) {
+      const headBefore = getHeadHashFull(ctx.cwd);
 
-    const spawnResult = await spawnPiSession(prompt, ctx.cwd);
+      // Determine prompt based on retry count
+      const prompt =
+        retries === 0
+          ? await renderPlanPrompt(filePath)
+          : await renderContinuationPrompt(filePath, previousMessages);
 
-    if (spawnResult.killed) {
-      const result: PlanResult = {
-        file: fileName,
-        success: false,
-        error: "Pi session was killed (cancelled).",
-      };
-      results.push(result);
-      ctx.ui.notify(`✗ ${fileName}: Session killed`, "error");
-      break; // Stop orchestration
-    }
+      // Spawn pi session with timeout and log forwarding
+      const spawnResult = await spawnPiSession(prompt, ctx.cwd, {
+        timeoutMs: getPlanTimeoutMs(),
+        onLog: ctx.logLine,
+      });
 
-    // Check implementation result
-    const headAfter = getHeadHashFull(ctx.cwd);
-    const treeClean = isWorkingTreeClean(ctx.cwd);
-    const lastCommit = getLastCommitMessage(ctx.cwd);
+      // Collect assistant messages for potential continuation
+      if (spawnResult.assistantMessages.length > 0) {
+        previousMessages = spawnResult.assistantMessages;
+      }
 
-    const headChanged = headAfter !== "" && headBefore !== headAfter;
+      // ── Case 1: Killed by user / non-timeout kill ──────────
+      if (spawnResult.killed && !spawnResult.timedOut) {
+        planResult = {
+          file: fileName,
+          success: false,
+          error: "Pi session was killed (cancelled).",
+        };
+        break;
+      }
 
-    if (spawnResult.exitCode !== 0) {
-      // Non-zero exit — analyze the failure
-      const analysis = await analyzeFailure(filePath, spawnResult, ctx);
-      const result: PlanResult = {
-        file: fileName,
-        success: false,
-        error: `Pi session exited with code ${spawnResult.exitCode}`,
-        analysis,
-      };
-      results.push(result);
-      ctx.ui.notify(`✗ ${fileName}: Failed (exit code ${spawnResult.exitCode})`, "error");
-      break; // Stop on first failure
-    }
-
-    if (!headChanged && !treeClean) {
-      // HEAD didn't change and there are uncommitted changes
-      const analysis = await analyzeFailure(filePath, spawnResult, ctx);
-      const result: PlanResult = {
-        file: fileName,
-        success: false,
-        error: "Implementation was not committed; changes left uncommitted.",
-        analysis,
-      };
-      results.push(result);
-      ctx.ui.notify(`✗ ${fileName}: Changes not committed`, "error");
-      break; // Stop on first failure
-    }
-
-    if (headChanged) {
-      // Implementation completed and committed
-      // Archive the plan file
-      const archived = await moveToArchive(filePath, plansDir);
-      ctx.ui.notify(`  Archived: ${basename(archived)}`, "info");
-
-      // Track implementation progress: decrement spec/ADR remaining counts
-      try {
-        const { onPlanImplemented } = await import(
-          "../../modular-workflow/src/plan.ts"
+      // ── Case 2: Clean completion (agent_end received) ─────
+      if (spawnResult.completed) {
+        planResult = await handleSessionOutcome(
+          filePath, plansDir, fileName,
+          headBefore, spawnResult, ctx,
         );
-        await onPlanImplemented(archived, ctx.cwd);
-      } catch {
-        // Modular-workflow not available; skip tracking
+        break;
       }
 
-      // Git add the archived file
-      const staged = stageFile(archived, ctx.cwd);
-      if (!staged) {
-        ctx.ui.notify(`  Warning: Failed to stage archived file`, "warning");
+      // ── Case 3: Timeout ────────────────────────────────────
+      if (spawnResult.timedOut) {
+        const headAfter = getHeadHashFull(ctx.cwd);
+        const headChanged = headAfter !== "" && headBefore !== headAfter;
+        const treeClean = isWorkingTreeClean(ctx.cwd);
+
+        if (headChanged) {
+          planResult = await handleTimeoutWithCommit(
+            filePath, plansDir, fileName, headAfter, ctx,
+          );
+          break;
+        }
+
+        retries++;
+
+        if (retries <= MAX_RETRIES) {
+          ctx.ui.notify(
+            `⏱ ${fileName} timed out (attempt ${retries}/${MAX_RETRIES}). Retrying...`,
+            "warning",
+          );
+          continue;
+        }
+
+        planResult = await handleTimeoutExhausted(
+          filePath, plansDir, fileName, ctx,
+        );
+        break;
       }
 
-      // Amend the last commit to include the archived file
-      const amendResult = amendLastCommit(ctx.cwd);
-      if (amendResult.success) {
-        ctx.ui.notify(`  Amended commit: ${lastCommit}`, "info");
-      } else {
+      // ── Case 4: Non-zero exit (spawn failed) ───────────────
+      if (spawnResult.exitCode !== 0 && !spawnResult.completed) {
+        planResult = await handleSpawnError(
+          filePath, fileName, spawnResult, ctx,
+        );
+        break;
+      }
+
+      // ── Case 5: No agent_end but exitCode=0 ───────────────
+      retries++;
+      if (retries <= MAX_RETRIES) {
         ctx.ui.notify(
-          `  Warning: Amend failed: ${amendResult.error ?? "unknown"}`,
+          `⏱ ${fileName} did not complete (attempt ${retries}/${MAX_RETRIES}). Retrying...`,
           "warning",
         );
+        continue;
       }
 
-      results.push({
-        file: fileName,
-        success: true,
-      });
-    } else if (treeClean) {
-      // HEAD unchanged and tree clean — might mean the plan was already implemented
-      // or the pi session did nothing. Archive anyway.
-      const archived = await moveToArchive(filePath, plansDir);
+      planResult = await handleTimeoutExhausted(
+        filePath, plansDir, fileName, ctx,
+      );
+      break;
+    }
 
-      // Track implementation progress
-      try {
-        const { onPlanImplemented } = await import(
-          "../../modular-workflow/src/plan.ts"
-        );
-        await onPlanImplemented(archived, ctx.cwd);
-      } catch {
-        // Modular-workflow not available; skip tracking
-      }
+    // ── Process result ────────────────────────────────────────
+    if (planResult) {
+      results.push(planResult);
 
-      const staged = stageFile(archived, ctx.cwd);
-      if (staged) {
-        amendLastCommit(ctx.cwd);
+      if (!planResult.success && !planResult.error?.includes("timed out")) {
+        ctx.ui.notify(`✗ ${fileName}: ${planResult.error}`, "error");
+        break;
       }
-      results.push({
-        file: fileName,
-        success: true,
-        error: undefined,
-      });
     }
   }
 
   ctx.ui.setStatus("orchestrator", undefined);
-
   return buildSummary(results);
-}
-
-/**
- * Build a summary from per-plan results.
- */
-function buildSummary(results: PlanResult[]): OrchestrationSummary {
-  const implemented = results.filter((r) => r.success).length;
-  const failed = results.filter((r) => !r.success).length;
-
-  return {
-    results,
-    total: results.length,
-    implemented,
-    failed,
-  };
-}
-
-/**
- * Analyze why a plan implementation failed.
- *
- * Spawns a pi subprocess to analyze the failure, reads the analysis,
- * and returns the findings.
- *
- * @param planFile    - Absolute path to the plan file.
- * @param spawnResult - Result of the failed pi session.
- * @param ctx         - Extension context.
- * @returns Analysis text.
- */
-async function analyzeFailure(
-  planFile: string,
-  spawnResult: { stdout: string; stderr: string; exitCode: number },
-  ctx: ExtensionContext,
-): Promise<string> {
-  const analysisPrompt = [
-    `You are analyzing why a plan implementation failed.`,
-    ``,
-    `Plan file: ${planFile}`,
-    `Pi session exit code: ${spawnResult.exitCode}`,
-    ``,
-    `Pi session stderr:`,
-    spawnResult.stderr || "(empty)",
-    ``,
-    `Pi session stdout (last 2000 chars):`,
-    spawnResult.stdout.slice(-2000) || "(empty)",
-    ``,
-    `Current git status:`,
-    `Run \`git status --short\` and \`git log -3 --oneline\` to inspect the state.`,
-    ``,
-    `Read the plan file and diagnose the root cause of the failure.`,
-    `Suggest a fix in 2-3 sentences.`,
-  ].join("\n");
-
-  const result = await spawnPiSession(analysisPrompt, ctx.cwd);
-  return result.stdout || result.stderr || "Unable to analyze failure.";
 }
 
 /**
@@ -281,7 +209,9 @@ export function formatSummary(summary: OrchestrationSummary): string {
     lines.push("");
   }
 
-  lines.push(`Total: ${summary.total} | Implemented: ${summary.implemented} | Failed: ${summary.failed}`);
+  lines.push(
+    `Total: ${summary.total} | Implemented: ${summary.implemented} | Failed: ${summary.failed}`,
+  );
 
   if (summary.failed > 0) {
     lines.push("");

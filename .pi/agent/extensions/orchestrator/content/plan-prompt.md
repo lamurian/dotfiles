@@ -13,3 +13,8 @@ Follow the returned instructions exactly. Use `read`, `write`, `edit`, and `bash
 After each logical task, stage your changes with `git add` and call `commit_changes` with a conventional commit message.
 
 Do not skip any task from the plan. Do not add behavior not specified in the plan.
+
+## Step 5: Finalize
+
+After all tasks are implemented and committed, output a concise summary describing what was done.
+Your final assistant message must contain text only — do not include any tool calls.
