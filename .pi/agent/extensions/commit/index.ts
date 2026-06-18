@@ -121,6 +121,63 @@ Examples:
 		},
 	});
 
+	// ── commit_amend tool ────────────────────────────────────────────
+	pi.registerTool({
+		name: "commit_amend",
+		description:
+			"Perform git commit --amend --no-edit to include staged changes " +
+			"in the last commit without changing the commit message. " +
+			"Use after archiving completed files to include them in the implementation commit.",
+		parameters: Type.Object({}),
+		promptSnippet:
+			"Stage changes and amend the last commit without changing its message.",
+		promptGuidelines: [
+			"Use commit_amend after archiving a completed plan file to " +
+				"include the archived file in the implementation commit.",
+		],
+		async execute(
+			_toolCallId: string,
+			_params: Record<string, never>,
+			signal: AbortSignal | undefined,
+			onUpdate:
+				| ((update: { content: { type: string; text: string }[] }) => void)
+				| undefined,
+			ctx: { cwd: string; ui: { notify: (msg: string, type: string) => void } },
+		) {
+			onUpdate?.({ content: [{ type: "text", text: "Amending last commit..." }] });
+
+			const result = await execGit(pi, ["commit", "--amend", "--no-edit"], signal);
+
+			if (result.code === 0) {
+				ctx.ui.notify("✓ Amended last commit", "info");
+				// Get the new hash after amend
+				const { stdout: hash } = await execGit(
+					pi, ["rev-parse", "--short", "HEAD"], signal,
+				);
+				return {
+					content: [
+						{
+							type: "text",
+							text: `Commit amended successfully. Hash: ${hash.trim()}`,
+						},
+					],
+					details: { success: true },
+				};
+			}
+
+			ctx.ui.notify("✗ Amend failed", "error");
+			return {
+				content: [
+					{
+						type: "text",
+						text: `Failed to amend commit:\n${result.stderr || result.stdout}`,
+					},
+				],
+				isError: true,
+			};
+		},
+	});
+
 	// ── commit_changes tool ──────────────────────────────────────────────
 	pi.registerTool({
 		name: "commit_changes",
