@@ -72,7 +72,7 @@ export async function nextPlanNumber(
  * Uses uniform naming: xxx-short-slug.md where xxx is a 3-digit
  * sequential number and slug is ≤20 characters.
  *
- * @param specNumber  - Full spec number (e.g. "1.1").
+ * @param specNumber  - Spec number in 3-digit format (e.g. "001" for spec 001).
  * @param title       - Plan title (<5 words).
  * @param content     - Plan markdown body (Overview, Goals, Steps, Risks, UAT, References).
  * @param cwd         - Project working directory.
@@ -93,11 +93,14 @@ export async function createPlan(
   const filename = `${String(planNum).padStart(3, "0")}-${slug}.md`;
   const filePath = join(await plansDirPath(cwd), filename);
 
+  // Normalize specNumber to 3-digit format for cross-reference safety
+  const normalizedSpecNum = String(parseInt(specNumber, 10)).padStart(3, "0");
+
   // Auto-append @ cross-reference to the spec if not present
   const hasRef = /@docs\/specs\//i.test(content);
   const body = hasRef
     ? content
-    : `${content}\n\nThis plan implements @docs/specs/${specNumber.replace(/\./g, "-")}-*.md`;
+    : `${content}\n\nThis plan implements @docs/specs/${normalizedSpecNum}-*.md`;
 
   const template = await loadContent("plan-template.md");
   const fullContent = renderTemplate(template, {

@@ -3,6 +3,9 @@ import { Type } from "typebox";
 import { createSpec, listSpecs } from "./spec.ts";
 import { relative } from "node:path";
 
+/** Maximum words allowed in a spec title for atomicity. */
+const MAX_TITLE_WORDS = 5;
+
 /**
  * Register the `spec_create` AI tool so the agent can write complete spec files.
  *
@@ -17,6 +20,7 @@ export function registerSpecTool(pi: ExtensionAPI): void {
     label: "Create Spec",
     description:
       "Create a complete specification file linked to an ADR. " +
+      "Each spec must be atomic — one architectural concern from one ADR. " +
       "Use this to write finished specs with full requirements, design, and references. " +
       "Create ALL specs for an ADR before moving to planning. " +
       "Returns the created file path.",
@@ -55,6 +59,46 @@ export function registerSpecTool(pi: ExtensionAPI): void {
           ],
           isError: true,
         };
+      }
+
+      // ── Atomicity guardrails ─────────────────────────────────
+
+      // Title word count check
+      const wordCount = title.trim().split(/\s+/).length;
+      if (wordCount > MAX_TITLE_WORDS) {
+        return {
+          content: [
+            {
+              type: "text",
+              text:
+                `Error: Spec title "${title}" has ${wordCount} words, exceeding the ` +
+                `${MAX_TITLE_WORDS}-word atomicity limit. ` +
+                `Keep titles focused on one architectural concern (≤${MAX_TITLE_WORDS} words).`,
+            },
+          ],
+          isError: true,
+        };
+      }
+
+      // Single ADR reference check
+      const adrRefs = content.match(/@docs\/ADR\/(\d{3})/gi);
+      if (adrRefs) {
+        const uniqueAdrs = new Set(adrRefs.map((r: string) => r.toLowerCase()));
+        if (uniqueAdrs.size > 1) {
+          return {
+            content: [
+              {
+                type: "text",
+                text:
+                  `Error: Spec references ${uniqueAdrs.size} different ADRs ` +
+                  `([${[...uniqueAdrs].join(", ")}]). ` +
+                  `Each spec must be atomic and implement only one ADR. ` +
+                  `Create separate specs for each ADR.`,
+            },
+          ],
+          isError: true,
+        };
+      }
       }
 
       try {
