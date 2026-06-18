@@ -2,7 +2,7 @@
   "enabled": true,
   "filesystem": {
     "allowWrite": [".", "/tmp", "/home", "/var/tmp"],
-    "denyRead": ["~/.ssh", "~/.aws"],
+    "denyRead": ["~/.ssh", "~/.aws", "**/.env"],
     "denyWrite": []
   },
   "network": {
