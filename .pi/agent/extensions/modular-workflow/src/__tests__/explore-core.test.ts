@@ -241,6 +241,43 @@ describe("runParallelExploration", () => {
     );
     assert.deepEqual(results, []);
   });
+
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// runScoutSubprocess — backup timer cleanup
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("runScoutSubprocess backup timer", () => {
+  it("does not leave dangling Timeout handles after abort", async () => {
+    // The killProc function inside runScoutSubprocess creates a 5-second
+    // SIGKILL backup timer. Without .unref(), this timer keeps the event
+    // loop alive, causing the test suite to hang for ~35s.
+    const packageRoot = resolve(import.meta.dirname!, "../..");
+    const { runScoutSubprocess, discoverEmbeddedAgents } = await import("../subagent-runner.ts");
+    const agents = discoverEmbeddedAgents(packageRoot);
+    const scout = agents.find((a: { name: string }) => a.name === "scout")!;
+    assert.ok(scout, "scout agent must be found for the test");
+
+    // Get baseline active Timeout handles
+    const before = process.getActiveResourcesInfo()
+      .filter((h) => h === "Timeout").length;
+
+    // Trigger killProc by passing an already-aborted signal
+    await runScoutSubprocess(scout, "test task", "/tmp", AbortSignal.abort());
+
+    // Wait a microtask for any scheduled event-loop cleanup
+    await new Promise((r) => setTimeout(r, 0));
+
+    // After runScoutSubprocess returns, the backup timer should NOT
+    // be counted as an active resource (it must be unref'd)
+    const after = process.getActiveResourcesInfo()
+      .filter((h) => h === "Timeout").length;
+
+    assert.equal(after, before,
+      `Backup timer left ${after - before} active Timeout handle(s). ` +
+      "The 5-second SIGKILL backup timer in killProc must be unref'd.");
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -293,12 +330,17 @@ describe("createLoader", () => {
     }
   });
 
-  it("returns spinner loader object with update and done methods", async () => {
+  it("returns spinner loader object with update and done methods (and cleans up interval)", async () => {
     const { createLoader } = await import("../explore-core.ts");
     const loader = createLoader("test");
 
     assert.equal(typeof loader.update, "function");
     assert.equal(typeof loader.done, "function");
+
+    // Must call done() to clear the internal setInterval, otherwise
+    // the dangling interval keeps the event loop alive indefinitely,
+    // causing the test suite to hang for the full test timeout (~30s).
+    loader.done();
   });
 });
 
