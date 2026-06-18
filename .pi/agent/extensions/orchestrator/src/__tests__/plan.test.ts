@@ -1,23 +1,58 @@
 /**
- * Tests for plan file operations (list, archive, move).
+ * Tests for plan file operations (list, archive, move, git mv).
  */
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, rmSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
-import { listPlanFiles, moveToArchive, archiveDirPath } from "../plan.ts";
+import { execSync } from "node:child_process";
+import { listPlanFiles, moveToArchive, gitMoveToArchive, archiveDirPath } from "../plan.ts";
 
-interface TempDir {
+interface TempRepo {
   path: string;
   cleanup: () => void;
 }
 
-function createTempDir(): TempDir {
-  const path = mkdtempSync("orchestrator-test-");
-  return {
-    path,
-    cleanup: () => rmSync(path, { recursive: true, force: true }),
-  };
+/**
+ * Initialize a git repo with an initial commit.
+ * Uses git plumbing commands (commit-tree + update-ref) to avoid
+ * the commit extension intercepting `git commit` calls.
+ */
+function gitInit(path: string): void {
+  execSync("git init", { cwd: path, stdio: "pipe" });
+  execSync('git config user.email "t@t.com"', { cwd: path, stdio: "pipe" });
+  execSync('git config user.name "T"', { cwd: path, stdio: "pipe" });
+  writeFileSync(join(path, "README.md"), "# test");
+  execSync("git add -A", { cwd: path, stdio: "pipe" });
+  // Plumbing: create initial commit without `git commit`
+  const treeHash = execSync("git write-tree", { cwd: path, encoding: "utf-8" }).trim();
+  const commitHash = execSync(
+    `echo "initial commit" | git commit-tree ${treeHash}`,
+    { cwd: path, stdio: ["pipe", "pipe", "pipe"], encoding: "utf-8" },
+  ).trim();
+  execSync(`git update-ref HEAD ${commitHash}`, { cwd: path, stdio: "pipe" });
+}
+
+/**
+ * Stage and commit a file using git plumbing.
+ * Uses relative paths from repoPath to avoid git path issues.
+ */
+function gitCommitFile(repoPath: string, filePath: string, msg: string): void {
+  const relPath = filePath.replace(repoPath + "/", "");
+  execSync(`git add "${relPath}"`, { cwd: repoPath, stdio: "pipe" });
+  const treeHash = execSync("git write-tree", { cwd: repoPath, encoding: "utf-8" }).trim();
+  const currentHead = execSync("git rev-parse HEAD", { cwd: repoPath, encoding: "utf-8" }).trim();
+  const commitHash = execSync(
+    `echo "${msg}" | git commit-tree ${treeHash} -p ${currentHead}`,
+    { cwd: repoPath, stdio: ["pipe", "pipe", "pipe"], encoding: "utf-8" },
+  ).trim();
+  execSync(`git update-ref HEAD ${commitHash}`, { cwd: repoPath, stdio: "pipe" });
+}
+
+function createRepo(): TempRepo {
+  const path = mkdtempSync("orchestrator-plan-test-");
+  gitInit(path);
+  return { path, cleanup: () => rmSync(path, { recursive: true, force: true }) };
 }
 
 /** Create a fresh temp dir for each test using a unique subdirectory. */
@@ -32,10 +67,10 @@ function testDir(parent: string, name: string): string {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe("listPlanFiles", () => {
-  let tmp: TempDir;
+  let tmp: TempRepo;
 
   before(() => {
-    tmp = createTempDir();
+    tmp = createRepo();
   });
 
   after(() => {
@@ -97,10 +132,10 @@ describe("archiveDirPath", () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe("moveToArchive", () => {
-  let tmp: TempDir;
+  let tmp: TempRepo;
 
   before(() => {
-    tmp = createTempDir();
+    tmp = createRepo();
   });
 
   after(() => {
@@ -120,5 +155,105 @@ describe("moveToArchive", () => {
     // Archived file should exist
     assert.equal(existsSync(archived), true);
     assert.equal(archived, join(dir, ".archive", "001-plan.md"));
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// gitMoveToArchive
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("gitMoveToArchive", () => {
+  let repo: TempRepo;
+  let plansDir: string;
+
+  before(() => {
+    repo = createRepo();
+    plansDir = join(repo.path, "docs", "plans");
+    mkdirSync(plansDir, { recursive: true });
+  });
+
+  after(() => {
+    repo.cleanup();
+  });
+
+  it("moves a tracked file using git mv and keeps it tracked", async () => {
+    const planPath = join(plansDir, "001-auth.md");
+    writeFileSync(planPath, "# Auth plan\n\n- [ ] Implement login");
+    gitCommitFile(repo.path, planPath, "add plan");
+
+    // Move via git mv
+    const archived = await gitMoveToArchive(planPath, plansDir, repo.path);
+
+    // Original file should be gone
+    assert.equal(existsSync(planPath), false);
+
+    // Archived file should exist
+    assert.equal(existsSync(archived), true);
+    assert.equal(archived, join(plansDir, ".archive", "001-auth.md"));
+
+    // The move should show as rename in git status (staged)
+    const status = execSync("git status --short", {
+      cwd: repo.path, encoding: "utf-8",
+    }).trim();
+    assert.ok(
+      status.includes("R"),
+      `expected rename detected in git status, got: ${status}`,
+    );
+
+    // Archived file should be tracked by git
+    const tracked = execSync("git ls-files docs/plans/.archive/001-auth.md", {
+      cwd: repo.path, encoding: "utf-8",
+    }).trim();
+    assert.ok(tracked.length > 0, "archived file should be tracked by git");
+  });
+
+  it("moves a tracked file before any commit (index only)", async () => {
+    const planPath = join(plansDir, "002-draft.md");
+    writeFileSync(planPath, "# Draft plan");
+    // Stage without committing
+    const relPath = planPath.replace(repo.path + "/", "");
+    execSync(`git add "${relPath}"`, { cwd: repo.path, stdio: "pipe" });
+
+    const archived = await gitMoveToArchive(planPath, plansDir, repo.path);
+
+    assert.equal(existsSync(planPath), false);
+    assert.equal(existsSync(archived), true);
+
+    // File should be tracked in new location
+    const tracked = execSync("git ls-files docs/plans/.archive/002-draft.md", {
+      cwd: repo.path, encoding: "utf-8",
+    }).trim();
+    assert.ok(tracked.length > 0, "archived draft should be tracked by git");
+  });
+
+  it("creates .archive directory if it does not exist", async () => {
+    const cleanDir = mkdtempSync("orchestrator-git-mv-");
+    const plans = join(cleanDir, "plans");
+    mkdirSync(plans, { recursive: true });
+
+    gitInit(cleanDir);
+
+    const planPath = join(plans, "001-task.md");
+    writeFileSync(planPath, "# Task");
+    gitCommitFile(cleanDir, planPath, "add plan");
+
+    const archived = await gitMoveToArchive(planPath, plans, cleanDir);
+
+    assert.equal(existsSync(join(plans, ".archive", "001-task.md")), true);
+    assert.equal(archived, join(plans, ".archive", "001-task.md"));
+
+    rmSync(cleanDir, { recursive: true, force: true });
+  });
+
+  it("works with nested paths", async () => {
+    const planPath = join(plansDir, "002-db.md");
+    writeFileSync(planPath, "# DB plan");
+    gitCommitFile(repo.path, planPath, "add db plan");
+
+    const archived = await gitMoveToArchive(planPath, plansDir, repo.path);
+
+    assert.equal(existsSync(planPath), false);
+    assert.equal(existsSync(archived), true);
+    assert.ok(archived.endsWith(".archive/002-db.md"));
   });
 });
