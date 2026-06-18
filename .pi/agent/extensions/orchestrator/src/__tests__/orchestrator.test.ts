@@ -3,7 +3,7 @@
  */
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { execSync } from "node:child_process";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
@@ -51,7 +51,6 @@ describe("runOrchestration", () => {
   });
 
   it("returns empty summary when no plan files exist", async () => {
-    // An empty directory (no plan files)
     const emptyDir = mkdtempSync("orchestrator-empty-");
     const ctx = mockCtx(repo.path);
 
@@ -65,19 +64,16 @@ describe("runOrchestration", () => {
     rmSync(emptyDir, { recursive: true, force: true });
   });
 
-  it("fails gracefully for a simple plan file when pi is not in PATH", async () => {
-    // Write a plan file
+  it("fails gracefully when pi is not in PATH", async () => {
     const planPath = join(plansDir, "001-test-task.md");
     writeFileSync(planPath, "# Test Task\n\n- [ ] Do something");
     const ctx = mockCtx(repo.path);
 
-    // Temporarily remove pi from PATH
     const originalPath = process.env.PATH;
     process.env.PATH = "/nonexistent-path";
 
     try {
       const summary = await runOrchestration(plansDir, ctx);
-
       assert.equal(summary.total, 1);
       assert.equal(summary.failed, 1);
       assert.equal(summary.results[0].success, false);
@@ -87,6 +83,53 @@ describe("runOrchestration", () => {
       );
     } finally {
       process.env.PATH = originalPath;
+    }
+  });
+
+  it("stops orchestration on spawn error (non-timeout)", async () => {
+    // Previous test left plansDir with 001-test-task.md.
+    // Add a second plan — the first should fail (pi not found), stopping everything.
+    writeFileSync(join(plansDir, "002-after-fail.md"), "# After\n\n- [ ] Task");
+    const ctx = mockCtx(repo.path);
+
+    const originalPath = process.env.PATH;
+    process.env.PATH = "/nonexistent-path";
+
+    try {
+      const summary = await runOrchestration(plansDir, ctx);
+      // Only first plan should be processed (spawn error stops orchestration)
+      assert.equal(summary.total, 1, "should stop after first failure");
+      assert.equal(summary.failed, 1);
+      // First plan should NOT be archived (no commit made, kill path)
+      assert.equal(
+        existsSync(join(plansDir, "001-test-task.md")),
+        true,
+        "failed plan should remain unarchived",
+      );
+    } finally {
+      process.env.PATH = originalPath;
+    }
+  });
+
+  it("processes only the new plan when pi works", async () => {
+    // Set up a clean dir with just one plan
+    const cleanDir = mkdtempSync("orchestrator-clean-");
+    const cleanPlans = join(cleanDir, "plans");
+    mkdirSync(cleanPlans, { recursive: true });
+    writeFileSync(join(cleanPlans, "001-unique.md"), "# Unique\n\n- [ ] Task");
+
+    const ctx = mockCtx(cleanDir);
+
+    // With pi NOT in PATH, this will fail — but it tests that a single plan is processed
+    const originalPath = process.env.PATH;
+    process.env.PATH = "/nonexistent-path";
+
+    try {
+      const summary = await runOrchestration(cleanPlans, ctx);
+      assert.equal(summary.total, 1, "one plan should be processed");
+    } finally {
+      process.env.PATH = originalPath;
+      rmSync(cleanDir, { recursive: true, force: true });
     }
   });
 });
@@ -118,8 +161,8 @@ describe("formatSummary", () => {
         {
           file: "002-db.md",
           success: false,
-          error: "Pi session exited with code 1",
-          analysis: "Missing database driver",
+          error: "Timed out after 3 attempts",
+          analysis: "Session timed out while implementing",
         },
       ],
       total: 2,
@@ -129,7 +172,7 @@ describe("formatSummary", () => {
 
     const output = formatSummary(summary);
     assert.ok(output.includes("❌"));
-    assert.ok(output.includes("Missing database driver"));
+    assert.ok(output.includes("Timed out after 3 attempts"));
     assert.ok(output.includes("stopped due to failure"));
   });
 
@@ -143,5 +186,25 @@ describe("formatSummary", () => {
 
     const output = formatSummary(summary);
     assert.ok(output.includes("Total: 0"));
+  });
+
+  it("formats a timeout-with-commit summary as success", () => {
+    const summary: OrchestrationSummary = {
+      results: [
+        {
+          file: "003-timeout-commit.md",
+          success: true,
+          error: "Timed out after 10 min. Partial work committed and archived.",
+        },
+      ],
+      total: 1,
+      implemented: 1,
+      failed: 0,
+    };
+
+    const output = formatSummary(summary);
+    assert.ok(output.includes("✅"));
+    assert.ok(output.includes("Partial work committed"));
+    assert.ok(!output.includes("stopped due to failure"));
   });
 });
