@@ -272,6 +272,8 @@ export async function runScoutSubprocess(
         shell: false,
         stdio: ["ignore", "pipe", "pipe"],
       });
+
+
       let buffer = "";
 
       const processLine = (line: string) => {
@@ -312,13 +314,23 @@ export async function runScoutSubprocess(
       // Wire up combined kill signal (timeout + parent abort)
       if (killSignal) {
         const killProc = () => {
-          proc.kill("SIGTERM");
-          setTimeout(() => {
-            if (!proc.killed) proc.kill("SIGKILL");
-          }, 5000);
+          // Use SIGKILL directly (no SIGTERM + backup timer) to avoid
+          // a race condition: SIGTERM can be sent before the subprocess
+          // has fully started, causing the signal to be missed. When
+          // that happens, the subprocess runs until the 5-second backup
+          // SIGKILL fires — and the process handle keeps the event loop
+          // alive during that window, hanging the test suite for ~35s.
+          // SIGKILL is always delivered and kills immediately.
+          proc.kill("SIGKILL");
         };
-        if (killSignal.aborted) killProc();
-        else killSignal.addEventListener("abort", killProc, { once: true });
+        if (killSignal.aborted) {
+          // SIGKILL immediately. The process doesn't need to be
+          // initialized first — SIGKILL delivered before execve
+          // is handled when the process starts.
+          killProc();
+        } else {
+          killSignal.addEventListener("abort", killProc, { once: true });
+        }
       }
     });
 
