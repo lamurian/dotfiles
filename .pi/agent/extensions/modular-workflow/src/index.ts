@@ -262,12 +262,12 @@ export default function (pi: ExtensionAPI): void {
           }
           const spec = resolved.content || fileContents.join("\n\n---\n\n");
 
-          // Archive the plan file now that it's being consumed
+          // Track implementation progress before archiving
           const planAbs = isAbsolute(planRef) ? planRef : resolve(ctx.cwd, planRef);
-          await archivePlan(planAbs, ctx.cwd);
-          // Track implementation progress: decrement spec/ADR remaining counts
           const { onPlanImplemented } = await import("./plan.ts");
           await onPlanImplemented(planAbs, ctx.cwd);
+          // Archive the plan file now that it's been consumed
+          await archivePlan(planAbs, ctx.cwd);
           ctx.ui.notify(`Plan archived: ${planAbs}`, "info");
 
           await startTdd(spec, pi, ctx);
