@@ -17,14 +17,14 @@
  *     "my-tool": { "access": ["read"], "pathParams": ["targetFile"] }
  *
  * Network: `--unshare-net` isolates the sandbox completely.
- *   If allowedDomains is non-empty, a minimal socat proxy bridge is set up.
+ *   If allowedDomains is non-empty, host network is used directly (no --unshare-net).
  *   If empty or no network config, all network is blocked.
  *
  * Usage:
  *   pi --no-sandbox         disable sandboxing
  *   /sandbox                show current configuration
  *
- * Linux requires: bubblewrap (bwrap), socat
+ * Linux requires: bubblewrap (bwrap)
  */
 
 import { spawn, execSync } from "node:child_process";
@@ -43,7 +43,7 @@ import {
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-interface SandboxConfig {
+export interface SandboxConfig {
 	enabled?: boolean;
 	network?: {
 		allowedDomains?: string[];
@@ -152,7 +152,7 @@ function resolveDenyPath(cwd: string, pattern: string): string | null {
 
 // ─── Bwrap arg builder ───────────────────────────────────────────────────────
 
-function buildBwrapArgs(
+export function buildBwrapArgs(
 	cwd: string,
 	config: SandboxConfig,
 ): { args: string[]; needsSocat: boolean } {
@@ -209,21 +209,21 @@ function buildBwrapArgs(
 	// ── Network ───────────────────────────────────────────────────────────
 
 	const allowedDomains = config.network?.allowedDomains;
-	const needsSocat = allowedDomains !== undefined && allowedDomains.length > 0;
+	const hasAllowed = allowedDomains !== undefined && allowedDomains.length > 0;
 
-	if (needsSocat) {
-		// Network with proxy filtering: needs socat bridge
-		// bwrap args are built later after socat sockets are ready
-		// We return early with the filesystem args only
-		return { args, needsSocat: true };
-	} else {
-		// No network or block all
+	if (!hasAllowed) {
+		// No allowed domains configured — fully isolate network
 		args.push("--unshare-net");
-		return { args, needsSocat: false };
 	}
+	// When allowedDomains are configured, use host network directly.
+	// Domain filtering is advisory (documented in config but not enforced at OS level).
+	return { args, needsSocat: false };
 }
 
-// ─── Socat bridge (for filtered network) ─────────────────────────────────────
+// ─── Socat bridge (for filtered network) — deprecated ───────────────────────
+// Socat-based proxy bridging was removed in favor of direct host network access
+// when allowedDomains is configured. This interface and the startSocatBridge(),
+// buildWrappedCommand() functions are kept for reference but no longer used.
 
 interface SocatBridge {
 	httpSocketPath: string;
@@ -318,17 +318,11 @@ function buildWrappedCommand(
 
 // ─── Sandboxed bash operations ───────────────────────────────────────────────
 
-function createSandboxedBashOps(config: SandboxConfig): BashOperations {
-	let bridge: SocatBridge | null = null;
-	const needsSocat = (config.network?.allowedDomains?.length ?? 0) > 0;
-
-	if (needsSocat) {
-		try {
-			bridge = startSocatBridge();
-		} catch (e) {
-			console.error("[sandbox] Failed to start socat bridge, falling back to no network:", e);
-		}
-	}
+function createSandboxedBashOps(_config: SandboxConfig): BashOperations {
+	// Socat bridge was removed. When allowedDomains is configured, host network is used
+	// directly (bwrap omits --unshare-net). The socat bridge code is kept in the file for
+	// reference but createSandboxedBashOps no longer starts it.
+	const bridge: SocatBridge | null = null;
 
 	return {
 		async exec(command, cwd, { onData, signal, timeout }) {
@@ -488,20 +482,12 @@ export default function (pi: ExtensionAPI) {
 			return;
 		}
 
-		const needsNetwork = (config.network?.allowedDomains?.length ?? 0) > 0;
-		if (needsNetwork) {
-			try {
-				execSync("socat -V", { stdio: "ignore", timeout: 3000 });
-			} catch {
-				ctx.ui.notify("socat not found. Network filtering disabled. Install: sudo apt install socat", "warning");
-			}
-		}
-
 		sandboxEnabled = true;
 
 		const writeCount = config.filesystem?.allowWrite?.length ?? 0;
 		const denyCount = config.filesystem?.denyRead?.length ?? 0;
-		const netMode = needsNetwork ? "filtered" : "isolated";
+		const hasNetwork = (config.network?.allowedDomains?.length ?? 0) > 0;
+		const netMode = hasNetwork ? "allowed" : "isolated";
 		ctx.ui.setStatus(
 			"sandbox",
 			ctx.ui.theme.fg("accent", `✚ bwrap: ${writeCount} writable, ${denyCount} denied, net=${netMode}`),
@@ -531,7 +517,7 @@ export default function (pi: ExtensionAPI) {
 				"Sandbox (direct bwrap):",
 				"",
 				"Network:",
-				`  Mode: ${(config.network?.allowedDomains?.length ?? 0) > 0 ? "filtered (socat)" : "isolated (--unshare-net)"}`,
+				`  Mode: ${(config.network?.allowedDomains?.length ?? 0) > 0 ? "host (allowedDomains)" : "isolated (--unshare-net)"}`,
 				`  Allowed: ${config.network?.allowedDomains?.join(", ") || "(block all)"}`,
 				`  Denied: ${config.network?.deniedDomains?.join(", ") || "(none)"}`,
 				"",
