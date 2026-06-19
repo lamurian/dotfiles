@@ -77,8 +77,12 @@ export function truncateForLog(text: string, maxLen: number = 120): string {
 interface JsonEventCallbacks {
   /** Called when an assistant message text block is received. */
   onAssistantMessage?: (text: string) => void;
+  /** Called for streaming text deltas during message generation. */
+  onAssistantMessageDelta?: (delta: string) => void;
   /** Called when a tool execution starts. */
   onToolCall?: (toolName: string, args: Record<string, unknown>) => void;
+  /** Called when a tool execution ends with its result. */
+  onToolResult?: (toolName: string, summary: string, isError: boolean) => void;
 }
 
 /**
@@ -152,13 +156,105 @@ export function handleJsonEvent(
     }
   }
 
+  if (
+    event.type === "message_update" &&
+    typeof event.assistantMessageEvent === "object" &&
+    event.assistantMessageEvent !== null &&
+    (event.assistantMessageEvent as Record<string, unknown>).type === "text_delta"
+  ) {
+    const delta = (event.assistantMessageEvent as Record<string, unknown>).delta;
+    if (typeof delta === "string") {
+      callbacks.onAssistantMessageDelta?.(delta);
+    }
+  }
+
   if (event.type === "tool_execution_start") {
     const toolName = typeof event.toolName === "string" ? event.toolName : "unknown";
     const args = (event.args as Record<string, unknown>) ?? {};
     callbacks.onToolCall?.(toolName, args);
   }
 
+  if (event.type === "tool_execution_end") {
+    const toolName = typeof event.toolName === "string" ? event.toolName : "unknown";
+    const isError = event.isError === true;
+    let summary = "";
+    if (
+      typeof event.result === "object" &&
+      event.result !== null
+    ) {
+      const res = event.result as Record<string, unknown>;
+      if (typeof res.content === "string") {
+        summary = res.content.slice(0, 100);
+      } else if (
+        Array.isArray(res.content) &&
+        typeof res.content[0] === "object" &&
+        res.content[0] !== null &&
+        (res.content[0] as Record<string, unknown>).type === "text"
+      ) {
+        const text = (res.content[0] as Record<string, unknown>).text;
+        summary = typeof text === "string" ? text.slice(0, 100) : "";
+      } else if (typeof res.stderr === "string") {
+        summary = res.stderr.slice(0, 100);
+      }
+    }
+    callbacks.onToolResult?.(toolName, summary, isError);
+  }
+
   return result;
+}
+
+/**
+ * Build a set of JSON event callbacks that forward log output through `onLog`.
+ *
+ * The returned callbacks format messages, deltas, tool calls, and tool results
+ * into human-readable log lines and push them through `onLog`. Assistant message
+ * text is also collected in the provided arrays for later inspection.
+ *
+ * @param textParts         - Array collecting full assistant message text.
+ * @param assistantMessages - Array collecting each assistant message turn.
+ * @param onLog             - Callback for each formatted log line.
+ * @returns A JsonEventCallbacks object wired to `onLog`.
+ */
+export function makeLogCallbacks(
+  textParts: string[],
+  assistantMessages: string[],
+  onLog?: (line: string) => void,
+): JsonEventCallbacks {
+  const log = (line: string) => {
+    if (onLog) {
+      onLog(line);
+    } else {
+      process.stdout.write(line + "\n");
+    }
+  };
+
+  return {
+    onAssistantMessage: (text) => {
+      assistantMessages.push(text);
+      textParts.push(text);
+      log(truncateForLog(text));
+    },
+    onAssistantMessageDelta: (delta) => {
+      log(delta);
+    },
+    onToolCall: (toolName, args) => {
+      const argsSummary = Object.values(args)
+        .filter((v): v is string => typeof v === "string")
+        .slice(0, 2)
+        .join(", ");
+      const logLine = argsSummary
+        ? `  tool: ${toolName} ${argsSummary}`
+        : `  tool: ${toolName}`;
+      log(logLine);
+    },
+    onToolResult: (toolName, summary, isError) => {
+      const prefix = isError ? "  ✗" : "  →";
+      const logLine = summary
+        ? `${prefix} ${toolName}: ${summary}`
+        : `${prefix} ${toolName}`;
+      log(logLine);
+    },
+  };
 }
 
 /**
@@ -226,36 +322,10 @@ export function spawnPiSession(
 
     // ── Parse JSON events from stdout ──────────────────────────
 
+    const eventCallbacks = makeLogCallbacks(textParts, assistantMessages, options?.onLog);
+
     const processLine = (line: string) => {
-      const result = handleJsonEvent(line, {
-        onAssistantMessage: (text) => {
-          assistantMessages.push(text);
-          textParts.push(text);
-
-          // Forward truncated log line
-          const logLine = truncateForLog(text);
-          if (options?.onLog) {
-            options.onLog(logLine);
-          } else {
-            process.stdout.write(logLine + "\n");
-          }
-        },
-        onToolCall: (toolName, args) => {
-          const argsSummary = Object.values(args)
-            .filter((v): v is string => typeof v === "string")
-            .slice(0, 2)
-            .join(", ");
-          const logLine = argsSummary
-            ? `  tool: ${toolName} ${argsSummary}`
-            : `  tool: ${toolName}`;
-
-          if (options?.onLog) {
-            options.onLog(logLine);
-          } else {
-            process.stdout.write(logLine + "\n");
-          }
-        },
-      });
+      const result = handleJsonEvent(line, eventCallbacks);
 
       if (result.completed) {
         completed = true;

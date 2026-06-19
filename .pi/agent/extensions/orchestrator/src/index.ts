@@ -130,18 +130,23 @@ export default function (pi: ExtensionAPI): void {
       const MAX_TOTAL = 1000;
       const logBuffer: string[] = [];
 
-      ctx.ui.setWidget("orchestrator-log", (_tui, theme) => ({
-        render: () => {
-          if (logBuffer.length === 0) return [];
-          const lines = logBuffer.slice(-MAX_VISIBLE);
-          return [
-            theme.fg("accent", theme.bold("── Orchestrator ──")),
-            ...lines.map((l) => theme.fg("dim", l)),
-            theme.fg("muted", `  ${logBuffer.length} events`),
-          ];
-        },
-        invalidate: () => {},
-      }));
+      let requestRender: (() => void) | undefined;
+
+      ctx.ui.setWidget("orchestrator-log", (tui, theme) => {
+        requestRender = () => tui.requestRender();
+        return {
+          render: () => {
+            if (logBuffer.length === 0) return [];
+            const lines = logBuffer.slice(-MAX_VISIBLE);
+            return [
+              theme.fg("accent", theme.bold("── Orchestrator ──")),
+              ...lines.map((l) => theme.fg("dim", l)),
+              theme.fg("muted", `  ${logBuffer.length} events`),
+            ];
+          },
+          invalidate: () => {},
+        };
+      });
 
       const summary = await runOrchestration(plansDir, {
         ...ctx,
@@ -150,6 +155,7 @@ export default function (pi: ExtensionAPI): void {
           if (logBuffer.length > MAX_TOTAL) {
             logBuffer.splice(0, logBuffer.length - MAX_VISIBLE * 3);
           }
+          requestRender?.();
         },
       });
 
@@ -160,11 +166,13 @@ export default function (pi: ExtensionAPI): void {
       const formatted = formatSummary(summary);
       ctx.ui.notify(formatted, "info");
 
+      // Include last log lines on failure for diagnostics
       if (summary.failed > 0) {
-        ctx.ui.notify(
-          `Orchestration stopped. Fix the reported issue and re-run /orchestrate.`,
-          "warning",
-        );
+        const tail = logBuffer.slice(-8).join("\n");
+        const msg = tail
+          ? `Orchestration stopped. Last events:\n${tail}`
+          : `Orchestration stopped. Fix the reported issue and re-run /orchestrate.`;
+        ctx.ui.notify(msg, "warning");
       }
     },
   });
