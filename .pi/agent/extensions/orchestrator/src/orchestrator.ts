@@ -5,7 +5,7 @@
  * 1. Record HEAD hash before
  * 2. Build full context (plan content + cross-refs) and spawn pi session
  * 3. After subprocess exits (any reason): check if HEAD changed
- * 4. If HEAD changed → git mv to archive + git commit --amend --no-edit
+ * 4. If HEAD changed → mv to archive + git commit --amend --no-edit
  * 5. If HEAD unchanged → failure, plan stays in place
  *
  * Single-pass per plan. No retry loop. No continuation prompts.
@@ -13,7 +13,7 @@
  */
 
 import { readFile } from "node:fs/promises";
-import { listPlanFiles, gitMoveToArchive } from "./plan.ts";
+import { listPlanFiles, moveToArchive } from "./plan.ts";
 import { renderPlanPrompt, spawnPiSession } from "./session.ts";
 import { getPlanTimeoutMs } from "./session-types.ts";
 import { getHeadHashFull, amendLastCommit } from "./git.ts";
@@ -33,7 +33,7 @@ export type { Ctx };
  * 2. Record HEAD_BEFORE
  * 3. Spawn pi session with timeout and log forwarding
  * 4. After subprocess exits (any reason):
- *    a. If HEAD changed → git mv to .archive, git commit --amend --no-edit
+ *    a. If HEAD changed → mv to .archive (filesystem rename), git commit --amend --no-edit
  *    b. If HEAD unchanged → failure
  * 5. On failure, stop processing further plans
  * 6. Continue to next plan on success
@@ -100,9 +100,9 @@ export async function runOrchestration(
     const headChanged = headAfter !== "" && headBefore !== headAfter;
 
     if (headChanged) {
-      // ── Success: archive using git mv and amend last commit ──
+      // ── Success: archive using filesystem rename and amend last commit ──
       try {
-        const archived = await gitMoveToArchive(filePath, plansDir, ctx.cwd);
+        const archived = await moveToArchive(filePath, plansDir);
         ctx.ui.notify(`🗄  Archived: ${basename(archived)}`, "info");
       } catch (err) {
         ctx.ui.notify(
