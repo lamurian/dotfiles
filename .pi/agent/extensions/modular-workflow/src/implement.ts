@@ -10,6 +10,17 @@ import {
 } from "./state.ts";
 
 /**
+ * Warning shown when /implement is called with no args and
+ * no prior discussion or ADR exists.
+ *
+ * Guides the user to the right starting point.
+ */
+export const NO_INPUT_WARNING =
+  "No spec provided and no ADR found. Run /brainstorm <topic> " +
+  "to start the full workflow, or /discuss <topic> for a " +
+  "lightweight discussion-then-implement flow.";
+
+/**
  * Start the TDD implementation phase.
  *
  * 1. Builds a TDD system prompt from the specification
