@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, rmSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { execSync } from "node:child_process";
-import { listPlanFiles, moveToArchive, gitMoveToArchive, archiveDirPath } from "../plan.ts";
+import { listPlanFiles, moveToArchive, archiveDirPath } from "../plan.ts";
 
 interface TempRepo {
   path: string;
@@ -159,10 +159,25 @@ describe("moveToArchive", () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// gitMoveToArchive
+// archive — moveToArchive (filesystem rename)
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe("gitMoveToArchive", () => {
+describe("plan module exports", () => {
+  it("exports moveToArchive but not gitMoveToArchive", async () => {
+    // gitMoveToArchive was removed because git mv fails when the
+    // archive destination is gitignored (dotfiles repo pattern).
+    // moveToArchive uses filesystem rename which works regardless.
+    const mod: Record<string, unknown> = await import("../plan.ts");
+    assert.equal(typeof mod.moveToArchive, "function");
+    assert.equal(
+      mod.gitMoveToArchive,
+      undefined,
+      "gitMoveToArchive should be removed; use moveToArchive instead",
+    );
+  });
+});
+
+describe("archive with filesystem rename", () => {
   let repo: TempRepo;
   let plansDir: string;
 
@@ -176,73 +191,97 @@ describe("gitMoveToArchive", () => {
     repo.cleanup();
   });
 
-  it("moves a tracked file using git mv and keeps it tracked", async () => {
+  it("moves a tracked file to .archive using filesystem rename", async () => {
     const planPath = join(plansDir, "001-auth.md");
     writeFileSync(planPath, "# Auth plan\n\n- [ ] Implement login");
     gitCommitFile(repo.path, planPath, "add plan");
 
-    // Move via git mv
-    const archived = await gitMoveToArchive(planPath, plansDir, repo.path);
+    // Move via filesystem rename (not git mv)
+    const archived = await moveToArchive(planPath, plansDir);
 
-    // Original file should be gone
-    assert.equal(existsSync(planPath), false);
+    // Source file should be gone from disk (rename, not git mv)
+    assert.equal(existsSync(planPath), false, "source should be gone from disk");
 
-    // Archived file should exist
-    assert.equal(existsSync(archived), true);
+    // Archived file should exist at the expected path
+    assert.equal(existsSync(archived), true, "archived file should exist");
     assert.equal(archived, join(plansDir, ".archive", "001-auth.md"));
-
-    // The move should show as rename in git status (staged)
-    const status = execSync("git status --short", {
-      cwd: repo.path, encoding: "utf-8",
-    }).trim();
-    assert.ok(
-      status.includes("R"),
-      `expected rename detected in git status, got: ${status}`,
-    );
-
-    // Archived file should be tracked by git
-    const tracked = execSync("git ls-files docs/plans/.archive/001-auth.md", {
-      cwd: repo.path, encoding: "utf-8",
-    }).trim();
-    assert.ok(tracked.length > 0, "archived file should be tracked by git");
   });
 
-  it("moves a tracked file before any commit (index only)", async () => {
-    const planPath = join(plansDir, "002-draft.md");
-    writeFileSync(planPath, "# Draft plan");
-    // Stage without committing
-    const relPath = planPath.replace(repo.path + "/", "");
-    execSync(`git add "${relPath}"`, { cwd: repo.path, stdio: "pipe" });
+  it("works when .archive is gitignored (dotfiles-style repo)", async () => {
+    const cleanDir = mkdtempSync("orchestrator-archive-gitignored-");
+    try {
+      execSync("git init", { cwd: cleanDir, stdio: "pipe" });
+      execSync('git config user.email "t@t.com"', { cwd: cleanDir, stdio: "pipe" });
+      execSync('git config user.name "T"', { cwd: cleanDir, stdio: "pipe" });
 
-    const archived = await gitMoveToArchive(planPath, plansDir, repo.path);
+      // Root .gitignore with blacklist-all pattern (like dotfiles repo)
+      writeFileSync(join(cleanDir, ".gitignore"), "*\n!*/\n");
+      execSync("git add -f .gitignore", { cwd: cleanDir, stdio: "pipe" });
 
-    assert.equal(existsSync(planPath), false);
-    assert.equal(existsSync(archived), true);
+      // Initial commit
+      const initTree = execSync("git write-tree", { cwd: cleanDir, encoding: "utf-8" }).trim();
+      const initCommit = execSync(`echo "init" | git commit-tree ${initTree}`, {
+        cwd: cleanDir, stdio: ["pipe", "pipe", "pipe"], encoding: "utf-8",
+      }).trim();
+      execSync(`git update-ref HEAD ${initCommit}`, { cwd: cleanDir, stdio: "pipe" });
 
-    // File should be tracked in new location
-    const tracked = execSync("git ls-files docs/plans/.archive/002-draft.md", {
-      cwd: repo.path, encoding: "utf-8",
-    }).trim();
-    assert.ok(tracked.length > 0, "archived draft should be tracked by git");
+      // Create a tracked plan file (force-add since it's gitignored)
+      const plans = join(cleanDir, "docs", "plans");
+      mkdirSync(plans, { recursive: true });
+      const planPath = join(plans, "001-task.md");
+      writeFileSync(planPath, "# Task\n\n- [ ] Do it");
+      execSync(`git add -f "${planPath.replace(cleanDir + "/", "")}"`, { cwd: cleanDir, stdio: "pipe" });
+
+      const tree = execSync("git write-tree", { cwd: cleanDir, encoding: "utf-8" }).trim();
+      const head = execSync("git rev-parse HEAD", { cwd: cleanDir, encoding: "utf-8" }).trim();
+      const commit = execSync(`echo "add plan" | git commit-tree ${tree} -p ${head}`, {
+        cwd: cleanDir, stdio: ["pipe", "pipe", "pipe"], encoding: "utf-8",
+      }).trim();
+      execSync(`git update-ref HEAD ${commit}`, { cwd: cleanDir, stdio: "pipe" });
+
+      // git mv to .archive would FAIL here because .archive/** is gitignored.
+      // moveToArchive (filesystem rename) succeeds regardless.
+      const archived = await moveToArchive(planPath, plans);
+
+      assert.equal(existsSync(planPath), false, "source file should be removed");
+      assert.equal(existsSync(archived), true, "archived file should exist");
+      assert.equal(archived, join(plans, ".archive", "001-task.md"));
+
+      // Archived file should NOT be tracked by git (it's gitignored)
+      const tracked = execSync('git ls-files "docs/plans/.archive/001-task.md"', {
+        cwd: cleanDir, encoding: "utf-8",
+      }).trim();
+      assert.equal(tracked, "", "archived file should not be tracked (gitignored)");
+    } finally {
+      rmSync(cleanDir, { recursive: true, force: true });
+    }
   });
 
   it("creates .archive directory if it does not exist", async () => {
-    const cleanDir = mkdtempSync("orchestrator-git-mv-");
-    const plans = join(cleanDir, "plans");
-    mkdirSync(plans, { recursive: true });
+    const cleanDir = mkdtempSync("orchestrator-archive-mkdir-");
+    try {
+      execSync("git init", { cwd: cleanDir, stdio: "pipe" });
+      execSync('git config user.email "t@t.com"', { cwd: cleanDir, stdio: "pipe" });
+      execSync('git config user.name "T"', { cwd: cleanDir, stdio: "pipe" });
+      execSync("git commit --allow-empty -m init", {
+        cwd: cleanDir, stdio: "pipe",
+      });
 
-    gitInit(cleanDir);
+      const plans = join(cleanDir, "plans");
+      mkdirSync(plans, { recursive: true });
+      const planPath = join(plans, "001-task.md");
+      writeFileSync(planPath, "# Task");
 
-    const planPath = join(plans, "001-task.md");
-    writeFileSync(planPath, "# Task");
-    gitCommitFile(cleanDir, planPath, "add plan");
+      // .archive does not exist yet
+      assert.equal(existsSync(join(plans, ".archive")), false);
 
-    const archived = await gitMoveToArchive(planPath, plans, cleanDir);
+      const archived = await moveToArchive(planPath, plans);
 
-    assert.equal(existsSync(join(plans, ".archive", "001-task.md")), true);
-    assert.equal(archived, join(plans, ".archive", "001-task.md"));
-
-    rmSync(cleanDir, { recursive: true, force: true });
+      assert.equal(existsSync(join(plans, ".archive", "001-task.md")), true);
+      assert.equal(archived, join(plans, ".archive", "001-task.md"));
+    } finally {
+      rmSync(cleanDir, { recursive: true, force: true });
+    }
   });
 
   it("works with nested paths", async () => {
@@ -250,7 +289,7 @@ describe("gitMoveToArchive", () => {
     writeFileSync(planPath, "# DB plan");
     gitCommitFile(repo.path, planPath, "add db plan");
 
-    const archived = await gitMoveToArchive(planPath, plansDir, repo.path);
+    const archived = await moveToArchive(planPath, plansDir);
 
     assert.equal(existsSync(planPath), false);
     assert.equal(existsSync(archived), true);
