@@ -1,4 +1,4 @@
-import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { type WorkflowState, loadState, transitionTo, updateUi } from "./state.ts";
 
@@ -19,8 +19,8 @@ const VALID_PHASES = [
  * automatically progress through workflow phases.
  *
  * After completing all documents in the current phase, the agent
- * calls this tool to move to the next phase. The system then loads
- * the appropriate phase prompt on the next agent turn.
+ * calls this tool to move to the next phase. The user is prompted
+ * for confirmation via a UI dialog that the LLM cannot bypass.
  *
  * @param pi - ExtensionAPI reference.
  */
@@ -30,11 +30,9 @@ export function registerWorkflowTransitionTool(pi: ExtensionAPI): void {
     label: "Transition Phase",
     description:
       "Progress the workflow to the next phase. " +
-      "Ask the user for confirmation before calling this tool. " +
-      "Call this after completing ALL documents in the current phase AND " +
-      "the user has explicitly confirmed the transition. " +
-      "Valid transitions: requirements → specifying → planning → implementing. " +
-      "Pass confirmed: true only after the user has approved.",
+      "Call this after completing ALL documents in the current phase. " +
+      "The user will be prompted for confirmation automatically. " +
+      "Valid transitions: requirements → specifying → planning → implementing.",
 
     parameters: Type.Object({
       phase: Type.String({
@@ -45,17 +43,10 @@ export function registerWorkflowTransitionTool(pi: ExtensionAPI): void {
           "planning → after all plans created. " +
           "implementing → ready to start implementing.",
       }),
-      confirmed: Type.Optional(
-        Type.Boolean({
-          description:
-            "Set to true only after the user has explicitly confirmed the transition. " +
-            "When omitted or false, the tool will ask for confirmation without transitioning.",
-        }),
-      ),
     }),
 
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
-      const { phase, confirmed } = params;
+      const { phase } = params;
 
       // Validate phase
       if (!VALID_PHASES.includes(phase as typeof VALID_PHASES[number])) {
@@ -72,16 +63,17 @@ export function registerWorkflowTransitionTool(pi: ExtensionAPI): void {
         };
       }
 
-      // Require user confirmation before transitioning
-      if (confirmed !== true) {
+      // Prompt user for confirmation via UI dialog (non-bypassable)
+      const ok = await ctx.ui.confirm(
+        "Phase Transition",
+        `Transition to "${phase}" phase?`,
+      );
+      if (!ok) {
         return {
           content: [
             {
               type: "text",
-              text:
-                `Transition to "${phase}" requested. ` +
-                `Please confirm with the user before proceeding. ` +
-                `Call again with confirmed: true once they approve.`,
+              text: `Transition to "${phase}" was cancelled.`,
             },
           ],
         };
