@@ -154,7 +154,7 @@ export default function (pi: ExtensionAPI): void {
       await ensureArchiveDir(plansDir);
 
       // ── Live log widget above the editor ────────────────────
-      const MAX_VISIBLE = 15;
+      const MAX_VISIBLE = 8;
       const MAX_TOTAL = 1000;
       const logBuffer: string[] = [];
 
