@@ -15,6 +15,34 @@ import { resolve, isAbsolute } from "node:path";
 import { readFile } from "node:fs/promises";
 import { ensureArchiveDir } from "./plan.ts";
 import { runOrchestration, formatSummary } from "./orchestrator.ts";
+import { truncateToWidth } from "@earendil-works/pi-tui";
+
+// ── Widget Helpers ────────────────────────────────────────────
+
+/**
+ * Render log lines as an array of widget strings.
+ * Each line is truncated to fit within the given terminal width.
+ *
+ * @param logBuffer - Array of log messages.
+ * @param maxVisible - Maximum number of visible lines.
+ * @param width - Terminal width in columns.
+ * @param theme - Theme object for styling.
+ * @returns Array of rendered lines (themed, truncated).
+ */
+export function renderWidgetLines(
+  logBuffer: string[],
+  maxVisible: number,
+  width: number,
+  theme: { fg: (color: string, text: string) => string; bold: (text: string) => string },
+): string[] {
+  if (logBuffer.length === 0) return [];
+  const lines = logBuffer.slice(-maxVisible);
+  return [
+    theme.fg("accent", theme.bold(truncateToWidth("── Orchestrator ──", width))),
+    ...lines.map((l) => theme.fg("dim", truncateToWidth(l, width))),
+    theme.fg("muted", truncateToWidth(`  ${logBuffer.length} events`, width)),
+  ];
+}
 
 export default function (pi: ExtensionAPI): void {
   // ── implement_plan tool ──────────────────────────────────────
@@ -135,15 +163,7 @@ export default function (pi: ExtensionAPI): void {
       ctx.ui.setWidget("orchestrator-log", (tui, theme) => {
         requestRender = () => tui.requestRender();
         return {
-          render: () => {
-            if (logBuffer.length === 0) return [];
-            const lines = logBuffer.slice(-MAX_VISIBLE);
-            return [
-              theme.fg("accent", theme.bold("── Orchestrator ──")),
-              ...lines.map((l) => theme.fg("dim", l)),
-              theme.fg("muted", `  ${logBuffer.length} events`),
-            ];
-          },
+          render: (width: number) => renderWidgetLines(logBuffer, MAX_VISIBLE, width, theme),
           invalidate: () => {},
         };
       });
