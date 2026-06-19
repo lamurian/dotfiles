@@ -14,6 +14,7 @@ import { registerAdrTool } from "./adr-tool.ts";
 import { registerSpecTool } from "./spec-tool.ts";
 import { registerPlanTool } from "./plan-tool.ts";
 import { registerWorkflowTransitionTool } from "./workflow-transition.ts";
+import { checkToolPhaseGate } from "./phase-gates.ts";
 import { parseArgs, getSkillsDir, detectDocType } from "./utils.ts";
 import { setupAutocomplete } from "./autocomplete.ts";
 import { handlePreCompact, handlePostCompact } from "./compaction.ts";
@@ -116,6 +117,18 @@ export default function (pi: ExtensionAPI): void {
       currentState.phase === "planning";
 
     if (!isBrainstormPhase) return;
+
+    // ── Phase-based gating for document creation tools ──────
+    const gateResult = checkToolPhaseGate(
+      event.toolName,
+      currentState.phase,
+    );
+    if (gateResult) {
+      return {
+        block: true,
+        reason: gateResult.reason,
+      };
+    }
 
     if (isToolCallEventType("write", event)) {
       const path: string = event.input.path ?? "";
