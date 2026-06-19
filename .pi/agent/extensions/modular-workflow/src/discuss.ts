@@ -1,6 +1,6 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import type { WorkflowState } from "./state.ts";
-import { transitionTo, updateUi } from "./state.ts";
+import { transitionTo, updateUi, loadState } from "./state.ts";
 
 /**
  * Start a discussion session about an issue, bug, chore, or small fix.
@@ -43,4 +43,48 @@ export async function runDiscussion(
   );
 
   pi.sendUserMessage(topic, { deliverAs: "steer" });
+}
+
+/**
+ * Detect whether a discussion topic exists in the session.
+ *
+ * Scans session entries for:
+ * 1. A saved state entry with phase === "discussing" (primary) → returns specText
+ * 2. The most recent user message that starts with /discuss (fallback) → returns
+ *    the message content after the command
+ * 3. Returns empty string if nothing found
+ *
+ * This ensures /implement can detect a discussion even if the custom state
+ * entry is on a different branch path or was lost during compaction.
+ *
+ * @param ctx - Extension context with session manager access.
+ * @returns The discussion topic, or empty string if none found.
+ */
+export function detectDiscussionTopic(ctx: ExtensionContext): string {
+  // 1. Try saved state first
+  const state = loadState(ctx);
+  if (state && state.phase === "discussing" && state.specText) {
+    return state.specText;
+  }
+
+  // 2. Fallback: scan session for /discuss user message
+  const entries = ctx.sessionManager.getBranch();
+  for (let i = entries.length - 1; i >= 0; i--) {
+    const entry = entries[i];
+    if (entry.type === "message") {
+      const msg = (entry as { message?: { role?: string; content?: unknown } }).message;
+      if (msg && msg.role === "user" && typeof msg.content === "string") {
+        const trimmed = msg.content.trim();
+        if (trimmed.startsWith("/discuss ")) {
+          return trimmed.slice("/discuss ".length).trim();
+        }
+        if (trimmed === "/discuss") {
+          return "Let's discuss this issue.";
+        }
+      }
+    }
+  }
+
+  // 3. Nothing found
+  return "";
 }

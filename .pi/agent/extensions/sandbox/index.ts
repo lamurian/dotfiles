@@ -318,7 +318,7 @@ function buildWrappedCommand(
 
 // ─── Sandboxed bash operations ───────────────────────────────────────────────
 
-function createSandboxedBashOps(_config: SandboxConfig): BashOperations {
+export function createSandboxedBashOps(config: SandboxConfig): BashOperations {
 	// Socat bridge was removed. When allowedDomains is configured, host network is used
 	// directly (bwrap omits --unshare-net). The socat bridge code is kept in the file for
 	// reference but createSandboxedBashOps no longer starts it.

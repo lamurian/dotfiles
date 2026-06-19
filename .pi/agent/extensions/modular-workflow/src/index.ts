@@ -2,7 +2,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { isToolCallEventType } from "@earendil-works/pi-coding-agent";
 import { loadState, updateUi, type WorkflowState } from "./state.ts";
 import { runBrainstorming, buildPhasePrompt, isDocumentDir, checkLineLimit } from "./brainstorm.ts";
-import { runDiscussion } from "./discuss.ts";
+import { runDiscussion, detectDiscussionTopic } from "./discuss.ts";
 import { archivePlan } from "./plan.ts";
 import { startTdd, buildTddPrompt } from "./implement.ts";
 import { readLatestAdr } from "./adr.ts";
@@ -270,11 +270,11 @@ export default function (pi: ExtensionAPI): void {
       }
 
       if (!topic && fileContents.length === 0) {
-        // If there's an active discussion, use that as the plan
-        const discussionState = loadState(ctx);
-        if (discussionState && discussionState.phase === "discussing") {
+        // Detect discussion from saved state or session history
+        const discussionTopic = detectDiscussionTopic(ctx);
+        if (discussionTopic) {
           await startTdd(
-            `Discussion topic: ${discussionState.specText}\n\n` +
+            `Discussion topic: ${discussionTopic}\n\n` +
               "The user and you agreed on an implementation strategy during " +
               "the discussion. Refer to the conversation history for the full plan.",
             pi,
