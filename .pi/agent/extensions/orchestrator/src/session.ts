@@ -6,7 +6,7 @@
  */
 
 import { spawn } from "node:child_process";
-import { resolve } from "node:path";
+import { resolve, basename } from "node:path";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { createTimeoutSignal } from "./session-types.ts";
@@ -69,6 +69,18 @@ export async function renderPlanPrompt(planContent: string): Promise<string> {
 export function truncateForLog(text: string, maxLen: number = 120): string {
   if (text.length <= maxLen) return text;
   return text.slice(0, maxLen) + "...";
+}
+
+/**
+ * Replace newlines and carriage returns in a string for single-line log display.
+ * Newlines are replaced with "↵ " (a unicode arrow followed by space).
+ * Carriage returns are removed entirely.
+ *
+ * @param text - The text to sanitize.
+ * @returns Sanitized text with newlines replaced.
+ */
+export function sanitizeLogLine(text: string): string {
+  return text.replace(/\n/g, "↵ ").replace(/\r/g, "");
 }
 
 /**
@@ -183,18 +195,21 @@ export function handleJsonEvent(
       event.result !== null
     ) {
       const res = event.result as Record<string, unknown>;
-      if (typeof res.content === "string") {
-        summary = res.content.slice(0, 100);
-      } else if (
-        Array.isArray(res.content) &&
-        typeof res.content[0] === "object" &&
-        res.content[0] !== null &&
-        (res.content[0] as Record<string, unknown>).type === "text"
-      ) {
-        const text = (res.content[0] as Record<string, unknown>).text;
-        summary = typeof text === "string" ? text.slice(0, 100) : "";
-      } else if (typeof res.stderr === "string") {
-        summary = res.stderr.slice(0, 100);
+      // For read tools, the result content is the file contents — never useful as a log summary
+      if (toolName !== "read") {
+        if (typeof res.content === "string") {
+          summary = res.content.slice(0, 80);
+        } else if (
+          Array.isArray(res.content) &&
+          typeof res.content[0] === "object" &&
+          res.content[0] !== null &&
+          (res.content[0] as Record<string, unknown>).type === "text"
+        ) {
+          const text = (res.content[0] as Record<string, unknown>).text;
+          summary = typeof text === "string" ? text.slice(0, 80) : "";
+        } else if (typeof res.stderr === "string") {
+          summary = res.stderr.slice(0, 80);
+        }
       }
     }
     callbacks.onToolResult?.(toolName, summary, isError);
@@ -228,31 +243,51 @@ export function makeLogCallbacks(
     }
   };
 
+  /**
+   * Extract a short argument for display from tool args.
+   * For path-based tools (read, write, edit), returns the basename.
+   * For bash/explore/grep, returns the first key arg truncated to 80 chars.
+   * For others, returns the first string arg value.
+   */
+  function getShortArg(toolName: string, args: Record<string, unknown>): string {
+    // Path-based tools: show basename
+    if ((toolName === "read" || toolName === "write" || toolName === "edit") && typeof args.path === "string") {
+      return basename(args.path);
+    }
+    // Other tools: first meaningful string arg
+    for (const key of ["command", "instruction", "pattern"]) {
+      if (typeof args[key] === "string") {
+        const val = args[key] as string;
+        return val.length > 80 ? val.slice(0, 80) + "..." : val;
+      }
+    }
+    // Fallback: first string arg
+    const firstStr = Object.values(args).find((v): v is string => typeof v === "string");
+    if (firstStr) {
+      return firstStr.length > 80 ? firstStr.slice(0, 80) + "..." : firstStr;
+    }
+    return "";
+  }
+
   return {
     onAssistantMessage: (text) => {
+      // Collect for spawn result but do NOT log to widget — assistant text is noise
       assistantMessages.push(text);
       textParts.push(text);
-      log(truncateForLog(text));
-    },
-    onAssistantMessageDelta: (delta) => {
-      log(delta);
     },
     onToolCall: (toolName, args) => {
-      const argsSummary = Object.values(args)
-        .filter((v): v is string => typeof v === "string")
-        .slice(0, 2)
-        .join(", ");
-      const logLine = argsSummary
-        ? `  tool: ${toolName} ${argsSummary}`
-        : `  tool: ${toolName}`;
-      log(logLine);
+      const arg = getShortArg(toolName, args);
+      const logLine = arg ? `  ${toolName}  ${arg}` : `  ${toolName}`;
+      log(sanitizeLogLine(logLine));
     },
     onToolResult: (toolName, summary, isError) => {
-      const prefix = isError ? "  ✗" : "  →";
-      const logLine = summary
-        ? `${prefix} ${toolName}: ${summary}`
-        : `${prefix} ${toolName}`;
-      log(logLine);
+      if (isError) {
+        const line = summary ? `  ✗ ${toolName}  ${summary}` : `  ✗ ${toolName}`;
+        log(sanitizeLogLine(line));
+      } else if (summary) {
+        log(sanitizeLogLine(`  ✓ ${toolName}  ${summary}`));
+      }
+      // If success and empty summary (e.g. read tool), skip result line
     },
   };
 }

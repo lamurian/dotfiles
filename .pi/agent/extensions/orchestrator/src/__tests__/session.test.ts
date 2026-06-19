@@ -8,7 +8,7 @@
 
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { truncateForLog, handleJsonEvent, makeLogCallbacks } from "../session.ts";
+import { truncateForLog, handleJsonEvent, makeLogCallbacks, sanitizeLogLine } from "../session.ts";
 import type { SpawnOptions } from "../session.ts";
 
 // ─── truncateForLog ──────────────────────────────────────────────
@@ -50,6 +50,147 @@ describe("truncateForLog", () => {
   });
 });
 
+// ─── sanitizeLogLine ─────────────────────────────────────────────
+
+describe("sanitizeLogLine", () => {
+  it("replaces newlines with ↵ character", () => {
+    assert.equal(sanitizeLogLine("hello\nworld"), "hello↵ world");
+  });
+
+  it("replaces multiple newlines", () => {
+    assert.equal(sanitizeLogLine("a\nb\nc"), "a↵ b↵ c");
+  });
+
+  it("removes carriage returns", () => {
+    assert.equal(sanitizeLogLine("hello\r\nworld"), "hello↵ world");
+  });
+
+  it("passes through text without newlines", () => {
+    assert.equal(sanitizeLogLine("hello world"), "hello world");
+  });
+
+  it("handles empty string", () => {
+    assert.equal(sanitizeLogLine(""), "");
+  });
+
+  it("handles only newlines", () => {
+    assert.equal(sanitizeLogLine("\n\n"), "↵ ↵ ");
+  });
+});
+
+// ─── makeLogCallbacks format ─────────────────────────────────────
+
+describe("makeLogCallbacks compact format", () => {
+  it("formats tool call with basename for path tools", () => {
+    const logs: string[] = [];
+    const callbacks = makeLogCallbacks([], [], (line) => logs.push(line));
+
+    callbacks.onToolCall?.("read", { path: "/home/user/project/src/types.ts" });
+
+    assert.equal(logs.length, 1);
+    assert.equal(logs[0], "  read  types.ts");
+  });
+
+  it("formats tool call for bash with short command", () => {
+    const logs: string[] = [];
+    const callbacks = makeLogCallbacks([], [], (line) => logs.push(line));
+
+    callbacks.onToolCall?.("bash", { command: "npm run test -- --coverage" });
+
+    assert.equal(logs.length, 1);
+    assert.equal(logs[0], "  bash  npm run test -- --coverage");
+  });
+
+  it("formats tool call for explore with short instruction", () => {
+    const logs: string[] = [];
+    const callbacks = makeLogCallbacks([], [], (line) => logs.push(line));
+
+    callbacks.onToolCall?.("explore", { instruction: "List all files in the src directory and check for tsconfig" });
+
+    assert.equal(logs.length, 1);
+    assert.equal(logs[0], "  explore  List all files in the src directory and check for tsconfig");
+  });
+
+  it("sanitizes newlines in tool call args", () => {
+    const logs: string[] = [];
+    const callbacks = makeLogCallbacks([], [], (line) => logs.push(line));
+
+    callbacks.onToolCall?.("read", { path: "multi\nline\nfile.ts" });
+
+    assert.equal(logs.length, 1);
+    assert.ok(logs[0].includes("↵"));
+    assert.ok(!logs[0].includes("\n"));
+  });
+});
+
+describe("makeLogCallbacks clean results", () => {
+  it("formats successful tool result with ✓ and tool name", () => {
+    const logs: string[] = [];
+    const callbacks = makeLogCallbacks([], [], (line) => logs.push(line));
+
+    callbacks.onToolResult?.("edit", "Successfully replaced 1 block", false);
+
+    assert.equal(logs.length, 1);
+    assert.equal(logs[0], "  ✓ edit  Successfully replaced 1 block");
+  });
+
+  it("formats error tool result with ✗", () => {
+    const logs: string[] = [];
+    const callbacks = makeLogCallbacks([], [], (line) => logs.push(line));
+
+    callbacks.onToolResult?.("bash", "command not found", true);
+
+    assert.equal(logs.length, 1);
+    assert.equal(logs[0], "  ✗ bash  command not found");
+  });
+
+  it("skips result line for read tool with empty summary", () => {
+    const logs: string[] = [];
+    const callbacks = makeLogCallbacks([], [], (line) => logs.push(line));
+
+    callbacks.onToolResult?.("read", "", false);
+
+    assert.equal(logs.length, 0);
+  });
+
+  it("sanitizes newlines in result summary", () => {
+    const logs: string[] = [];
+    const callbacks = makeLogCallbacks([], [], (line) => logs.push(line));
+
+    callbacks.onToolResult?.("edit", "line1\nline2", false);
+
+    assert.equal(logs.length, 1);
+    assert.ok(logs[0].includes("↵"));
+    assert.ok(!logs[0].includes("\n"));
+  });
+});
+
+describe("makeLogCallbacks no assistant text", () => {
+  it("does not log assistant messages", () => {
+    const logs: string[] = [];
+    const messages: string[] = [];
+    const callbacks = makeLogCallbacks(messages, [], (line) => logs.push(line));
+
+    callbacks.onAssistantMessage?.("Let me fix the simpler errors first.");
+
+    // Messages are collected for spawn result but NOT logged
+    assert.equal(logs.length, 0, "assistant messages should not appear in logs");
+    assert.equal(messages.length, 1, "full text should still be collected");
+    assert.equal(messages[0], "Let me fix the simpler errors first.");
+  });
+
+  it("does not log assistant message deltas", () => {
+    const logs: string[] = [];
+    const callbacks = makeLogCallbacks([], [], (line) => logs.push(line));
+
+    callbacks.onAssistantMessageDelta?.("Hello ");
+    callbacks.onAssistantMessageDelta?.("world");
+
+    // Delta handler should not be registered, so this should be a no-op
+    assert.equal(logs.length, 0, "deltas should not appear in logs");
+  });
+});
+
 // ─── handleJsonEvent ─────────────────────────────────────────────
 
 describe("handleJsonEvent", () => {
@@ -76,16 +217,31 @@ describe("handleJsonEvent", () => {
     assert.equal(deltas.length, 0);
   });
 
-  it("calls onToolResult for tool_execution_end with text result", () => {
+  it("gives empty summary for read tool result (file content is not useful as log)", () => {
     const results: Array<{ toolName: string; summary: string; isError: boolean }> = [];
     handleJsonEvent(
-      '{"type":"tool_execution_end","toolCallId":"abc","toolName":"read","result":{"content":[{"type":"text","text":"file content"}]},"isError":false}',
+      '{"type":"tool_execution_end","toolCallId":"abc","toolName":"read","result":{"content":[{"type":"text","text":"---\\ntitle: Something"}]},"isError":false}',
       {
         onToolResult: (toolName, summary, isError) => results.push({ toolName, summary, isError }),
       },
     );
     assert.equal(results.length, 1);
     assert.equal(results[0].toolName, "read");
+    assert.equal(results[0].summary, "", "read tool should have empty summary");
+    assert.equal(results[0].isError, false);
+  });
+
+  it("gives summary for non-read tool result", () => {
+    const results: Array<{ toolName: string; summary: string; isError: boolean }> = [];
+    handleJsonEvent(
+      '{"type":"tool_execution_end","toolCallId":"abc","toolName":"edit","result":{"content":[{"type":"text","text":"Successfully replaced 1 block"}]},"isError":false}',
+      {
+        onToolResult: (toolName, summary, isError) => results.push({ toolName, summary, isError }),
+      },
+    );
+    assert.equal(results.length, 1);
+    assert.equal(results[0].toolName, "edit");
+    assert.equal(results[0].summary, "Successfully replaced 1 block");
     assert.equal(results[0].isError, false);
   });
 
@@ -99,6 +255,7 @@ describe("handleJsonEvent", () => {
     );
     assert.equal(results.length, 1);
     assert.equal(results[0].toolName, "bash");
+    assert.equal(results[0].summary, "command not found");
     assert.equal(results[0].isError, true);
   });
 
@@ -180,49 +337,52 @@ describe("makeLogCallbacks", () => {
     const logs: string[] = [];
     const callbacks = makeLogCallbacks([], [], (line) => logs.push(line));
 
-    callbacks.onToolResult?.("read", "file contents...", false);
+    // read tool with empty summary — should be skipped
+    callbacks.onToolResult?.("read", "", false);
+    // bash error — should show ✗ with summary
     callbacks.onToolResult?.("bash", "error: command not found", true);
+    // edit success with summary — should show ✓
+    callbacks.onToolResult?.("edit", "1 block replaced", false);
 
     assert.equal(logs.length, 2);
-    assert.equal(logs[0], "  → read: file contents...");
-    assert.equal(logs[1], "  ✗ bash: error: command not found");
+    assert.equal(logs[0], "  ✗ bash  error: command not found");
+    assert.equal(logs[1], "  ✓ edit  1 block replaced");
   });
 
-  it("forwards assistant message deltas", () => {
-    const logs: string[] = [];
-    const callbacks = makeLogCallbacks([], [], (line) => logs.push(line));
-
-    callbacks.onAssistantMessageDelta?.("Hello ");
-    callbacks.onAssistantMessageDelta?.("world");
-
-    assert.equal(logs.length, 2);
-    assert.equal(logs[0], "Hello ");
-    assert.equal(logs[1], "world");
-  });
-
-  it("truncates assistant messages", () => {
+  it("collects assistant messages without logging", () => {
     const logs: string[] = [];
     const messages: string[] = [];
-    const callbacks = makeLogCallbacks(messages, [], (line) => logs.push(line));
+    const textParts: string[] = [];
+    const callbacks = makeLogCallbacks(textParts, messages, (line) => logs.push(line));
 
     const long = "a".repeat(200);
     callbacks.onAssistantMessage?.(long);
 
-    assert.equal(logs.length, 1);
-    assert.equal(logs[0].length, 123); // 120 + "..."
+    assert.equal(logs.length, 0, "assistant messages should not be logged");
     assert.equal(messages.length, 1);
     assert.equal(messages[0], long); // full text preserved
+    assert.equal(textParts.length, 1);
+    assert.equal(textParts[0], long);
   });
 
-  it("formats tool call log lines", () => {
+  it("formats tool call log lines with basename", () => {
     const logs: string[] = [];
     const callbacks = makeLogCallbacks([], [], (line) => logs.push(line));
 
-    callbacks.onToolCall?.("read", { path: "/test.txt" });
+    callbacks.onToolCall?.("read", { path: "/home/user/test.txt" });
 
     assert.equal(logs.length, 1);
     assert.ok(logs[0].includes("read"));
-    assert.ok(logs[0].includes("/test.txt"));
+    assert.ok(logs[0].includes("test.txt"));
+    assert.ok(!logs[0].includes("/home")); // no full path
+  });
+
+  it("formats tool call without onLog (stdout fallback)", () => {
+    const callbacks = makeLogCallbacks([], []);
+    // Should not throw when calling without onLog
+    callbacks.onToolCall?.("read", { path: "/test.txt" });
+    callbacks.onToolResult?.("edit", "done", false);
+    assert.ok(true, "should not throw when no onLog provided");
   });
 });
 
