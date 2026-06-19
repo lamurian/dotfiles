@@ -8,7 +8,7 @@
 
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { truncateForLog, handleJsonEvent } from "../session.ts";
+import { truncateForLog, handleJsonEvent, makeLogCallbacks } from "../session.ts";
 import type { SpawnOptions } from "../session.ts";
 
 // ─── truncateForLog ──────────────────────────────────────────────
@@ -53,6 +53,62 @@ describe("truncateForLog", () => {
 // ─── handleJsonEvent ─────────────────────────────────────────────
 
 describe("handleJsonEvent", () => {
+  it("calls onAssistantMessageDelta for message_update with text_delta", () => {
+    const deltas: string[] = [];
+    handleJsonEvent(
+      '{"type":"message_update","message":{"role":"assistant"},"assistantMessageEvent":{"type":"text_delta","delta":"Hello from pi"}}',
+      {
+        onAssistantMessageDelta: (delta) => deltas.push(delta),
+      },
+    );
+    assert.equal(deltas.length, 1);
+    assert.equal(deltas[0], "Hello from pi");
+  });
+
+  it("ignores message_update without assistantMessageEvent", () => {
+    const deltas: string[] = [];
+    handleJsonEvent(
+      '{"type":"message_update","message":{"role":"assistant"}}',
+      {
+        onAssistantMessageDelta: (delta) => deltas.push(delta),
+      },
+    );
+    assert.equal(deltas.length, 0);
+  });
+
+  it("calls onToolResult for tool_execution_end with text result", () => {
+    const results: Array<{ toolName: string; summary: string; isError: boolean }> = [];
+    handleJsonEvent(
+      '{"type":"tool_execution_end","toolCallId":"abc","toolName":"read","result":{"content":[{"type":"text","text":"file content"}]},"isError":false}',
+      {
+        onToolResult: (toolName, summary, isError) => results.push({ toolName, summary, isError }),
+      },
+    );
+    assert.equal(results.length, 1);
+    assert.equal(results[0].toolName, "read");
+    assert.equal(results[0].isError, false);
+  });
+
+  it("calls onToolResult for tool_execution_end with error", () => {
+    const results: Array<{ toolName: string; summary: string; isError: boolean }> = [];
+    handleJsonEvent(
+      '{"type":"tool_execution_end","toolCallId":"abc","toolName":"bash","result":{"stderr":"command not found"},"isError":true}',
+      {
+        onToolResult: (toolName, summary, isError) => results.push({ toolName, summary, isError }),
+      },
+    );
+    assert.equal(results.length, 1);
+    assert.equal(results[0].toolName, "bash");
+    assert.equal(results[0].isError, true);
+  });
+
+  it("ignores tool_execution_end without onToolResult callback", () => {
+    const result = handleJsonEvent(
+      '{"type":"tool_execution_end","toolCallId":"abc","toolName":"read","result":"ok","isError":false}',
+      {},
+    );
+    assert.equal(result.completed, false);
+  });
   it("detects agent_end", () => {
     const result = handleJsonEvent(
       '{"type":"agent_end"}',
@@ -114,6 +170,59 @@ describe("handleJsonEvent", () => {
     const result = handleJsonEvent("not json", {});
     assert.equal(result.completed, false);
     assert.deepEqual(result.assistantMessages, []);
+  });
+});
+
+// ─── makeLogCallbacks ───────────────────────────────────────────
+
+describe("makeLogCallbacks", () => {
+  it("formats tool result log lines", () => {
+    const logs: string[] = [];
+    const callbacks = makeLogCallbacks([], [], (line) => logs.push(line));
+
+    callbacks.onToolResult?.("read", "file contents...", false);
+    callbacks.onToolResult?.("bash", "error: command not found", true);
+
+    assert.equal(logs.length, 2);
+    assert.equal(logs[0], "  → read: file contents...");
+    assert.equal(logs[1], "  ✗ bash: error: command not found");
+  });
+
+  it("forwards assistant message deltas", () => {
+    const logs: string[] = [];
+    const callbacks = makeLogCallbacks([], [], (line) => logs.push(line));
+
+    callbacks.onAssistantMessageDelta?.("Hello ");
+    callbacks.onAssistantMessageDelta?.("world");
+
+    assert.equal(logs.length, 2);
+    assert.equal(logs[0], "Hello ");
+    assert.equal(logs[1], "world");
+  });
+
+  it("truncates assistant messages", () => {
+    const logs: string[] = [];
+    const messages: string[] = [];
+    const callbacks = makeLogCallbacks(messages, [], (line) => logs.push(line));
+
+    const long = "a".repeat(200);
+    callbacks.onAssistantMessage?.(long);
+
+    assert.equal(logs.length, 1);
+    assert.equal(logs[0].length, 123); // 120 + "..."
+    assert.equal(messages.length, 1);
+    assert.equal(messages[0], long); // full text preserved
+  });
+
+  it("formats tool call log lines", () => {
+    const logs: string[] = [];
+    const callbacks = makeLogCallbacks([], [], (line) => logs.push(line));
+
+    callbacks.onToolCall?.("read", { path: "/test.txt" });
+
+    assert.equal(logs.length, 1);
+    assert.ok(logs[0].includes("read"));
+    assert.ok(logs[0].includes("/test.txt"));
   });
 });
 
