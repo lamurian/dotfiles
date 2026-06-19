@@ -1,6 +1,6 @@
 import { describe, it, mock } from "node:test";
 import assert from "node:assert/strict";
-import { startTdd } from "../implement.ts";
+import { startTdd, NO_INPUT_WARNING } from "../implement.ts";
 import type {
   ExtensionAPI,
   ExtensionContext,
@@ -42,6 +42,26 @@ function mockCtx(cwd: string): ExtensionContext {
     },
   } as unknown as ExtensionContext;
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// NO_INPUT_WARNING
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("NO_INPUT_WARNING", () => {
+  it("mentions /discuss as an alternative entry point", () => {
+    assert.ok(
+      NO_INPUT_WARNING.includes("/discuss"),
+      "warning should guide users to /discuss as a lightweight alternative",
+    );
+  });
+
+  it("mentions /brainstorm as the primary workflow", () => {
+    assert.ok(
+      NO_INPUT_WARNING.includes("/brainstorm"),
+      "warning should mention /brainstorm as the full workflow entry point",
+    );
+  });
+});
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // startTdd

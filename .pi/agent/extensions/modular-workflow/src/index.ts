@@ -4,7 +4,7 @@ import { loadState, updateUi, type WorkflowState } from "./state.ts";
 import { runBrainstorming, buildPhasePrompt, isDocumentDir, checkLineLimit } from "./brainstorm.ts";
 import { runDiscussion, detectDiscussionTopic } from "./discuss.ts";
 import { archivePlan } from "./plan.ts";
-import { startTdd, buildTddPrompt } from "./implement.ts";
+import { startTdd, buildTddPrompt, NO_INPUT_WARNING } from "./implement.ts";
 import { readLatestAdr } from "./adr.ts";
 import { getAdrContext } from "./adr-detect.ts";
 import { readArchitecture } from "./architecture.ts";
@@ -296,7 +296,7 @@ export default function (pi: ExtensionAPI): void {
           return;
         }
         ctx.ui.notify(
-          "No spec provided and no ADR found. Run /brainstorm first or provide a spec.",
+          NO_INPUT_WARNING,
           "warning",
         );
         return;
