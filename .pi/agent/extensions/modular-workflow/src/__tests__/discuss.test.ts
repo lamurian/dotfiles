@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { runDiscussion } from "../discuss.ts";
+import { runDiscussion, detectDiscussionTopic } from "../discuss.ts";
 import { buildPhasePrompt } from "../brainstorm.ts";
 import { loadContent, getPackageRoot } from "../utils.ts";
 import {
@@ -417,6 +417,156 @@ describe("implement integration with discussion state", () => {
     const ctx = mockCtx("/tmp/test", null);
     const loaded = loadState(ctx);
     assert.equal(loaded, null);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// detectDiscussionTopic
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("detectDiscussionTopic", () => {
+  it("returns specText from state when phase is discussing", () => {
+    const state = discussionState("fix button alignment");
+    const ctx = mockCtx("/tmp/test", state);
+
+    const topic = detectDiscussionTopic(ctx);
+
+    assert.equal(topic, "fix button alignment");
+  });
+
+  it("returns empty string when no state and no /discuss message found", () => {
+    const ctx = mockCtx("/tmp/test", null);
+
+    const topic = detectDiscussionTopic(ctx);
+
+    assert.equal(topic, "");
+  });
+
+  it("falls back to scanning user messages for /discuss when no state exists", () => {
+    // Session with user messages but no custom state entry
+    const entries = [
+      {
+        type: "message",
+        id: "entry-1",
+        parentId: null,
+        message: {
+          role: "user",
+          content: "/discuss refactor the auth middleware",
+        },
+      },
+      {
+        type: "message",
+        id: "entry-2",
+        parentId: "entry-1",
+        message: {
+          role: "assistant",
+          content: [{ type: "text", text: "OK, let's discuss." }],
+        },
+      },
+      {
+        type: "message",
+        id: "entry-3",
+        parentId: "entry-2",
+        message: {
+          role: "user",
+          content: "/discuss fix the login button too",
+        },
+      },
+    ];
+
+    const ctx: ExtensionContext = {
+      cwd: "/tmp/test",
+      sessionManager: {
+        getBranch: () => entries,
+      },
+      ui: {} as unknown as ExtensionContext["ui"],
+    } as unknown as ExtensionContext;
+
+    // Should return the MOST RECENT /discuss topic
+    const topic = detectDiscussionTopic(ctx);
+    assert.equal(topic, "fix the login button too");
+  });
+
+  it("prefers saved state over /discuss message fallback", () => {
+    const state = discussionState("saved topic");
+    const entries = [
+      {
+        type: "custom",
+        customType: "workflow-state",
+        data: state,
+      },
+      {
+        type: "message",
+        id: "entry-1",
+        parentId: null,
+        message: {
+          role: "user",
+          content: "/discuss message topic",
+        },
+      },
+    ];
+
+    const ctx: ExtensionContext = {
+      cwd: "/tmp/test",
+      sessionManager: {
+        getBranch: () => entries,
+      },
+      ui: {} as unknown as ExtensionContext["ui"],
+    } as unknown as ExtensionContext;
+
+    // Should prefer the saved state
+    const topic = detectDiscussionTopic(ctx);
+    assert.equal(topic, "saved topic");
+  });
+
+  it("returns default topic for bare /discuss with no args", () => {
+    const entries = [
+      {
+        type: "message",
+        id: "entry-1",
+        parentId: null,
+        message: {
+          role: "user",
+          content: "/discuss",
+        },
+      },
+    ];
+
+    const ctx: ExtensionContext = {
+      cwd: "/tmp/test",
+      sessionManager: {
+        getBranch: () => entries,
+      },
+      ui: {} as unknown as ExtensionContext["ui"],
+    } as unknown as ExtensionContext;
+
+    const topic = detectDiscussionTopic(ctx);
+    assert.equal(topic, "Let's discuss this issue.");
+  });
+
+  it("only matches user message role, not assistant", () => {
+    const entries = [
+      {
+        type: "message",
+        id: "entry-1",
+        parentId: null,
+        message: {
+          role: "assistant",
+          content: [{ type: "text", text: "/discuss this should not match" }],
+        },
+      },
+    ];
+
+    const ctx: ExtensionContext = {
+      cwd: "/tmp/test",
+      sessionManager: {
+        getBranch: () => entries,
+      },
+      ui: {} as unknown as ExtensionContext["ui"],
+    } as unknown as ExtensionContext;
+
+    const topic = detectDiscussionTopic(ctx);
+    assert.equal(topic, "");
   });
 });
 

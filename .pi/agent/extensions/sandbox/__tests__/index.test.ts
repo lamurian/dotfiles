@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { buildBwrapArgs, type SandboxConfig } from "../index.ts";
+import { buildBwrapArgs, createSandboxedBashOps, type SandboxConfig } from "../index.ts";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // buildBwrapArgs — network isolation logic
@@ -48,5 +48,33 @@ describe("buildBwrapArgs — network", () => {
 		assert.ok(result.args.includes("--ro-bind"), "should include filesystem mount args");
 		assert.ok(result.args.includes("--proc"), "should include /proc mount");
 		assert.ok(result.args.includes("--dev"), "should include /dev mount");
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// createSandboxedBashOps — should not throw on config reference
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("createSandboxedBashOps", () => {
+	it("should return BashOperations without throwing", () => {
+		const ops = createSandboxedBashOps({});
+		assert.ok(ops, "should return a BashOperations object");
+		assert.equal(typeof ops.exec, "function", "should have an exec method");
+	});
+
+	it("should not throw ReferenceError when exec is called", async () => {
+		const ops = createSandboxedBashOps({});
+		try {
+			// This will try to build a bwrap command using config.
+			// Before the fix, this throws: "config is not defined"
+			await ops.exec("echo hello", CWD, {});
+		} catch (err) {
+			// We expect a non-ReferenceError (e.g., bwrap not found in test env, or IO error).
+			// A ReferenceError means the config variable is not in scope.
+			if (err instanceof ReferenceError) {
+				assert.fail(`Got ReferenceError: ${err.message} — config variable is not in scope`);
+			}
+			// Any other error (ENOENT for bwrap, missing directory, etc.) is fine for this test
+		}
 	});
 });
