@@ -123,6 +123,86 @@ describe("runBrainstorming", () => {
     }
   });
 
+  // ── checkProjectInitiation (exported) ──
+
+  it("omits src/ from required directories for pi packages", { timeout: 5000 }, async () => {
+    const tmpDir = join(tmpdir(), `brainstorm-pi-pkg-${randomUUID()}`);
+    await mkdir(tmpDir, { recursive: true });
+    await writeFile(
+      join(tmpDir, "package.json"),
+      JSON.stringify({ name: "test-pkg", pi: { extensions: ["./extensions/index.ts"] } }),
+      "utf-8",
+    );
+
+    const { checkProjectInitiation } = await import("../brainstorm.ts");
+    const result = await checkProjectInitiation(tmpDir);
+
+    assert.ok(result !== null, "Should return initiation context (AGENTS.md missing)");
+    assert.ok(result.includes("AGENTS.md"), "Should mention missing AGENTS.md");
+    assert.ok(result.includes("project directories"), "Should mention missing dirs");
+
+    const missingMatch = result.match(/missing: ([^.]+)\./);
+    if (missingMatch) {
+      assert.ok(
+        !missingMatch[1].includes("src"),
+        `Should NOT require src/ for pi packages, missing list was: ${missingMatch[1]}`,
+      );
+    } else {
+      assert.fail(`Could not find missing: list in: ${result.slice(0, 300)}`);
+    }
+    assert.ok(
+      result.includes("docs/"),
+      `Should mention docs/ directories, got: ${result.slice(0, 200)}`,
+    );
+
+    await rm(tmpDir, { recursive: true, force: true });
+  }, 5000);
+
+  it("includes src/ in required directories for non-pi packages", { timeout: 5000 }, async () => {
+    const tmpDir = join(tmpdir(), `brainstorm-nonpi-${randomUUID()}`);
+    await mkdir(tmpDir, { recursive: true });
+    await writeFile(
+      join(tmpDir, "package.json"),
+      JSON.stringify({ name: "test-pkg", version: "1.0.0" }),
+      "utf-8",
+    );
+
+    const { checkProjectInitiation } = await import("../brainstorm.ts");
+    const result = await checkProjectInitiation(tmpDir);
+
+    assert.ok(result !== null, "Should return initiation context (AGENTS.md missing)");
+    const missingMatch = result.match(/missing: ([^.]+)\./);
+    if (missingMatch) {
+      assert.ok(
+        missingMatch[1].includes("src"),
+        `Should require src/ for non-pi packages, missing list was: ${missingMatch[1]}`,
+      );
+    } else {
+      assert.fail(`Could not find missing: list in: ${result.slice(0, 300)}`);
+    }
+
+    await rm(tmpDir, { recursive: true, force: true });
+  }, 5000);
+
+  it("omits src/ when no package.json exists (plain project)", { timeout: 5000 }, async () => {
+    const tmpDir = join(tmpdir(), `brainstorm-plain-${randomUUID()}`);
+    await mkdir(tmpDir, { recursive: true });
+
+    const { checkProjectInitiation } = await import("../brainstorm.ts");
+    const result = await checkProjectInitiation(tmpDir);
+
+    assert.ok(result !== null, "Should return initiation context (AGENTS.md missing)");
+    const missingMatch = result.match(/missing: ([^.]+)\./);
+    if (missingMatch) {
+      assert.ok(
+        missingMatch[1].includes("src"),
+        `Should include src/ by default when no package.json, got: ${missingMatch[1]}`,
+      );
+    }
+
+    await rm(tmpDir, { recursive: true, force: true });
+  }, 5000);
+
   it("skips project initiation when AGENTS.md already exists", async () => {
     const tmpDir = join(tmpdir(), `brainstorm-skip-init-${randomUUID()}`);
     await mkdir(tmpDir, { recursive: true });

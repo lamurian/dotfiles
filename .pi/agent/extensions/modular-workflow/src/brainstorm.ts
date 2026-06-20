@@ -8,6 +8,7 @@ import { loadWorkflowConfig } from "./paths.ts";
 import { resolveCrossReferences } from "./cross-ref.ts";
 import { relative } from "node:path";
 import { existsSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 
 /** Default brainstorming topic when none is provided. */
 const DEFAULT_TOPIC = "Let's discuss the implementation requirements for this project.";
@@ -137,7 +138,7 @@ async function detectPhaseFromArgs(
  * @param cwd - Project working directory.
  * @returns Initiation context string, or null if none needed.
  */
-async function checkProjectInitiation(cwd: string): Promise<string | null> {
+export async function checkProjectInitiation(cwd: string): Promise<string | null> {
   const parts: string[] = [];
 
   // Check for root AGENTS.md
@@ -145,14 +146,29 @@ async function checkProjectInitiation(cwd: string): Promise<string | null> {
     parts.push(
       "- **AGENTS.md** is missing. Create a root AGENTS.md (≤100 lines) describing the " +
         "project purpose, language conventions (casual business English), and agent instructions. " +
-        "Then add per-directory AGENTS.md files (e.g., src/AGENTS.md, tests/AGENTS.md) to explain " +
+        "Then add per-directory AGENTS.md files (e.g., tests/AGENTS.md, docs/AGENTS.md) to explain " +
         "what each directory contains for agent navigation. The root AGENTS.md should " +
         "cross-reference these subdirectory AGENTS.md files.",
     );
   }
 
   // Check key project directories
-  const keyDirs = ["src", "tests", "docs/ADR", "docs/specs", "docs/plans"];
+  // pi packages (those with a "pi" field in package.json) use extensions/ as source — skip src/.
+  const isPiPackage =
+    existsSync(`${cwd}/package.json`);
+  let hasPiField = false;
+  if (isPiPackage) {
+    try {
+      const pkg = JSON.parse(await readFile(`${cwd}/package.json`, "utf-8"));
+      hasPiField = !!pkg.pi;
+    } catch {
+      // Ignore parse errors — treat as non-pi package
+    }
+  }
+  const keyDirs = [
+    ...(hasPiField ? [] : ["src"] as const),
+    "tests", "docs/ADR", "docs/specs", "docs/plans",
+  ];
   const missingDirs: string[] = [];
   for (const dir of keyDirs) {
     const absDir = `${cwd}/${dir}`;
