@@ -3,8 +3,7 @@ import { isToolCallEventType } from "@earendil-works/pi-coding-agent";
 import { loadState, updateUi, type WorkflowState } from "./state.ts";
 import { runBrainstorming, buildPhasePrompt, isDocumentDir, checkLineLimit } from "./brainstorm.ts";
 import { runDiscussion, detectDiscussionTopic } from "./discuss.ts";
-import { archivePlan } from "./plan.ts";
-import { startTdd, buildTddPrompt, NO_INPUT_WARNING } from "./implement.ts";
+import { startTdd, NO_INPUT_WARNING, registerCompleteImplementationTool } from "./implement.ts";
 import { readLatestAdr } from "./adr.ts";
 import { getAdrContext } from "./adr-detect.ts";
 import { readArchitecture } from "./architecture.ts";
@@ -17,11 +16,13 @@ import { registerWorkflowTransitionTool } from "./workflow-transition.ts";
 import { registerValidateTool } from "./validate-tool.ts";
 import { registerBatchTools } from "./batch-tools.ts";
 import { checkToolPhaseGate } from "./phase-gates.ts";
-import { parseArgs, getSkillsDir, detectDocType } from "./utils.ts";
+import { parseArgs, getSkillsDir, detectDocType, stripFileRefs } from "./utils.ts";
 import { setupAutocomplete } from "./autocomplete.ts";
 import { handlePreCompact, handlePostCompact } from "./compaction.ts";
 import { loadWorkflowConfig } from "./paths.ts";
 import { resolveCrossReferences } from "./cross-ref.ts";
+import { readFile } from "node:fs/promises";
+import { statSync, existsSync } from "node:fs";
 import { isAbsolute, resolve } from "node:path";
 
 export default function (pi: ExtensionAPI): void {
@@ -97,6 +98,7 @@ export default function (pi: ExtensionAPI): void {
   registerWorkflowTransitionTool(pi);
   registerValidateTool(pi);
   registerBatchTools(pi);
+  registerCompleteImplementationTool(pi);
 
   // ── Phase-based edit restrictions ───────────────────────────
   pi.on("tool_call", async (event, ctx) => {
@@ -243,28 +245,32 @@ export default function (pi: ExtensionAPI): void {
   // ── /implement ──────────────────────────────────────────────
   pi.registerCommand("implement", {
     description:
-      "TDD implementation. Usage: /implement @docs/plans/<file> | /implement [spec]",
+      "TDD implementation. Usage: /implement @docs/plans/<file> | /implement <path-to-plan>",
     handler: async (args, ctx) => {
-      const { topic, fileContents } = await parseArgs(args, ctx.cwd);
+      const trimmed = args.trim();
 
-      // If file refs are provided, prefer cross-reference resolution
-      // for plan files (resolves plan -> spec -> ADR chain)
+      // ── Phase 1: Extract @file references ──────────────────
       const refRegex = /@(\S+)/g;
       const refs: string[] = [];
       let match: RegExpExecArray | null;
-      while ((match = refRegex.exec(args)) !== null) {
+      while ((match = refRegex.exec(trimmed)) !== null) {
         refs.push(match[1]);
       }
 
+      // ── Phase 2: Determine plan path and spec text ──────────
+      // Priority: @docs/plans/X ref > plain path > discussion > ADR
+      let planAbs: string | undefined;
+      let spec: string | undefined;
+
+      // Strategy A: @-prefixed plan reference
       if (refs.length > 0) {
-        // Check if any referenced file is a plan document
         const planRef = refs.find((r) => {
           const abs = isAbsolute(r) ? r : resolve(ctx.cwd, r);
           return detectDocType(abs) === "plan";
         });
 
         if (planRef) {
-          // Resolve cross-references from the plan file
+          planAbs = isAbsolute(planRef) ? planRef : resolve(ctx.cwd, planRef);
           const resolved = await resolveCrossReferences(planRef, ctx.cwd);
           if (resolved.errors.length > 0) {
             ctx.ui.notify(
@@ -272,63 +278,87 @@ export default function (pi: ExtensionAPI): void {
               "warning",
             );
           }
-          const spec = resolved.content || fileContents.join("\n\n---\n\n");
-
-          // Track implementation progress before archiving
-          const planAbs = isAbsolute(planRef) ? planRef : resolve(ctx.cwd, planRef);
-          const { onPlanImplemented } = await import("./plan.ts");
-          await onPlanImplemented(planAbs, ctx.cwd);
-          // Archive the plan file now that it's been consumed
-          await archivePlan(planAbs, ctx.cwd);
-          ctx.ui.notify(`Plan archived: ${planAbs}`, "info");
-
-          await startTdd(spec, pi, ctx);
-          return;
-        }
-
-        // Non-plan refs: use parsed file contents directly
-        if (fileContents.length > 0) {
-          const spec = fileContents.join("\n\n---\n\n");
-          await startTdd(spec, pi, ctx);
-          return;
+          // Read plan content for the spec if resolve didn't produce it
+          if (resolved.content) {
+            spec = resolved.content;
+          } else {
+            const planContent = await readFile(planAbs, "utf-8");
+            spec = planContent;
+          }
+        } else {
+          // Non-plan @-refs: read file contents as spec
+          const { fileContents } = await parseArgs(args, ctx.cwd);
+          if (fileContents.length > 0) {
+            spec = fileContents.join("\n\n---\n\n");
+          }
         }
       }
 
-      if (!topic && fileContents.length === 0) {
-        // Detect discussion from saved state or session history
-        const discussionTopic = detectDiscussionTopic(ctx);
-        if (discussionTopic) {
-          await startTdd(
-            `Discussion topic: ${discussionTopic}\n\n` +
-              "The user and you agreed on an implementation strategy during " +
-              "the discussion. Refer to the conversation history for the full plan.",
-            pi,
-            ctx,
-          );
-          return;
-        }
+      // Strategy B: plain path (no @ prefix) — check if it's a file
+      if (!planAbs && !spec && trimmed) {
+        const maybePath = isAbsolute(trimmed) ? trimmed : resolve(ctx.cwd, trimmed);
+        try {
+          if (existsSync(maybePath) && statSync(maybePath).isFile()) {
+            planAbs = maybePath;
+            const planContent = await readFile(planAbs, "utf-8");
 
-        const latestAdr = await readLatestAdr(ctx.cwd);
-        if (latestAdr) {
-          const spec = [
-            `Title: ${latestAdr.title}`,
-            `Description: ${latestAdr.description}`,
-            `Context: ${latestAdr.context}`,
-            `Decision: ${latestAdr.decision}`,
-            `Impact: ${latestAdr.impact}`,
-          ].join("\n");
-          await startTdd(spec, pi, ctx);
-          return;
+            // Resolve cross-references if it's a plan
+            if (detectDocType(planAbs) === "plan") {
+              const resolved = await resolveCrossReferences(planAbs, ctx.cwd);
+              spec = resolved.content || planContent;
+            } else {
+              spec = planContent;
+            }
+          }
+        } catch {
+          // Not a valid file — fall through to free-form topic
         }
-        ctx.ui.notify(
-          NO_INPUT_WARNING,
-          "warning",
-        );
+      }
+
+      // Strategy C: discussion topic or latest ADR (no args)
+      if (!planAbs && !spec) {
+        const topic = stripFileRefs(trimmed);
+
+        if (!topic) {
+          const discussionTopic = detectDiscussionTopic(ctx);
+          if (discussionTopic) {
+            await startTdd(
+              `Discussion topic: ${discussionTopic}\n\n` +
+                "The user and you agreed on an implementation strategy during " +
+                "the discussion. Refer to the conversation history for the full plan.",
+              pi,
+              ctx,
+            );
+            return;
+          }
+
+          const latestAdr = await readLatestAdr(ctx.cwd);
+          if (latestAdr) {
+            spec = [
+              `Title: ${latestAdr.title}`,
+              `Description: ${latestAdr.description}`,
+              `Context: ${latestAdr.context}`,
+              `Decision: ${latestAdr.decision}`,
+              `Impact: ${latestAdr.impact}`,
+            ].join("\n");
+          } else {
+            ctx.ui.notify(NO_INPUT_WARNING, "warning");
+            return;
+          }
+        } else {
+          // Free-form topic text
+          spec = topic;
+        }
+      }
+
+      // ── Phase 3: Start TDD — plan stays in place until finalized ──
+      if (!spec) {
+        ctx.ui.notify("No specification resolved. Nothing to implement.", "warning");
         return;
       }
 
-      const spec = topic || fileContents.join("\n\n---\n\n");
-      await startTdd(spec, pi, ctx);
+      // Pass planAbs so complete_implementation can find it later
+      await startTdd(spec, pi, ctx, planAbs);
     },
   });
 
