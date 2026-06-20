@@ -104,7 +104,7 @@ async function createPlan(
   return filePath;
 }
 
-describe("Plan reference extraction", () => {
+describe("Plan reference extraction and numbering", () => {
   before(async () => {
     tmpDir = join(tmpdir(), `cascade-ref-${randomUUID()}`);
     await mkdir(tmpDir, { recursive: true });
@@ -112,6 +112,32 @@ describe("Plan reference extraction", () => {
 
   after(async () => {
     await rm(tmpDir, { recursive: true, force: true });
+  });
+
+  it("nextPlanNumber scans both plans dir and archive dir", async () => {
+    const { nextPlanNumber } = await import("../plan.ts");
+    const testDir = join(tmpdir(), `nextplan-${randomUUID()}`);
+    const plansDir = join(testDir, "docs", "plans");
+    const archiveDir = join(testDir, "docs", "plans", ".archive");
+    await mkdir(archiveDir, { recursive: true });
+
+    // Plan 005 exists in main dir
+    await writeFile(join(plansDir, "005-active-plan.md"), "---\ntitle: Active\n---\n", "utf-8");
+    // Plan 011 exists in archive
+    await writeFile(join(archiveDir, "011-archived-plan.md"), "---\ntitle: Archived\n---\n", "utf-8");
+
+    const next = await nextPlanNumber("001", testDir);
+    await rm(testDir, { recursive: true, force: true });
+    assert.equal(next, 12, "nextPlanNumber should return max(plans, archive) + 1");
+  });
+
+  it("nextPlanNumber returns 1 when both dirs are empty", async () => {
+    const { nextPlanNumber } = await import("../plan.ts");
+    const testDir = join(tmpdir(), `nextplan-empty-${randomUUID()}`);
+    await mkdir(join(testDir, "docs", "plans", ".archive"), { recursive: true });
+    const next = await nextPlanNumber("001", testDir);
+    await rm(testDir, { recursive: true, force: true });
+    assert.equal(next, 1, "Empty dirs should return 1");
   });
 
   it("extractSpecRefFromPlan extracts spec number from plan file", async () => {

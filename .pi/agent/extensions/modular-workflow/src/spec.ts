@@ -3,6 +3,7 @@ import { join, basename } from "node:path";
 import { existsSync } from "node:fs";
 import { loadContent, renderTemplate, formatDate, shortSlug } from "./utils.ts";
 import { loadDirectoriesConfig, ARCHIVE_SUBDIR } from "./paths.ts";
+import { normalizeReferences } from "./cross-ref.ts";
 
 /**
  * Get the absolute path to the specs directory.
@@ -110,6 +111,12 @@ export async function createSpec(
   });
 
   await writeFile(filePath, fullContent, "utf-8");
+
+  // Normalize cross-references in the written file
+  const writtenContent = await readFile(filePath, "utf-8");
+  const normalized = await normalizeReferences(writtenContent, cwd);
+  await writeFile(filePath, normalized, "utf-8");
+
   return filePath;
 }
 

@@ -105,12 +105,18 @@ export function registerPlanTool(pi: ExtensionAPI): void {
 
       try {
         const planPath = await createPlan(specNumber, title, content, ctx.cwd, description);
+
+        // Auto-update spec remaining count
+        const normalizedSpecNum = String(parseInt(specNumber, 10)).padStart(3, "0");
+        const { computeAndUpdateSpecRemaining } = await import("./spec.ts");
+        const { remaining } = await computeAndUpdateSpecRemaining(normalizedSpecNum, ctx.cwd);
+
         const relPath = relative(ctx.cwd, planPath);
         return {
           content: [
             {
               type: "text",
-              text: `Plan created: ${relPath}\nTitle: ${title}\nLinked to spec ${specNumber}`,
+              text: `Plan created: ${relPath}\nTitle: ${title}\nLinked to spec ${specNumber} (remaining: ${remaining})`,
             },
           ],
         };

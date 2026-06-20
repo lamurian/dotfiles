@@ -3,6 +3,7 @@ import { join, basename } from "node:path";
 import { existsSync } from "node:fs";
 import { loadContent, renderTemplate, formatDate, shortSlug } from "./utils.ts";
 import { loadDirectoriesConfig, ARCHIVE_SUBDIR } from "./paths.ts";
+import { normalizeReferences } from "./cross-ref.ts";
 import { updateSpecField } from "./spec.ts";
 import { listAdrs, updateAdrField } from "./adr.ts";
 
@@ -53,14 +54,26 @@ export async function nextPlanNumber(
   const dir = await plansDirPath(cwd);
   if (!existsSync(dir)) return 1;
 
-  const files = await readdir(dir);
   let max = 0;
 
-  for (const f of files) {
+  // Scan main plans directory
+  for (const f of await readdir(dir)) {
     const match = f.match(/^(\d{3})-/);
     if (match) {
       const num = parseInt(match[1], 10);
       if (num > max) max = num;
+    }
+  }
+
+  // Also scan archive directory for used numbers
+  const archiveDir = join(dir, ARCHIVE_SUBDIR);
+  if (existsSync(archiveDir)) {
+    for (const f of await readdir(archiveDir)) {
+      const match = f.match(/^(\d{3})-/);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (num > max) max = num;
+      }
     }
   }
 
@@ -113,6 +126,12 @@ export async function createPlan(
   });
 
   await writeFile(filePath, fullContent, "utf-8");
+
+  // Normalize cross-references in the written file
+  const writtenContent = await readFile(filePath, "utf-8");
+  const normalized = await normalizeReferences(writtenContent, cwd);
+  await writeFile(filePath, normalized, "utf-8");
+
   return filePath;
 }
 

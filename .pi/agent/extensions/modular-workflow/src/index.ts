@@ -14,6 +14,8 @@ import { registerAdrTool } from "./adr-tool.ts";
 import { registerSpecTool } from "./spec-tool.ts";
 import { registerPlanTool } from "./plan-tool.ts";
 import { registerWorkflowTransitionTool } from "./workflow-transition.ts";
+import { registerValidateTool } from "./validate-tool.ts";
+import { registerBatchTools } from "./batch-tools.ts";
 import { checkToolPhaseGate } from "./phase-gates.ts";
 import { parseArgs, getSkillsDir, detectDocType } from "./utils.ts";
 import { setupAutocomplete } from "./autocomplete.ts";
@@ -93,6 +95,8 @@ export default function (pi: ExtensionAPI): void {
   registerSpecTool(pi);
   registerPlanTool(pi);
   registerWorkflowTransitionTool(pi);
+  registerValidateTool(pi);
+  registerBatchTools(pi);
 
   // ── Phase-based edit restrictions ───────────────────────────
   pi.on("tool_call", async (event, ctx) => {

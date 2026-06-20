@@ -4,6 +4,7 @@ import { existsSync } from "node:fs";
 import { loadContent, renderTemplate, formatDate, shortSlug } from "./utils.ts";
 import { findExistingAdrDirs, detectAdrDir } from "./adr-detect.ts";
 import { loadDirectoriesConfig } from "./paths.ts";
+import { normalizeReferences } from "./cross-ref.ts";
 
 /** Architecture Decision Record matching the unified template. */
 export interface Adr {
@@ -141,6 +142,12 @@ export async function createAdr(adr: Adr, cwd: string): Promise<string> {
   });
 
   await writeFile(filePath, content, "utf-8");
+
+  // Normalize cross-references in the written file
+  const writtenContent = await readFile(filePath, "utf-8");
+  const normalized = await normalizeReferences(writtenContent, cwd);
+  await writeFile(filePath, normalized, "utf-8");
+
   return filePath;
 }
 

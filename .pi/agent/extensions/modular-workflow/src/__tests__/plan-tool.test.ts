@@ -196,6 +196,66 @@ describe("plan_create tool", () => {
     );
   });
 
+  it("auto-updates spec remaining count after creating a plan", async () => {
+    const pi = mockPi();
+    const { registerPlanTool } = await import("../plan-tool.ts");
+    registerPlanTool(pi);
+
+    const tool = pi.tools.find((t) => t.name === "plan_create");
+    assert.ok(tool);
+
+    // Isolated dir
+    const autoDir = join(tmpdir(), `plan-auto-${randomUUID()}`);
+    await mkdir(join(autoDir, "docs", "ADR"), { recursive: true });
+    await mkdir(join(autoDir, "docs", "specs"), { recursive: true });
+    await mkdir(join(autoDir, "docs", "plans"), { recursive: true });
+
+    // Create an ADR
+    const { createAdr } = await import("../adr.ts");
+    await createAdr(
+      { title: "Plan Test ADR", description: "For testing plan auto-update", status: "proposed", context: "C", decision: "D", impact: "I" },
+      autoDir,
+    );
+    // Create a spec for it
+    const { createSpec } = await import("../spec.ts");
+    const specPath = await createSpec(1, "Auto Update Spec", "# Requirements\n\nTest\n\n# Design\n\nTest\n\n# References\n\n", autoDir);
+
+    // Spec should have remaining=0 initially
+    let specContent = await readFile(specPath, "utf-8");
+    const initRemaining = specContent.match(/^remaining:\s*(\d+)/m)?.[1];
+    assert.ok(
+      initRemaining === "0" || initRemaining === undefined,
+      `Spec should have no remaining plans initially, got remaining=${initRemaining}`,
+    );
+
+    const ctx = mockCtx();
+    ctx.cwd = autoDir;
+    const result = await tool.execute(
+      "call-auto-plan-1",
+      {
+        specNumber: "001",
+        title: "Auto Update Plan",
+        content:
+          "# Overview\n\nTest\n\n# Goals\n\n- Goal\n\n# Implementation Steps\n\n- [ ] Step 1\n\n# Risks\n\n| L | I | M |\n| --- | --- | --- |\n| Low | High | Review |\n\n# UAT\n\n1. Test\n\n# References\n\n",
+      },
+      new AbortController().signal,
+      () => {},
+      ctx,
+    );
+
+    assert.ok(result, "Should return a result");
+    assert.ok(!result.isError, `Plan creation should succeed, got: ${result.content?.[0]?.text}`);
+
+    await rm(autoDir, { recursive: true, force: true });
+
+    // Result should mention the remaining count
+    const text = result.content?.[0]?.text ?? "";
+    assert.ok(
+      text.includes("remaining:") || text.includes("remaining"),
+      `Result should mention remaining count, got: ${text}`,
+    );
+  });
+
   it("rejects plan referencing multiple specs for atomicity", async () => {
     const pi = mockPi();
     const { registerPlanTool } = await import("../plan-tool.ts");

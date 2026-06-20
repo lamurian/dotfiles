@@ -1,5 +1,6 @@
-import { readFile } from "node:fs/promises";
-import { resolve, isAbsolute } from "node:path";
+import { readFile, readdir } from "node:fs/promises";
+import { resolve, isAbsolute, join } from "node:path";
+import { existsSync } from "node:fs";
 
 /** Result of resolving cross-references in a document. */
 export interface ResolvedRefs {
@@ -27,6 +28,124 @@ export function extractRefs(content: string): string[] {
     refs.push(match[1]);
   }
   return refs;
+}
+
+/**
+ * Scan a directory for files matching `NNN-*.md` and build a map of number→filename.
+ *
+ * @param dir - Absolute path to the directory to scan.
+ * @returns Map of 3-digit number string to exact filename.
+ */
+async function buildNumberToFileMap(dir: string): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  if (!existsSync(dir)) return map;
+
+  try {
+    const files = await readdir(dir);
+    for (const file of files) {
+      const match = file.match(/^(\d{3})-/);
+      if (match) {
+        map.set(match[1], file);
+      }
+    }
+  } catch {
+    // Ignore unreadable directories
+  }
+
+  return map;
+}
+
+/**
+ * Normalize cross-references in document content.
+ *
+ * Resolves glob patterns and human-readable labels to exact file paths:
+ * 1. `@docs/ADR/NNN-*.md` → `@docs/ADR/NNN-exact-slug.md`
+ * 2. `@docs/specs/NNN-*.md` → `@docs/specs/NNN-exact-slug.md`
+ * 3. `ADR NNN: Title` → `ADR NNN: @docs/ADR/NNN-exact-slug.md`
+ * 4. `Spec NNN: Title` → `Spec NNN: @docs/specs/NNN-exact-slug.md`
+ *
+ * When no matching file is found for a number, the original text is left unchanged.
+ *
+ * @param content - Raw markdown content with loose references.
+ * @param cwd     - Project working directory.
+ * @returns Content with all references resolved to exact file paths.
+ */
+export async function normalizeReferences(
+  content: string,
+  cwd: string,
+): Promise<string> {
+  if (!content) return content;
+
+  const adrDir = join(cwd, "docs", "ADR");
+  const specsDir = join(cwd, "docs", "specs");
+
+  const adrMap = await buildNumberToFileMap(adrDir);
+  const specMap = await buildNumberToFileMap(specsDir);
+
+  let result = content;
+
+  // 1. Resolve @docs/ADR/NNN-*.md globs
+  result = result.replace(
+    /@docs\/ADR\/(\d{3})-\*\.md/g,
+    (_match, num: string) => {
+      const file = adrMap.get(num);
+      return file ? `@docs/ADR/${file}` : _match;
+    },
+  );
+
+  // 2. Resolve @docs/specs/NNN-*.md globs
+  result = result.replace(
+    /@docs\/specs\/(\d{3})-\*\.md/g,
+    (_match, num: string) => {
+      const file = specMap.get(num);
+      return file ? `@docs/specs/${file}` : _match;
+    },
+  );
+
+  // 3. Convert "ADR NNN: Title" to "ADR NNN: @docs/ADR/NNN-slug.md"
+  result = result.replace(
+    /ADR (\d{3}): ([^\n]+)/g,
+    (_match, num: string, title: string) => {
+      // Skip if already an @doc reference
+      if (title.trim().startsWith("@docs/")) return _match;
+      const file = adrMap.get(num);
+      return file ? `ADR ${num}: @docs/ADR/${file}` : _match;
+    },
+  );
+
+  // 4. Convert "Spec NNN: Title" to "Spec NNN: @docs/specs/NNN-slug.md"
+  result = result.replace(
+    /Spec (\d{3}): ([^\n]+)/g,
+    (_match, num: string, title: string) => {
+      // Skip if already an @doc reference
+      if (title.trim().startsWith("@docs/")) return _match;
+      const file = specMap.get(num);
+      return file ? `Spec ${num}: @docs/specs/${file}` : _match;
+    },
+  );
+
+  return result;
+}
+
+/**
+ * Build a map of number to filename for cross-reference resolution.
+ *
+ * Scans the ADR and specs directories and returns a combined map for
+ * quick lookup.
+ *
+ * @param cwd - Project working directory.
+ * @returns Object with adrMap and specMap.
+ */
+export async function buildReferenceMaps(
+  cwd: string,
+): Promise<{ adrMap: Map<string, string>; specMap: Map<string, string> }> {
+  const adrDir = join(cwd, "docs", "ADR");
+  const specsDir = join(cwd, "docs", "specs");
+
+  return {
+    adrMap: await buildNumberToFileMap(adrDir),
+    specMap: await buildNumberToFileMap(specsDir),
+  };
 }
 
 /**
