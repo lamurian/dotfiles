@@ -79,7 +79,7 @@ describe("workflow_transition tool", () => {
     );
     await writeFile(
       join(tmpDir, "docs", "specs", "001-user-auth.md"),
-      "---\ntitle: User Auth\ndescription: Auth system\nstatus: proposed\n---\n\n# Requirements\n\nAuth requirements.",
+      "---\ntitle: User Auth\ndescription: Auth system\nstatus: proposed\n---\n\n# Requirements\n\nAuth requirements.\n\nThis spec implements @docs/ADR/001-database-choice.md",
       "utf-8",
     );
     await writeFile(
@@ -462,7 +462,7 @@ describe("workflow_transition tool", () => {
     assert.ok(pi.stateEntries.length >= 1, "State should be persisted");
   });
 
-  it("blocks transition to planning when ADR has remaining > 0", async () => {
+  it("blocks transition to planning when ADR has no specs", async () => {
     const pi = mockPi();
     const { registerWorkflowTransitionTool } = await import("../workflow-transition.ts");
     registerWorkflowTransitionTool(pi);
@@ -470,17 +470,19 @@ describe("workflow_transition tool", () => {
     const tool = pi.tools.find((t) => t.name === "workflow_transition");
     assert.ok(tool);
 
-    // Isolated dir with ADR that has remaining > 0
-    const remainDir = join(tmpdir(), `wf-remain-${randomUUID()}`);
+    // Isolated dir: ADR with no specs at all
+    const noSpecDir = join(tmpdir(), `wf-no-spec-${randomUUID()}`);
+    await mkdir(noSpecDir, { recursive: true });
+    await mkdir(join(noSpecDir, "docs", "ADR"), { recursive: true });
+
     const { createAdr } = await import("../adr.ts");
-    const adrPath = await createAdr(
-      { title: "Unspeced", description: "No specs", status: "proposed", context: "C", decision: "D", impact: "I" },
-      remainDir,
+    await createAdr(
+      { title: "NoSpecs", description: "No specs created yet", status: "proposed", context: "C", decision: "D", impact: "I" },
+      noSpecDir,
     );
-    await import("../adr.ts").then((m) => m.updateAdrField(adrPath, "remaining", 1));
 
     const ctx = mockCtx({ confirmResult: true });
-    ctx.cwd = remainDir;
+    ctx.cwd = noSpecDir;
     const result = await tool.execute(
       "call-pre-4",
       { phase: "planning", force: true },
@@ -489,13 +491,13 @@ describe("workflow_transition tool", () => {
       ctx,
     );
 
-    await rm(remainDir, { recursive: true, force: true });
+    await rm(noSpecDir, { recursive: true, force: true });
 
-    assert.ok(result.isError, "Transition with ADR remaining > 0 should be blocked");
+    assert.ok(result.isError, "Transition with no specs should be blocked");
     const text = result.content?.[0]?.text ?? "";
     assert.ok(
-      text.includes("remaining") || text.includes("Pre-condition"),
-      `Should mention remaining count, got: ${text}`,
+      text.includes("no specs") || text.includes("Pre-condition"),
+      `Should mention no specs, got: ${text}`,
     );
   });
 
@@ -509,7 +511,7 @@ describe("workflow_transition tool", () => {
     const tool = pi.tools.find((t) => t.name === "workflow_transition");
     assert.ok(tool);
 
-    // Use fresh dir with a clean ADR (remaining defaults to 0)
+    // Use fresh dir: ADR + spec referencing it
     const freshDir = join(tmpdir(), `wf-plan-ok-${randomUUID()}`);
     await mkdir(join(freshDir, "docs", "ADR"), { recursive: true });
     await mkdir(join(freshDir, "docs", "specs"), { recursive: true });
@@ -518,6 +520,8 @@ describe("workflow_transition tool", () => {
       { title: "Ready", description: "Has specs", status: "proposed", context: "C", decision: "D", impact: "I" },
       freshDir,
     );
+    const { createSpec } = await import("../spec.ts");
+    await createSpec(1, "Spec For Ready", "# Requirements\n\nTest\n\n# Design\n\nTest\n\n# References\n\n", freshDir);
 
     const ctx = mockCtx({ confirmResult: true });
     ctx.cwd = freshDir;
@@ -776,5 +780,155 @@ describe("workflow_transition tool", () => {
 
     assert.ok(!confirmCalled, "ui.confirm should NOT be called for outline-only calls");
     assert.equal(pi.stateEntries.length, 0, "State should not be persisted");
+  });
+
+  // ── Auto-heal stale counters ──
+
+  it("auto-heals stale remaining counter before planning precondition check", async () => {
+    const pi = mockPi();
+    const { registerWorkflowTransitionTool } = await import("../workflow-transition.ts");
+    registerWorkflowTransitionTool(pi);
+
+    const tool = pi.tools.find((t) => t.name === "workflow_transition");
+    assert.ok(tool);
+
+    // Isolated dir: ADR with stale remaining=3, no specs referencing it
+    const staleDir = join(tmpdir(), `wf-autoheal-${randomUUID()}`);
+    await mkdir(staleDir, { recursive: true });
+    await mkdir(join(staleDir, "docs", "ADR"), { recursive: true });
+    await mkdir(join(staleDir, "docs", "specs"), { recursive: true });
+
+    // Create ADR with stale remaining=3
+    const { createAdr } = await import("../adr.ts");
+    const adrPath = await createAdr(
+      { title: "StaleRemain", description: "Stale counter", status: "proposed", context: "C", decision: "D", impact: "I" },
+      staleDir,
+    );
+    // Manually set the counter to 3 (stale)
+    await import("../adr.ts").then((m) => m.updateAdrField(adrPath, "remaining", 3));
+
+    // Create specs that do NOT reference this ADR
+    const { createSpec } = await import("../spec.ts");
+    await createSpec(1, "Unrelated Spec", "# Requirements\n\nTest\n\n# Design\n\nTest\n\n# References\n\n", staleDir);
+
+    const ctx = mockCtx({ confirmResult: true });
+    ctx.cwd = staleDir;
+    const result = await tool.execute(
+      "call-autoheal-1",
+      { phase: "planning", force: true },
+      new AbortController().signal,
+      () => {},
+      ctx,
+    );
+
+    await rm(staleDir, { recursive: true, force: true });
+
+    // Should succeed: autoUpdateRemaining should heal the stale counter to 0
+    assert.ok(result, "Should return a result");
+    assert.ok(!result.isError, "Stale counter should be auto-healed, transition allowed");
+    assert.ok(pi.stateEntries.length >= 1, "State should be persisted");
+    const text = result.content?.[0]?.text ?? "";
+    assert.ok(
+      text.includes("planning"),
+      `Should mention planning phase, got: ${text}`,
+    );
+  });
+
+  it("auto-heals stale remaining on all non-implemented ADRs during planning transition", async () => {
+    const pi = mockPi();
+    const { registerWorkflowTransitionTool } = await import("../workflow-transition.ts");
+    registerWorkflowTransitionTool(pi);
+
+    const tool = pi.tools.find((t) => t.name === "workflow_transition");
+    assert.ok(tool);
+
+    // Isolated dir: multiple ADRs with mixed stale states
+    const mixedDir = join(tmpdir(), `wf-mixed-heal-${randomUUID()}`);
+    await mkdir(mixedDir, { recursive: true });
+    await mkdir(join(mixedDir, "docs", "ADR"), { recursive: true });
+    await mkdir(join(mixedDir, "docs", "specs"), { recursive: true });
+
+    const { createAdr, listAdrs } = await import("../adr.ts");
+    const { createSpec } = await import("../spec.ts");
+    
+    // ADR 1: implemented — should be skipped
+    const adr1Path = await createAdr(
+      { title: "Done", description: "Done", status: "proposed", context: "C", decision: "D", impact: "I" },
+      mixedDir,
+    );
+    await import("../adr.ts").then((m) => m.updateAdrStatus(adr1Path, "implemented"));
+
+    // ADR 2: proposed with stale remaining=5 + spec referencing it
+    const adr2Path = await createAdr(
+      { title: "StaleFive", description: "Stale five", status: "proposed", context: "C", decision: "D", impact: "I" },
+      mixedDir,
+    );
+    await import("../adr.ts").then((m) => m.updateAdrField(adr2Path, "remaining", 5));
+    // createSpec auto-appends @docs/ADR/002-* reference
+    await createSpec(2, "Spec For Five", "# Requirements\n\nTest\n\n# Design\n\nTest\n\n# References\n\n", mixedDir);
+
+    // ADR 3: proposed with stale remaining=2 + spec referencing it
+    const adr3Path = await createAdr(
+      { title: "StaleTwo", description: "Stale two", status: "proposed", context: "C", decision: "D", impact: "I" },
+      mixedDir,
+    );
+    await import("../adr.ts").then((m) => m.updateAdrField(adr3Path, "remaining", 2));
+    // createSpec auto-appends @docs/ADR/003-* reference
+    await createSpec(3, "Spec For Two", "# Requirements\n\nTest\n\n# Design\n\nTest\n\n# References\n\n", mixedDir);
+
+    const ctx = mockCtx({ confirmResult: true });
+    ctx.cwd = mixedDir;
+    const result = await tool.execute(
+      "call-autoheal-2",
+      { phase: "planning", force: true },
+      new AbortController().signal,
+      () => {},
+      ctx,
+    );
+
+    await rm(mixedDir, { recursive: true, force: true });
+
+    // All stale counters should be auto-healed to 0 (no specs reference any ADR)
+    assert.ok(result, "Should return a result");
+    assert.ok(!result.isError, "All stale counters should be auto-healed");
+    assert.ok(pi.stateEntries.length >= 1, "State should be persisted");
+  });
+
+  it("does NOT auto-heal implemented ADRs during planning transition", async () => {
+    const pi = mockPi();
+    const { registerWorkflowTransitionTool } = await import("../workflow-transition.ts");
+    registerWorkflowTransitionTool(pi);
+
+    const tool = pi.tools.find((t) => t.name === "workflow_transition");
+    assert.ok(tool);
+
+    // Isolated dir: implemented ADR with stale remaining, should be skipped
+    const implStaleDir = join(tmpdir(), `wf-impl-stale-${randomUUID()}`);
+    await mkdir(implStaleDir, { recursive: true });
+    await mkdir(join(implStaleDir, "docs", "ADR"), { recursive: true });
+
+    const { createAdr } = await import("../adr.ts");
+    const adrPath = await createAdr(
+      { title: "ImplButStale", description: "Implemented but stale", status: "implemented", context: "C", decision: "D", impact: "I" },
+      implStaleDir,
+    );
+    // Set stale counter — but ADR is implemented so it should be skipped
+    await import("../adr.ts").then((m) => m.updateAdrField(adrPath, "remaining", 7));
+
+    const ctx = mockCtx({ confirmResult: true });
+    ctx.cwd = implStaleDir;
+    const result = await tool.execute(
+      "call-autoheal-3",
+      { phase: "planning", force: true },
+      new AbortController().signal,
+      () => {},
+      ctx,
+    );
+
+    await rm(implStaleDir, { recursive: true, force: true });
+
+    // Should succeed: implemented ADR is skipped, no proposed ADRs to check
+    assert.ok(result, "Should return a result");
+    assert.ok(!result.isError, "Implemented ADRs should be skipped during check");
   });
 });
