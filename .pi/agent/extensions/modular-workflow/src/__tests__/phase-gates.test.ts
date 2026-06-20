@@ -1,5 +1,9 @@
 import { describe, it, before } from "node:test";
 import assert from "node:assert/strict";
+import { mkdir, writeFile, rm } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+import { randomUUID } from "node:crypto";
 import type { WorkflowPhase } from "../state.ts";
 
 /**
@@ -148,5 +152,55 @@ describe("checkToolPhaseGate", () => {
   it("allows unknown tools in any brainstorm phase", () => {
     assert.equal(checkToolPhaseGate("unknown_tool", "requirements"), null);
     assert.equal(checkToolPhaseGate("another_tool", "specifying"), null);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// skipCeremony config
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("skipCeremony workflow config", () => {
+  let gateFn: (
+    toolName: string,
+    currentPhase: WorkflowPhase,
+  ) => { block: boolean; reason: string } | null;
+
+  before(async () => {
+    const mod = await import("../phase-gates.ts");
+    gateFn = mod.checkToolPhaseGate;
+  });
+
+  it("defaults skipCeremony to false", async () => {
+    const { loadWorkflowConfig, resetWorkflowConfigCache } = await import("../paths.ts");
+    resetWorkflowConfigCache();
+    const config = await loadWorkflowConfig("/nonexistent");
+    assert.equal(config.brainstorm?.skipCeremony, false);
+  });
+
+  it("reads skipCeremony from project-local workflow.json", async () => {
+    const tmpDir = join(tmpdir(), `wf-ceremony-${randomUUID()}`);
+    await mkdir(tmpDir, { recursive: true });
+    await mkdir(join(tmpDir, ".pi"), { recursive: true });
+    await writeFile(
+      join(tmpDir, ".pi", "workflow.json"),
+      JSON.stringify({ brainstorm: { skipCeremony: true } }),
+      "utf-8",
+    );
+
+    const { loadWorkflowConfig, resetWorkflowConfigCache } = await import("../paths.ts");
+    resetWorkflowConfigCache();
+    const config = await loadWorkflowConfig(tmpDir);
+
+    assert.equal(config.brainstorm?.skipCeremony, true);
+
+    await rm(tmpDir, { recursive: true, force: true });
+  });
+
+  it("skipCeremony does not change the phase-gate function itself", () => {
+    // Phase-gate function is unchanged — gating bypass is controlled by the caller (index.ts)
+    assert.equal(gateFn("adr_create", "requirements"), null);
+    assert.ok(gateFn("adr_create", "specifying")!.block);
+    assert.ok(gateFn("spec_create", "requirements")!.block);
+    assert.equal(gateFn("spec_create", "specifying"), null);
   });
 });
