@@ -6,6 +6,15 @@ All ADRs and specs are complete. Now create implementation plans.
 
 ## Protocol
 
+### Pre-flight check
+
+Before writing implementation steps, **verify architectural assumptions** by checking relevant API/SDK documentation. This prevents late discoveries that invalidate plan steps.
+
+- If planning `pi.registerCommand()` handlers: Read pi SDK examples (`docs/extensions.md` → `registerCommand`) to confirm what the handler can and cannot do (e.g., no direct tool access — outputs structured prompts for the agent).
+- If planning new pi tools: Check `pi.registerTool()` API, parameter schemas, and event lifecycle.
+- If modifying event interceptors: Check the event lifecycle guide.
+- Run one targeted `explore` or `read` to confirm assumptions **BEFORE** writing plan steps.
+
 1. **Read ALL spec files** in `docs/specs/` and their referenced ADRs for full context.
 2. **Map all plans**: For each spec, identify the implementation tasks needed. Determine the correct **execution order** — plans should be ordered by implementation sequence (what must be built first). List them all upfront as a complete mapping with sequence:
    ```
