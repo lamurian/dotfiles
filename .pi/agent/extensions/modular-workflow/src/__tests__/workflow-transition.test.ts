@@ -894,6 +894,92 @@ describe("workflow_transition tool", () => {
     assert.ok(pi.stateEntries.length >= 1, "State should be persisted");
   });
 
+  // ── Progress notifications ──
+
+  it("calls ctx.ui.notify during force transition to show progress", async () => {
+    const notifyCalls: string[] = [];
+    const ctx = mockCtx({ confirmResult: true });
+    ctx.ui.notify = (msg: string, _level?: string) => {
+      notifyCalls.push(msg);
+    };
+
+    const pi = mockPi();
+    const { registerWorkflowTransitionTool } = await import("../workflow-transition.ts");
+    registerWorkflowTransitionTool(pi);
+
+    const tool = pi.tools.find((t) => t.name === "workflow_transition");
+    assert.ok(tool);
+
+    const result = await tool.execute(
+      "call-notify-1",
+      { phase: "specifying", force: true },
+      new AbortController().signal,
+      () => {},
+      ctx,
+    );
+
+    assert.ok(result, "Should return a result");
+    assert.ok(!result.isError);
+    assert.ok(notifyCalls.length >= 1,
+      `Should have at least 1 notify call, got ${notifyCalls.length}: ${JSON.stringify(notifyCalls)}`);
+  });
+
+  it("calls ctx.ui.notify during force transition to planning", async () => {
+    const notifyCalls: string[] = [];
+    const ctx = mockCtx({ confirmResult: true });
+    ctx.ui.notify = (msg: string, _level?: string) => {
+      notifyCalls.push(msg);
+    };
+
+    const pi = mockPi();
+    const { registerWorkflowTransitionTool } = await import("../workflow-transition.ts");
+    registerWorkflowTransitionTool(pi);
+
+    const tool = pi.tools.find((t) => t.name === "workflow_transition");
+    assert.ok(tool);
+
+    const result = await tool.execute(
+      "call-notify-2",
+      { phase: "planning", force: true },
+      new AbortController().signal,
+      () => {},
+      ctx,
+    );
+
+    assert.ok(result, "Should return a result");
+    assert.ok(!result.isError);
+    assert.ok(notifyCalls.length >= 1,
+      `Should have at least 1 notify call, got ${notifyCalls.length}: ${JSON.stringify(notifyCalls)}`);
+  });
+
+  it("cancellation message includes next steps guidance", async () => {
+    const pi = mockPi();
+    const { registerWorkflowTransitionTool } = await import("../workflow-transition.ts");
+    registerWorkflowTransitionTool(pi);
+
+    const tool = pi.tools.find((t) => t.name === "workflow_transition");
+    assert.ok(tool);
+
+    const ctx = mockCtx({ confirmResult: false });
+
+    const result = await tool.execute(
+      "call-notify-3",
+      { phase: "specifying", force: true },
+      new AbortController().signal,
+      () => {},
+      ctx,
+    );
+
+    assert.ok(result, "Should return a result");
+    const text = result.content?.[0]?.text ?? "";
+    assert.ok(text.toLowerCase().includes("cancelled"),
+      `Should indicate cancellation, got: ${text}`);
+    assert.ok(
+      text.includes("/status") || text.includes("force: true"),
+      `Should include next steps guidance, got: ${text}`,
+    );
+  });
+
   it("does NOT auto-heal implemented ADRs during planning transition", async () => {
     const pi = mockPi();
     const { registerWorkflowTransitionTool } = await import("../workflow-transition.ts");

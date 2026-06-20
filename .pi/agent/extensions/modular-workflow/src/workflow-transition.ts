@@ -542,11 +542,15 @@ export function registerWorkflowTransitionTool(pi: ExtensionAPI): void {
           content: [
             {
               type: "text",
-              text: `Transition to "${phase}" was cancelled.`,
+              text: `Transition to "${phase}" was cancelled. No changes were made. ` +
+                `Use /status to check the current phase, or call workflow_transition ` +
+                `with force: true when ready.`,
             },
           ],
         };
       }
+
+      ctx.ui.notify(`Checking pre-conditions for ${phase}...`, "info");
 
       // ── Phase pre-condition check ──
       {
@@ -561,7 +565,9 @@ export function registerWorkflowTransitionTool(pi: ExtensionAPI): void {
 
       // Auto-compute remaining counts for non-implemented specs/ADRs
       if (phase === "implementing") {
+        ctx.ui.notify("Recomputing cross-reference counts...", "info");
         await autoUpdateRemaining(ctx.cwd);
+        ctx.ui.notify("Cross-reference counts synced", "info");
       }
 
       // Read current state from session
