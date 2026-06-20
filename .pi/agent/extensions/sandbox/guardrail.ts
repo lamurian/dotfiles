@@ -9,7 +9,7 @@
  * Built-in defaults for standard pi tools; users can add/override for custom tools.
  */
 
-import { matchesGlob, relative, resolve } from "node:path";
+import { relative, resolve } from "node:path";
 import { homedir } from "node:os";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -62,14 +62,120 @@ export function expandTilde(path: string): string {
 	return path;
 }
 
+// ─── Custom glob matching (no hidden-directory exclusion) ────────────────────
+
+/**
+ * Match a file path against a glob pattern.
+ *
+ * Unlike Node.js `path.matchesGlob`, this does NOT skip dot-directories (names
+ * starting with `.`). This is a security sandbox — `**` must traverse everything.
+ *
+ * Supported syntax:
+ *   `**`  — matches zero or more path segments (any depth)
+ *   `*`   — matches any characters within one path segment (except `/`)
+ *   `?`   — matches exactly one character within one path segment
+ *
+ * Handles both absolute and relative paths.
+ */
+export function pathMatchesGlob(filePath: string, pattern: string): boolean {
+	if (!pattern) return false;
+
+	const pathSegs = normalizeSlashes(filePath).split("/");
+	const patSegs = normalizeSlashes(pattern).split("/");
+
+	return matchSegments(pathSegs, patSegs, 0, 0);
+}
+
+/** Normalize slashes and strip trailing slash. */
+function normalizeSlashes(p: string): string {
+	return p.replace(/\\/g, "/").replace(/\/+$/, "");
+}
+
+/**
+ * Recursively match path segments against pattern segments.
+ * `pi` = path index (current path segment), `pj` = pattern index.
+ */
+function matchSegments(
+	pathSegs: string[],
+	patSegs: string[],
+	pi: number,
+	pj: number,
+): boolean {
+	// Pattern consumed: path must also be fully consumed
+	if (pj >= patSegs.length) return pi >= pathSegs.length;
+
+	const pat = patSegs[pj];
+
+	// Handle ** — matches zero or more path segments
+	if (pat === "**") {
+		for (let i = pi; i <= pathSegs.length; i++) {
+			if (matchSegments(pathSegs, patSegs, i, pj + 1)) return true;
+		}
+		return false;
+	}
+
+	// No more path segments — pattern can't be satisfied (unless remaining is **)
+	if (pi >= pathSegs.length) return false;
+
+	// Match this segment, then recurse
+	if (!matchSegment(pathSegs[pi], pat)) return false;
+
+	return matchSegments(pathSegs, patSegs, pi + 1, pj + 1);
+}
+
+/**
+ * Match a single path segment against a single pattern segment.
+ * Supports `*` (any characters) and `?` (single char).
+ */
+function matchSegment(segment: string, pattern: string): boolean {
+	return matchInSegment(segment, 0, pattern, 0);
+}
+
+function matchInSegment(
+	seg: string,
+	si: number,
+	pat: string,
+	pi: number,
+): boolean {
+	if (pi >= pat.length) return si >= seg.length;
+
+	if (pat[pi] === "*") {
+		// Consume all consecutive *
+		while (pi < pat.length && pat[pi] === "*") pi++;
+
+		// * at end matches rest of segment
+		if (pi >= pat.length) return true;
+
+		// Try matching * against 0…(seg.length - si) characters, then
+		// check whether the rest of the pattern matches from that point.
+		const nextChar = pat[pi];
+		for (let i = si; i <= seg.length; i++) {
+			// Either we've matched up to a char that equals nextChar,
+			// or we've run out of segment (which only works if rest is * or empty)
+			if (i < seg.length && seg[i] !== nextChar) continue;
+			if (matchInSegment(seg, i, pat, pi)) return true;
+		}
+		return false;
+	}
+
+	if (pat[pi] === "?") {
+		if (si >= seg.length) return false;
+		return matchInSegment(seg, si + 1, pat, pi + 1);
+	}
+
+	// Literal character
+	if (si >= seg.length || seg[si] !== pat[pi]) return false;
+	return matchInSegment(seg, si + 1, pat, pi + 1);
+}
+
 /**
  * Check if a file path matches any glob pattern in a list.
- * Patterns support ~/ expansion and all standard glob syntax via path.matchesGlob.
+ * Patterns support ~/ expansion and glob syntax via pathMatchesGlob.
  */
 export function isPathDenied(filePath: string, patterns: string[]): boolean {
 	for (const raw of patterns) {
 		const pattern = expandTilde(raw);
-		if (matchesGlob(filePath, pattern)) {
+		if (pathMatchesGlob(filePath, pattern)) {
 			return true;
 		}
 	}

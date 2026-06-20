@@ -10,6 +10,7 @@ import {
 	getToolPaths,
 	evaluateToolCall,
 	normalizeDenyPattern,
+	pathMatchesGlob,
 	type FilesystemConfig,
 	type ToolConfig,
 	type ToolAccess,
@@ -32,6 +33,83 @@ describe("expandTilde", () => {
 
 	it("should handle ~ alone", () => {
 		assert.equal(expandTilde("~"), HOME);
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// pathMatchesGlob — custom glob matcher (no dot-dir exclusion)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("pathMatchesGlob", () => {
+	it("should match exact path with no glob chars", () => {
+		assert.ok(pathMatchesGlob("/home/user/.env", "/home/user/.env"));
+	});
+
+	it("should match **/.env through visible directories", () => {
+		assert.ok(pathMatchesGlob("/home/user/project/.env", "**/.env"));
+	});
+
+	it("should match **/.env through hidden directories (THE BUG FIX)", () => {
+		assert.ok(pathMatchesGlob("/home/lam/.pi/agent/.env", "**/.env"));
+	});
+
+	it("should match **/.env through deeply nested hidden dirs", () => {
+		assert.ok(pathMatchesGlob("/home/user/.config/sub/.env", "**/.env"));
+	});
+
+	it("should match .env basename only", () => {
+		assert.ok(pathMatchesGlob(".env", "**/.env"));
+	});
+
+	it("should NOT match non-env files with **/.env", () => {
+		assert.ok(!pathMatchesGlob("/home/user/file.txt", "**/.env"));
+	});
+
+	it("should NOT match .env files in name only", () => {
+		assert.ok(!pathMatchesGlob("/home/user/.envfile", "**/.env"));
+	});
+
+	it("should match **/.ssh/** through hidden .ssh directory", () => {
+		assert.ok(pathMatchesGlob("/home/user/.ssh/id_rsa", "**/.ssh/**"));
+	});
+
+	it("should NOT mix up .notssh with .ssh", () => {
+		assert.ok(!pathMatchesGlob("/home/user/.notssh/id_rsa", "**/.ssh/**"));
+	});
+
+	it("should match * wildcard relative (.githooks/* matches .githooks/pre-commit)", () => {
+		assert.ok(pathMatchesGlob(".githooks/pre-commit", ".githooks/*"));
+	});
+
+	it("should NOT match * wildcard across dirs (.githooks/* vs absolute path)", () => {
+		assert.ok(!pathMatchesGlob("/home/user/project/.githooks/pre-commit", ".githooks/*"));
+	});
+
+	it("should match **/.githooks/* across dirs", () => {
+		assert.ok(pathMatchesGlob("/home/user/project/.githooks/pre-commit", "**/.githooks/*"));
+	});
+
+	it("should match ? single char wildcard", () => {
+		assert.ok(pathMatchesGlob("/home/user/file.txt", "**/file.???"));
+		assert.ok(!pathMatchesGlob("/home/user/file.tx", "**/file.???"));
+	});
+
+	it("should match multiple ** segments", () => {
+		assert.ok(pathMatchesGlob("/a/b/c/d/.env", "**/**/.env"));
+	});
+
+	it("should handle simple relative pattern with **/", () => {
+		assert.ok(pathMatchesGlob(".pi/agent/.env", "**/.env"));
+	});
+
+	it("should match *.lock files anywhere", () => {
+		assert.ok(pathMatchesGlob("/home/user/project/yarn.lock", "**/*.lock"));
+		assert.ok(pathMatchesGlob("/home/user/project/foo.lock", "**/*.lock"));
+		assert.ok(!pathMatchesGlob("/home/user/project/package-lock.json", "**/*.lock"));
+	});
+
+	it("should return false for empty pattern", () => {
+		assert.ok(!pathMatchesGlob("/home/user/file.txt", ""));
 	});
 });
 
