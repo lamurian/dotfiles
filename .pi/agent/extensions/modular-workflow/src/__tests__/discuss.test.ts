@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { runDiscussion, detectDiscussionTopic } from "../discuss.ts";
+import { runDiscussion, detectDiscussionTopic, getLatestAssistantMessage } from "../discuss.ts";
 import { buildPhasePrompt } from "../brainstorm.ts";
 import { loadContent, getPackageRoot } from "../utils.ts";
 import {
@@ -567,6 +567,132 @@ describe("detectDiscussionTopic", () => {
 
     const topic = detectDiscussionTopic(ctx);
     assert.equal(topic, "");
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// getLatestAssistantMessage
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("getLatestAssistantMessage", () => {
+  it("returns the content of the latest assistant message", () => {
+    const entries = [
+      {
+        type: "message",
+        id: "entry-1",
+        parentId: null,
+        message: {
+          role: "user",
+          content: "/discuss add retry to HTTP client",
+        },
+      },
+      {
+        type: "message",
+        id: "entry-2",
+        parentId: "entry-1",
+        message: {
+          role: "assistant",
+          content: "Let me clarify what you need.",
+        },
+      },
+      {
+        type: "message",
+        id: "entry-3",
+        parentId: "entry-2",
+        message: {
+          role: "user",
+          content: "Yes, exponential backoff would be great.",
+        },
+      },
+      {
+        type: "message",
+        id: "entry-4",
+        parentId: "entry-3",
+        message: {
+          role: "assistant",
+          content: "## Finalized Plan\n\n1. Add retry config\n2. Implement backoff logic\n3. Wire into client",
+        },
+      },
+    ];
+
+    const ctx: ExtensionContext = {
+      cwd: "/tmp/test",
+      sessionManager: {
+        getBranch: () => entries,
+      },
+      ui: {} as unknown as ExtensionContext["ui"],
+    } as unknown as ExtensionContext;
+
+    const message = getLatestAssistantMessage(ctx);
+    assert.ok(message.includes("Finalized Plan"), "should return the plan message");
+    assert.ok(message.includes("Add retry config"), "should include plan details");
+  });
+
+  it("returns empty string when no assistant messages exist", () => {
+    const entries = [
+      {
+        type: "message",
+        id: "entry-1",
+        parentId: null,
+        message: {
+          role: "user",
+          content: "/discuss something",
+        },
+      },
+    ];
+
+    const ctx: ExtensionContext = {
+      cwd: "/tmp/test",
+      sessionManager: {
+        getBranch: () => entries,
+      },
+      ui: {} as unknown as ExtensionContext["ui"],
+    } as unknown as ExtensionContext;
+
+    const message = getLatestAssistantMessage(ctx);
+    assert.equal(message, "");
+  });
+
+  it("returns empty string when session is empty", () => {
+    const ctx: ExtensionContext = {
+      cwd: "/tmp/test",
+      sessionManager: {
+        getBranch: () => [],
+      },
+      ui: {} as unknown as ExtensionContext["ui"],
+    } as unknown as ExtensionContext;
+
+    const message = getLatestAssistantMessage(ctx);
+    assert.equal(message, "");
+  });
+
+  it("extracts text from assistant messages with array content", () => {
+    const entries = [
+      {
+        type: "message",
+        id: "entry-1",
+        parentId: null,
+        message: {
+          role: "assistant",
+          content: [
+            { type: "text", text: "The plan is:" },
+            { type: "text", text: "Change the config module" },
+          ],
+        },
+      },
+    ];
+
+    const ctx: ExtensionContext = {
+      cwd: "/tmp/test",
+      sessionManager: {
+        getBranch: () => entries,
+      },
+      ui: {} as unknown as ExtensionContext["ui"],
+    } as unknown as ExtensionContext;
+
+    const message = getLatestAssistantMessage(ctx);
+    assert.ok(message.includes("The plan is:"));
+    assert.ok(message.includes("Change the config module"));
   });
 });
 

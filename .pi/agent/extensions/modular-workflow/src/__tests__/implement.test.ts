@@ -1,6 +1,6 @@
 import { describe, it, mock } from "node:test";
 import assert from "node:assert/strict";
-import { startTdd, NO_INPUT_WARNING } from "../implement.ts";
+import { startTdd, NO_INPUT_WARNING, resolveImplementSpec } from "../implement.ts";
 import type {
   ExtensionAPI,
   ExtensionContext,
@@ -42,6 +42,110 @@ function mockCtx(cwd: string): ExtensionContext {
     },
   } as unknown as ExtensionContext;
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// resolveImplementSpec — bare /implement resolution
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("resolveImplementSpec", () => {
+  it("returns the latest assistant message when one exists", async () => {
+    const entries = [
+      {
+        type: "message",
+        id: "entry-1",
+        parentId: null,
+        message: {
+          role: "assistant",
+          content: "## Finalized Plan\n\n1. Add retry to HTTP client",
+        },
+      },
+    ];
+
+    const ctx = {
+      cwd: "/tmp/test",
+      sessionManager: { getBranch: () => entries },
+      ui: { notify: () => {} },
+    } as unknown as ExtensionContext;
+
+    const spec = await resolveImplementSpec(ctx);
+    assert.ok(spec !== null);
+    assert.ok(spec!.includes("Finalized Plan"));
+    assert.ok(spec!.includes("Add retry"));
+  });
+
+  it("falls back to discussion topic when no assistant message exists", async () => {
+    // No assistant messages, but a discussing state with specText
+    const entries = [
+      {
+        type: "custom",
+        customType: "workflow-state",
+        data: {
+          phase: "discussing",
+          specText: "my discussion topic",
+          adrFiles: [],
+          specFiles: [],
+          planFiles: [],
+        },
+      },
+    ];
+
+    const ctx = {
+      cwd: "/tmp/test",
+      sessionManager: { getBranch: () => entries },
+      ui: { notify: () => {} },
+    } as unknown as ExtensionContext;
+
+    const spec = await resolveImplementSpec(ctx);
+    assert.equal(spec, "my discussion topic");
+  });
+
+  it("prefers assistant message over discussion topic when both exist", async () => {
+    // Both an assistant message and a discussion state exist
+    const entries = [
+      {
+        type: "custom",
+        customType: "workflow-state",
+        data: {
+          phase: "discussing",
+          specText: "older discussion topic",
+          adrFiles: [],
+          specFiles: [],
+          planFiles: [],
+        },
+      },
+      {
+        type: "message",
+        id: "entry-1",
+        parentId: null,
+        message: {
+          role: "assistant",
+          content: "## Finalized Plan from Assistant",
+        },
+      },
+    ];
+
+    const ctx = {
+      cwd: "/tmp/test",
+      sessionManager: { getBranch: () => entries },
+      ui: { notify: () => {} },
+    } as unknown as ExtensionContext;
+
+    const spec = await resolveImplementSpec(ctx);
+    assert.ok(spec !== null);
+    assert.ok(spec!.includes("Finalized Plan from Assistant"));
+  });
+
+  it("returns null when no assistant message, no discussion, no ADR", async () => {
+    const ctx = {
+      cwd: "/tmp/test",
+      sessionManager: { getBranch: () => [] },
+      ui: { notify: () => {} },
+    } as unknown as ExtensionContext;
+
+    const spec = await resolveImplementSpec(ctx);
+    assert.equal(spec, null);
+  });
+});
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // NO_INPUT_WARNING
