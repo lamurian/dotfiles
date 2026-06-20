@@ -16,26 +16,14 @@ All ADRs and specs are complete. Now create implementation plans.
      → Plan 003: <title> — <brief objective>
    ```
    The plan numbers (001, 002, 003...) define the implementation order. Number them sequentially in the order they should be executed.
-3. **Present the full ordered mapping** to the user and ask for their confirmation.
-4. **When confirmed**, create ALL plans using `plan_create` in the defined sequence order.
+3. **Present the full ordered mapping** to the user, then call `workflow_transition({ phase: "implementing", outline: "<mapping>" })` to run the atomicity check. Each plan must have exactly one `DoD:`. Fix any violations and re-run until the check passes.
+4. **When the atomicity check passes**, create ALL plans using `plan_create` in the defined sequence order.
 5. **After ALL plans are created**, build a final summary:
    - Read all ADR, spec, and plan files
    - Summarize everything made: ADRs (decisions), specs (specifications), plans (tasks)
    - Recommend the implementation flow based on the plan order
    - Write a condensed ARCHITECTURE.md (≤100 lines) with `write` or `edit` if one doesn't exist
-6. **Finally**, ask the user for confirmation to transition. Once confirmed, call `workflow_transition({ phase: "implementing", confirmed: true })`.
-
-## Atomic Plan Definition
-
-A plan is **atomic** when it describes one implementation task with a clear, single Definition of Done.
-
-**Litmus tests:**
-- Title is a single noun phrase (≤5 words)
-- One measurable goal — not a bullet list of unrelated outcomes
-- Steps form a linear sequence one person can complete in one session
-- Definition of Done is a single verifiable condition
-- References **exactly one spec** — a plan that says "implements spec 001 and spec 002" is not atomic
-- Can be implemented independently of other plans
+6. **Finally**, call `workflow_transition({ phase: "implementing", force: true })` to transition to the implementing phase.
 
 ## Rules
 - Tasks should be concrete and actionable (one person, one session).

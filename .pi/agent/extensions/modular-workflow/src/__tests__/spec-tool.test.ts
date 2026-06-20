@@ -183,6 +183,62 @@ describe("spec_create tool", () => {
     );
   });
 
+  it("auto-updates ADR remaining count after creating a spec", async () => {
+    const pi = mockPi();
+    const { registerSpecTool } = await import("../spec-tool.ts");
+    registerSpecTool(pi);
+
+    const tool = pi.tools.find((t) => t.name === "spec_create");
+    assert.ok(tool);
+
+    // Isolated dir — no prior ADRs or specs
+    const autoDir = join(tmpdir(), `spec-auto-${randomUUID()}`);
+    await mkdir(join(autoDir, "docs", "ADR"), { recursive: true });
+    await mkdir(join(autoDir, "docs", "specs"), { recursive: true });
+
+    // Create an ADR first
+    const { createAdr } = await import("../adr.ts");
+    const adrPath = await createAdr(
+      { title: "Spec Test ADR", description: "For testing spec auto-update", status: "proposed", context: "C", decision: "D", impact: "I" },
+      autoDir,
+    );
+
+    // ADR should have remaining=0 initially
+    let adrContent = await readFile(adrPath, "utf-8");
+    const initialRemaining = adrContent.match(/^remaining:\s*(\d+)/m)?.[1];
+    assert.ok(
+      initialRemaining === "0" || initialRemaining === undefined,
+      `ADR should have no remaining specs initially, got remaining=${initialRemaining}`,
+    );
+
+    const ctx = mockCtx();
+    ctx.cwd = autoDir;
+    const result = await tool.execute(
+      "call-auto-1",
+      {
+        adrNumber: 1,
+        title: "Auto Update Spec",
+        content:
+          "# Requirements Specification\n\n- Test requirement\n\n# Design Principles\n\n- Test principle\n\n# References\n\n",
+      },
+      new AbortController().signal,
+      () => {},
+      ctx,
+    );
+
+    assert.ok(result, "Should return a result");
+    assert.ok(!result.isError, `Spec creation should succeed, got: ${result.content?.[0]?.text}`);
+
+    // Result should mention the remaining count
+    const text = result.content?.[0]?.text ?? "";
+    assert.ok(
+      text.includes("remaining:") || text.includes("remaining"),
+      `Result should mention remaining count, got: ${text}`,
+    );
+
+    await rm(autoDir, { recursive: true, force: true });
+  });
+
   it("rejects spec referencing multiple ADRs for atomicity", async () => {
     const pi = mockPi();
     const { registerSpecTool } = await import("../spec-tool.ts");

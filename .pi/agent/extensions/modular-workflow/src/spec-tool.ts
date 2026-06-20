@@ -103,12 +103,17 @@ export function registerSpecTool(pi: ExtensionAPI): void {
 
       try {
         const specPath = await createSpec(adrNumber, title, content, ctx.cwd, description);
+
+        // Auto-update ADR remaining count
+        const { computeAndUpdateAdrRemaining } = await import("./adr.ts");
+        const { remaining } = await computeAndUpdateAdrRemaining(adrNumber, ctx.cwd);
+
         const relPath = relative(ctx.cwd, specPath);
         return {
           content: [
             {
               type: "text",
-              text: `Spec created: ${relPath}\nTitle: ${title}\nLinked to ADR ${String(adrNumber).padStart(3, "0")}`,
+              text: `Spec created: ${relPath}\nTitle: ${title}\nLinked to ADR ${String(adrNumber).padStart(3, "0")} (remaining: ${remaining})`,
             },
           ],
         };
