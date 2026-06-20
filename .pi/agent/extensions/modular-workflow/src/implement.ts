@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import { Type } from "typebox";
 import { loadContent, renderTemplate } from "./utils.ts";
 import { readLatestAdr } from "./adr.ts";
+import { detectDiscussionTopic, getLatestAssistantMessage } from "./discuss.ts";
 import {
   type WorkflowState,
   loadState,
@@ -11,6 +12,47 @@ import {
   updateUi,
 } from "./state.ts";
 import { onPlanImplemented, archivePlan } from "./plan.ts";
+
+/**
+ * Resolve the specification source when /implement is called without
+ * any arguments (bare).
+ *
+ * Priority:
+ * 1. Latest assistant (AI) message — the finalized plan from a discussion
+ * 2. Discussion topic (from /discuss state or /discuss message) 
+ * 3. Latest ADR content
+ * 4. null — nothing to implement
+ *
+ * @param ctx - Extension context with session manager access.
+ * @returns The resolved spec content, or null if nothing found.
+ */
+export async function resolveImplementSpec(ctx: ExtensionContext): Promise<string | null> {
+  // Priority 1: latest assistant message (finalized plan from discussion)
+  const assistantMsg = getLatestAssistantMessage(ctx);
+  if (assistantMsg) {
+    return assistantMsg;
+  }
+
+  // Priority 2: discussion topic
+  const discussionTopic = detectDiscussionTopic(ctx);
+  if (discussionTopic) {
+    return discussionTopic;
+  }
+
+  // Priority 3: latest ADR
+  const latestAdr = await readLatestAdr(ctx.cwd);
+  if (latestAdr) {
+    return [
+      `Title: ${latestAdr.title}`,
+      `Description: ${latestAdr.description}`,
+      `Context: ${latestAdr.context}`,
+      `Decision: ${latestAdr.decision}`,
+      `Impact: ${latestAdr.impact}`,
+    ].join("\n");
+  }
+
+  return null;
+}
 
 /**
  * Warning shown when /implement is called with no args and

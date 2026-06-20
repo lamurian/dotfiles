@@ -3,6 +3,16 @@ import type { WorkflowState } from "./state.ts";
 import { transitionTo, updateUi, loadState } from "./state.ts";
 
 /**
+ * Type guard for assistant message content which can be either a plain string
+ * or an array of content parts (e.g., [{ type: "text", text: "..." }]).
+ */
+interface ContentPart {
+  type: string;
+  text?: string;
+  [key: string]: unknown;
+}
+
+/**
  * Start a discussion session about an issue, bug, chore, or small fix.
  *
  * The LLM acts as an engineer who:
@@ -43,6 +53,46 @@ export async function runDiscussion(
   );
 
   pi.sendUserMessage(topic, { deliverAs: "steer" });
+}
+
+/**
+ * Get the content of the latest assistant (AI) message from the session.
+ *
+ * Used by `/implement` (when invoked without arguments) to pick up the
+ * finalized plan that the AI presented at the end of a discussion.
+ * This is more precise than `detectDiscussionTopic()`, which only returns
+ * the initial topic text.
+ *
+ * Handles both plain-string content and array-of-parts content (the pi
+ * SDK may deliver messages in either format). Array content is joined
+ * into a single string by concatenating all text parts.
+ *
+ * @param ctx - Extension context with session manager access.
+ * @returns The latest assistant message content, or empty string if none found.
+ */
+export function getLatestAssistantMessage(ctx: ExtensionContext): string {
+  const entries = ctx.sessionManager.getBranch();
+  for (let i = entries.length - 1; i >= 0; i--) {
+    const entry = entries[i];
+    if (entry.type === "message") {
+      const msg = (entry as { message?: { role?: string; content?: unknown } }).message;
+      if (msg && msg.role === "assistant" && msg.content != null) {
+        // Handle plain string content
+        if (typeof msg.content === "string") {
+          return msg.content;
+        }
+        // Handle array content (e.g., [{ type: "text", text: "..." }])
+        if (Array.isArray(msg.content)) {
+          return (msg.content as ContentPart[])
+            .filter((part) => part.type === "text" && typeof part.text === "string")
+            .map((part) => part.text!)
+            .join("\n");
+        }
+        return "";
+      }
+    }
+  }
+  return "";
 }
 
 /**

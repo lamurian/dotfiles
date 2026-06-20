@@ -2,9 +2,8 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { isToolCallEventType } from "@earendil-works/pi-coding-agent";
 import { loadState, updateUi, type WorkflowState } from "./state.ts";
 import { runBrainstorming, buildPhasePrompt, isDocumentDir, checkLineLimit } from "./brainstorm.ts";
-import { runDiscussion, detectDiscussionTopic } from "./discuss.ts";
-import { startTdd, NO_INPUT_WARNING, registerCompleteImplementationTool } from "./implement.ts";
-import { readLatestAdr } from "./adr.ts";
+import { runDiscussion } from "./discuss.ts";
+import { startTdd, NO_INPUT_WARNING, registerCompleteImplementationTool, resolveImplementSpec } from "./implement.ts";
 import { getAdrContext } from "./adr-detect.ts";
 import { readArchitecture } from "./architecture.ts";
 import { registerAdrCommand, registerSpecCommand, registerPlanCommand } from "./commands.ts";
@@ -315,32 +314,15 @@ export default function (pi: ExtensionAPI): void {
         }
       }
 
-      // Strategy C: discussion topic or latest ADR (no args)
+      // Strategy C: bare /implement — resolve spec from session
       if (!planAbs && !spec) {
         const topic = stripFileRefs(trimmed);
 
         if (!topic) {
-          const discussionTopic = detectDiscussionTopic(ctx);
-          if (discussionTopic) {
-            await startTdd(
-              `Discussion topic: ${discussionTopic}\n\n` +
-                "The user and you agreed on an implementation strategy during " +
-                "the discussion. Refer to the conversation history for the full plan.",
-              pi,
-              ctx,
-            );
-            return;
-          }
-
-          const latestAdr = await readLatestAdr(ctx.cwd);
-          if (latestAdr) {
-            spec = [
-              `Title: ${latestAdr.title}`,
-              `Description: ${latestAdr.description}`,
-              `Context: ${latestAdr.context}`,
-              `Decision: ${latestAdr.decision}`,
-              `Impact: ${latestAdr.impact}`,
-            ].join("\n");
+          // Use the new priority chain: assistant msg > discussion > ADR
+          const resolvedSpec = await resolveImplementSpec(ctx);
+          if (resolvedSpec) {
+            spec = resolvedSpec;
           } else {
             ctx.ui.notify(NO_INPUT_WARNING, "warning");
             return;
