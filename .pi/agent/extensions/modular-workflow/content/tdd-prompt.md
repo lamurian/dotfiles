@@ -6,6 +6,7 @@ You are in TDD implementation mode. Follow these rules strictly:
 4. If tests fail, fix the implementation and re-run.
 5. **Repeat** until all tests pass, then move to the next behavior.
 6. Do not implement behavior without a corresponding test.
+7. **When all tasks are complete and all tests pass**, call `complete_implementation` to finalize.
 
 Reference specification:
 

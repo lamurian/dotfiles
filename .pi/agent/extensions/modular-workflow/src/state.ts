@@ -23,6 +23,11 @@ export interface WorkflowState {
   specFiles: string[];
   /** Paths to plan files for the current spec. */
   planFiles: string[];
+  /**
+   * Path to a plan file being implemented but not yet archived.
+   * Set by /implement @docs/plans/<file>, consumed by complete_implementation.
+   */
+  pendingPlanPath?: string;
   /** Results from the latest test run, if any. */
   lastTestResults?: TestResults;
 }
