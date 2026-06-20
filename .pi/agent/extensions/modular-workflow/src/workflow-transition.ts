@@ -137,15 +137,33 @@ async function checkPhasePreconditions(
   }
 
   if (phase === "planning") {
-    // Every non-implemented ADR must have remaining === 0
+    // Recompute remaining counts from actual files — this auto-heals stale counters.
+    await autoUpdateRemaining(cwd);
+    // Check every non-implemented ADR has at least one spec (specifying is complete).
+    const specsDir = join(cwd, config.specs.path);
     for (const f of adrFiles) {
       const content = await readFile(join(adrDir, f), "utf-8");
       const status = content.match(/^status:\s*(\S+)/m)?.[1] ?? "";
       if (status === "implemented") continue;
-      const remaining = parseInt(content.match(/^remaining:\s*(\d+)/m)?.[1] ?? "0", 10);
-      if (remaining > 0) {
-        return `Pre-condition failed: ADR ${f.replace(/\.md$/, "")} has remaining=${remaining}. ` +
-          "Create specs for all non-implemented ADRs before transitioning to the planning phase.";
+      if (!existsSync(specsDir)) {
+        return `Pre-condition failed: ADR ${f.replace(/\.md$/, "")} has no specs. ` +
+          "Create at least one spec for this ADR before transitioning to the planning phase.";
+      }
+      const adrNum = f.slice(0, 3);
+      const specFiles = (await readdir(specsDir)).filter(
+        (sf) => sf.endsWith(".md") && !sf.startsWith("."),
+      );
+      let found = false;
+      for (const sf of specFiles) {
+        const sc = await readFile(join(specsDir, sf), "utf-8");
+        if (sc.includes(`@docs/ADR/${adrNum}`)) {
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        return `Pre-condition failed: ADR ${f.replace(/\.md$/, "")} has no specs. ` +
+          "Create at least one spec for this ADR before transitioning to the planning phase.";
       }
     }
     return null;
