@@ -121,6 +121,76 @@ function deepMerge(base: SandboxConfig, overrides: Partial<SandboxConfig>): Sand
 	return result;
 }
 
+// ─── Lazy file discovery cache ───────────────────────────────────────────────
+
+interface DiscoveredCache {
+	timestamp: number;
+	files: string[];
+}
+
+let discoveredCache: DiscoveredCache | null = null;
+const CACHE_TTL = 30_000; // 30 seconds
+
+/**
+ * Clear the lazy discovery cache. Used in tests and when a config change
+ * or write operation makes the cache stale.
+ */
+export function clearDiscoveredCache(): void {
+	discoveredCache = null;
+}
+
+/**
+ * Discover files matching patterns like `**\/.env` by scanning
+ * `$HOME` + allowed write paths. Uses `find` for speed.
+ *
+ * Results are cached for CACHE_TTL ms to avoid re-scanning on every bash call.
+ * Call `clearDiscoveredCache()` to force a fresh scan.
+ */
+export function getDiscoveredFiles(cwd: string, config: SandboxConfig): string[] {
+	if (discoveredCache && Date.now() - discoveredCache.timestamp < CACHE_TTL) {
+		return [...discoveredCache.files];
+	}
+
+	const searchDirs = new Set<string>();
+
+	// $HOME
+	searchDirs.add(homedir());
+
+	// Allowed write paths (config allows relative, absolute, or ~/ paths)
+	const allowWrite = config.filesystem?.allowWrite ?? [];
+	for (const raw of allowWrite) {
+		const absPath = resolvePath(cwd, raw);
+		if (existsSync(absPath)) searchDirs.add(absPath);
+	}
+
+	// cwd and its ancestors up to $HOME
+	let dir = resolve(cwd);
+	while (dir.startsWith(homedir()) || dir.startsWith("/")) {
+		searchDirs.add(dir);
+		const parent = resolve(dir, "..");
+		if (parent === dir) break;
+		dir = parent;
+	}
+
+	const files = new Set<string>();
+	for (const searchDir of searchDirs) {
+		try {
+			const result = execSync(
+				`find "${searchDir}" -maxdepth 8 -name '.env' -type f 2>/dev/null`,
+				{ timeout: 5000, encoding: "utf-8" },
+			);
+			for (const line of result.trim().split("\n").filter(Boolean)) {
+				files.add(line);
+			}
+		} catch {
+			// Ignore inaccessible or non-existent directories
+		}
+	}
+
+	discoveredCache = { timestamp: Date.now(), files: [...files] };
+	return [...files];
+}
+
 // ─── Path helpers ────────────────────────────────────────────────────────────
 
 function expandTilde(path: string): string {
@@ -195,6 +265,21 @@ export function buildBwrapArgs(
 	// Deny-read: mount /dev/null over sensitive paths
 	const denyRead = config.filesystem?.denyRead ?? [];
 	for (const raw of denyRead) {
+		// Handle **/<filename> patterns via lazy discovery
+		if (raw.startsWith("**/")) {
+			const suffix = raw.slice(3); // e.g., ".env"
+			// Only handle patterns with a concrete filename (no glob chars in suffix)
+			if (!suffix.includes("*") && !suffix.includes("?") && !suffix.includes("/")) {
+				const discovered = getDiscoveredFiles(cwd, config);
+				for (const filePath of discovered) {
+					if (filePath.endsWith("/" + suffix) || filePath === suffix) {
+						args.push("--ro-bind", "/dev/null", filePath);
+					}
+				}
+				continue;
+			}
+		}
+
 		const absPath = resolveDenyPath(cwd, raw);
 		if (!absPath) continue;
 		const st = statSync(absPath);

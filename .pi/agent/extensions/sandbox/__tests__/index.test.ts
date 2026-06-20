@@ -1,12 +1,163 @@
-import { describe, it } from "node:test";
+import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { buildBwrapArgs, createSandboxedBashOps, type SandboxConfig } from "../index.ts";
+import { existsSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { join } from "node:path";
+import {
+	buildBwrapArgs,
+	createSandboxedBashOps,
+	getDiscoveredFiles,
+	clearDiscoveredCache,
+	type SandboxConfig,
+} from "../index.ts";
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// buildBwrapArgs — network isolation logic
+// Helpers
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const CWD = "/home/user/project";
+const TMP = join("/tmp", "sandbox-test-" + Date.now());
+const CWD = join(TMP, "project");
+
+function createTestEnv(): void {
+	rmSync(TMP, { recursive: true, force: true });
+	// project root
+	mkdirSync(join(TMP, "project"), { recursive: true });
+	writeFileSync(join(TMP, "project", ".env"), "SECRET=exposed");
+	// hidden dir
+	mkdirSync(join(TMP, "project", ".config"), { recursive: true });
+	writeFileSync(join(TMP, "project", ".config", ".env"), "KEY=value");
+	// nested visible dir
+	mkdirSync(join(TMP, "project", "src"), { recursive: true });
+	writeFileSync(join(TMP, "project", "src", ".env"), "DB=prod");
+	// non-.env file (should NOT be discovered)
+	writeFileSync(join(TMP, "project", "note.txt"), "hello");
+	// .env outside HOME hunt (should still be found via writable paths)
+	mkdirSync(join(TMP, "external"), { recursive: true });
+	writeFileSync(join(TMP, "external", ".env"), "EXT=secret");
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// getDiscoveredFiles — lazy .env discovery
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("getDiscoveredFiles", () => {
+	before(() => createTestEnv());
+	after(() => rmSync(TMP, { recursive: true, force: true }));
+
+	it("should find .env files in cwd and subdirectories", () => {
+		clearDiscoveredCache();
+		const config: SandboxConfig = {
+			filesystem: {
+				allowWrite: [TMP],
+			},
+		};
+		const files = getDiscoveredFiles(CWD, config);
+		assert.ok(files.length >= 3, `expected ≥3 .env files, got ${files.length}: ${files.join(", ")}`);
+		assert.ok(files.some((f) => f.includes("project/.env")), "should find project/.env");
+		assert.ok(
+			files.some((f) => f.includes(".config/.env")),
+			"should find .env in hidden dir",
+		);
+		assert.ok(
+			files.some((f) => f.includes("external/.env")),
+			"should find .env in writable paths",
+		);
+	});
+
+	it("should NOT include non-.env files", () => {
+		clearDiscoveredCache();
+		const config: SandboxConfig = {
+			filesystem: {
+				allowWrite: [TMP],
+			},
+		};
+		const files = getDiscoveredFiles(CWD, config);
+		assert.ok(!files.some((f) => f.includes("note.txt")), "should not include non-.env files");
+	});
+
+	it("should cache results and return same set on second call", () => {
+		clearDiscoveredCache();
+		const config: SandboxConfig = {
+			filesystem: {
+				allowWrite: [TMP],
+			},
+		};
+		const first = getDiscoveredFiles(CWD, config);
+		const second = getDiscoveredFiles(CWD, config);
+		assert.deepEqual(first, second);
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// buildBwrapArgs — network isolation + filesystem deny
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("buildBwrapArgs — deny .env files", () => {
+	before(() => createTestEnv());
+	after(() => rmSync(TMP, { recursive: true, force: true }));
+
+	it("should add --ro-bind /dev/null for each discovered .env file when **/.env is in denyRead", () => {
+		clearDiscoveredCache();
+		const config: SandboxConfig = {
+			filesystem: {
+				denyRead: ["**/.env"],
+				allowWrite: [TMP],
+			},
+		};
+		const result = buildBwrapArgs(CWD, config);
+
+		// Count --ro-bind /dev/null entries
+		const nullBinds = result.args.filter(
+			(_, i) => result.args[i] === "--ro-bind" && result.args[i + 1] === "/dev/null",
+		);
+		assert.ok(nullBinds.length >= 3, `expected ≥3 /dev/null binds, got ${nullBinds.length}`);
+
+		// Each .env file should have a /dev/null mount
+		const envPaths = result.args.filter((_, i) => {
+			const next = result.args[i + 1];
+			return next && next.endsWith(".env");
+		});
+		assert.ok(envPaths.length >= 3, `expected ≥3 .env paths in args, got ${envPaths.length}`);
+	});
+
+	it("should add --ro-bind /dev/null for .env in hidden directories", () => {
+		clearDiscoveredCache();
+		const config: SandboxConfig = {
+			filesystem: {
+				denyRead: ["**/.env"],
+				allowWrite: [TMP],
+			},
+		};
+		const result = buildBwrapArgs(CWD, config);
+
+		// Find args referencing .config/.env
+		const hasHiddenEnv = result.args.some((a) => a.includes(".config") && a.includes(".env"));
+		assert.ok(hasHiddenEnv, "should hide .env inside .config hidden directory");
+	});
+
+	it("should NOT add /dev/null binds when **/.env is NOT in denyRead", () => {
+		clearDiscoveredCache();
+		const config: SandboxConfig = {
+			filesystem: {
+				denyRead: ["~/.ssh"],
+				allowWrite: [TMP],
+			},
+		};
+		const result = buildBwrapArgs(CWD, config);
+		const nullBinds = result.args.filter(
+			(_, i) => result.args[i] === "--ro-bind" && result.args[i + 1] === "/dev/null",
+		);
+		// The deny-write loop may add some for .ssh, but they should NOT be .env files
+		const envBinds = result.args.filter((_, i) => {
+			return result.args[i] === "/dev/null" && i > 0 && result.args[i - 1] === "--ro-bind"
+				&& result.args[i + 1]?.endsWith(".env");
+		});
+		assert.equal(envBinds.length, 0, "should not hide .env when pattern is not **/.env");
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// buildBwrapArgs — network isolation logic (existing tests preserved)
+// ═══════════════════════════════════════════════════════════════════════════════
 
 describe("buildBwrapArgs — network", () => {
 	it("should NOT add --unshare-net and return needsSocat=false when allowedDomains is non-empty", () => {
@@ -52,7 +203,7 @@ describe("buildBwrapArgs — network", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// createSandboxedBashOps — should not throw on config reference
+// createSandboxedBashOps
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe("createSandboxedBashOps", () => {
@@ -65,16 +216,13 @@ describe("createSandboxedBashOps", () => {
 	it("should not throw ReferenceError when exec is called", async () => {
 		const ops = createSandboxedBashOps({});
 		try {
-			// This will try to build a bwrap command using config.
-			// Before the fix, this throws: "config is not defined"
 			await ops.exec("echo hello", CWD, {});
 		} catch (err) {
 			// We expect a non-ReferenceError (e.g., bwrap not found in test env, or IO error).
-			// A ReferenceError means the config variable is not in scope.
 			if (err instanceof ReferenceError) {
 				assert.fail(`Got ReferenceError: ${err.message} — config variable is not in scope`);
 			}
-			// Any other error (ENOENT for bwrap, missing directory, etc.) is fine for this test
 		}
 	});
 });
+
