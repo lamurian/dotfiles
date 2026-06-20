@@ -238,6 +238,22 @@ export async function runBrainstorming(
     }
   }
 
+  // If skipCeremony is enabled (lightweight mode), go straight to implementing
+  if (phase === "requirements" && workflowConfig.brainstorm?.skipCeremony) {
+    const state: WorkflowState = {
+      phase: "implementing",
+      specText: contextText,
+      adrFiles: [],
+      specFiles: [],
+      planFiles: [],
+    };
+    transitionTo(pi, state, "implementing");
+    updateUi(state, ctx);
+    ctx.ui.notify("Ceremony skipped. Entering implementation phase directly.", "info");
+    pi.sendUserMessage(contextText, { deliverAs: "steer" });
+    return;
+  }
+
   // Check project initiation in requirements phase
   if (phase === "requirements") {
     const initiationContext = await checkProjectInitiation(ctx.cwd);

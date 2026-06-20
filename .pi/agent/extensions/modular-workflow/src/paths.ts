@@ -72,6 +72,12 @@ export interface BrainstormConfig {
    * @default []
    */
   skipTopics?: string[];
+  /**
+   * Skip the full ADR → Spec → Plan ceremony for small changes.
+   * When true, brainstorming goes straight to implementation.
+   * @default false
+   */
+  skipCeremony?: boolean;
 }
 
 /** Implementation (TDD) behavior configuration. */
@@ -98,6 +104,7 @@ const DEFAULT_WORKFLOW: WorkflowConfig = {
   brainstorm: {
     skipQuestionnaire: false,
     skipTopics: [],
+    skipCeremony: false,
   },
   implement: {
     enforceTdd: true,

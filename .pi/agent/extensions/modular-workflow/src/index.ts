@@ -122,6 +122,14 @@ export default function (pi: ExtensionAPI): void {
 
     if (!isBrainstormPhase) return;
 
+    // Skip all gating when skipCeremony is enabled (lightweight change mode)
+    try {
+      const wfConfig = await loadWorkflowConfig(ctx.cwd);
+      if (wfConfig.brainstorm?.skipCeremony) return;
+    } catch {
+      // Ignore config errors — fall through to normal gating
+    }
+
     // ── Phase-based gating for document creation tools ──────
     const gateResult = checkToolPhaseGate(
       event.toolName,
