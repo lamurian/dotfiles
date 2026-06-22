@@ -2,7 +2,12 @@
 
 These rules apply to all code written in this environment.
 
-## Language & Style
+## Language Use
+- Casual business English
+- No emojis
+- Concise, precise, straightforward
+
+## Coding Style
 - Use **TypeScript** for all pi extensions and tools; otherwise, use the language as the project dictate.
 - Each file must be **≤ 300 lines**. Split into modules when exceeding.
 - Every exported function must have a **JSDoc comment** describing purpose, parameters, and return value.
@@ -10,7 +15,7 @@ These rules apply to all code written in this environment.
 - Use `const` over `let` where possible. Avoid `any` — use `unknown` and narrow.
 
 ## Extension Structure
-- Extensions go in `~/.pi/agent/extensions/<name>/src/index.ts`.
+- Extensions go in `~/.pi/agent/extensions/<name>/index.ts` for global extensions and `<local-dir>/.pi/extensions/<name>/index.ts` for local extensions.
 - Use the directory-with-index.ts pattern for multi-file extensions.
 - Content files (templates, prompts) go in `content/` as `.md` or `.txt`, loaded at runtime via `readFile`.
 - Skills go in `skills/<name>/SKILL.md` with frontmatter.
