@@ -44,8 +44,8 @@ export function parseCommands(command: string): string[] {
 	const seen = new Set<string>();
 	const result: string[] = [];
 
-	// Split on shell separators: |, ;, &&, ||
-	const segments = command.split(/\s*[|;&]{1,2}\s*/);
+	// Split on shell separators: |, ;, &&, || (respecting quotes)
+	const segments = splitSegmentsRespectingQuotes(command);
 
 	for (const segment of segments) {
 		if (!segment.trim()) continue;
@@ -95,6 +95,75 @@ export function parseCommands(command: string): string[] {
 	}
 
 	return result;
+}
+
+/**
+ * Split a shell command string into pipeline segments, respecting quotes.
+ * Only splits on |, ;, &&, || when outside single or double quotes.
+ */
+function splitSegmentsRespectingQuotes(command: string): string[] {
+	const segments: string[] = [];
+	let current = "";
+	let inSingle = false;
+	let inDouble = false;
+
+	for (let i = 0; i < command.length; i++) {
+		const ch = command[i];
+		const next = command[i + 1];
+
+		// Track quote state
+		if (ch === "'" && !inDouble) {
+			inSingle = !inSingle;
+			current += ch;
+			continue;
+		}
+		if (ch === '"' && !inSingle) {
+			inDouble = !inDouble;
+			current += ch;
+			continue;
+		}
+
+		// If we're inside quotes, accumulate everything
+		if (inSingle || inDouble) {
+			current += ch;
+			continue;
+		}
+
+		// Outside quotes — check for separators
+		if (ch === "|" && next === "|") {
+			// || operator
+			if (current.trim()) segments.push(current.trim());
+			current = "";
+			i++; // skip next char
+			continue;
+		}
+		if (ch === "|") {
+			// | operator
+			if (current.trim()) segments.push(current.trim());
+			current = "";
+			continue;
+		}
+		if (ch === "&" && next === "&") {
+			// && operator
+			if (current.trim()) segments.push(current.trim());
+			current = "";
+			i++; // skip next char
+			continue;
+		}
+		if (ch === ";") {
+			// ; operator
+			if (current.trim()) segments.push(current.trim());
+			current = "";
+			continue;
+		}
+
+		current += ch;
+	}
+
+	// Push the last segment
+	if (current.trim()) segments.push(current.trim());
+
+	return segments;
 }
 
 /**
