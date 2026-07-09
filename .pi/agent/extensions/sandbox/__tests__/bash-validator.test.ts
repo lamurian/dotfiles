@@ -80,6 +80,55 @@ describe("parseCommands", () => {
 			["find"],
 		);
 	});
+
+	// ── quoting-aware pipeline splitting ─────────────────────────────────
+
+	it("should NOT split on pipe inside double-quoted string", () => {
+		const result = parseCommands('rg -n "foo|bar|baz" /path | head -5');
+		assert.deepEqual(result, ["rg", "head"]);
+	});
+
+	it("should NOT split on pipe inside single-quoted string", () => {
+		const result = parseCommands("rg 'foo|bar|baz' /path | wc -l");
+		assert.deepEqual(result, ["rg", "wc"]);
+	});
+
+	it("should NOT split on pipe inside double-quoted string with no real pipe", () => {
+		// This is the exact bug: the | inside quotes is treated as a command separator
+		const result = parseCommands('rg -n "callWebhookSvcKonsulinOmnichannel|callChatwootWithFallback|Omnichannel" /some/path');
+		assert.deepEqual(result, ["rg"]);
+	});
+
+	it("should handle 2>/dev/null redirect with pipe in quoted string", () => {
+		// The /.env 2>/dev/null case — stripPath on /dev/null returns "null"
+		const result = parseCommands('rg -n "WEBHOOK|webhook" /path/.env 2>/dev/null');
+		assert.deepEqual(result, ["rg"]);
+	});
+
+	it("should NOT split on semicolon inside double-quoted string", () => {
+		const result = parseCommands('echo "foo;bar;baz"');
+		assert.deepEqual(result, ["echo"]);
+	});
+
+	it("should NOT split on && inside double-quoted string", () => {
+		const result = parseCommands('echo "foo&&bar"');
+		assert.deepEqual(result, ["echo"]);
+	});
+
+	it("should handle real pipes mixed with quoted pipes", () => {
+		const result = parseCommands('rg "foo|bar" /path | grep "a|b" | head -5');
+		assert.deepEqual(result, ["rg", "grep", "head"]);
+	});
+
+	it("should NOT split on || inside double-quoted string", () => {
+		const result = parseCommands('echo "foo||bar"');
+		assert.deepEqual(result, ["echo"]);
+	});
+
+	it("should handle pipe inside quotes with single quotes inside double", () => {
+		const result = parseCommands('rg --include="*.go" -n "WEBHOOK|Webhook\\.|webhook_url" /path');
+		assert.deepEqual(result, ["rg"]);
+	});
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
