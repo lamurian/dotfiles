@@ -92,16 +92,41 @@ export function deepMerge(base: SandboxConfig, overrides: Partial<SandboxConfig>
 	const result: SandboxConfig = { ...base };
 	if (overrides.enabled !== undefined) result.enabled = overrides.enabled;
 	if (overrides.bash) {
-		result.bash = { ...base.bash, ...overrides.bash };
+		result.bash = mergeSection(base.bash ?? {}, overrides.bash);
 	}
 	if (overrides.network) {
-		result.network = { ...base.network, ...overrides.network };
+		result.network = mergeSection(base.network ?? {}, overrides.network);
 	}
 	if (overrides.filesystem) {
-		result.filesystem = { ...base.filesystem, ...overrides.filesystem };
+		result.filesystem = mergeSection(base.filesystem ?? {}, overrides.filesystem);
 	}
 	if (overrides.tools) {
-		result.tools = { ...base.tools, ...overrides.tools };
+		result.tools = mergeSection(base.tools ?? {}, overrides.tools);
+	}
+	return result;
+}
+
+/**
+ * Merge two section objects, concatenating arrays instead of replacing them.
+ * Scalars and nested objects are replaced (existing behavior).
+ * Arrays are concatenated with dedup.
+ */
+function mergeSection<T extends Record<string, unknown>>(
+	base: T,
+	overrides: Partial<T>,
+): T {
+	const result = { ...base };
+	for (const key of Object.keys(overrides) as Array<keyof T>) {
+		const overrideVal = overrides[key];
+		if (overrideVal === undefined) continue;
+		const baseVal = base[key];
+		if (Array.isArray(baseVal) && Array.isArray(overrideVal)) {
+			// Concatenate + deduplicate
+			result[key] = [...new Set([...baseVal, ...overrideVal])] as T[keyof T];
+		} else {
+			// Scalar or object replacement (existing behavior)
+			result[key] = overrideVal;
+		}
 	}
 	return result;
 }
