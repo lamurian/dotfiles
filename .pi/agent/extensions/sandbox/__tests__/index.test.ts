@@ -7,6 +7,7 @@ import {
 	createSandboxedBashOps,
 	getDiscoveredFiles,
 	clearDiscoveredCache,
+	resolveBinaries,
 	type SandboxConfig,
 } from "../index.ts";
 
@@ -205,6 +206,112 @@ describe("buildBwrapArgs — network", () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 // createSandboxedBashOps
 // ═══════════════════════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// resolveBinaries — resolve whitelisted binary paths
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("resolveBinaries", () => {
+	it("should resolve external binaries to absolute paths", async () => {
+		const result = await resolveBinaries(["ls", "find"]);
+		assert.ok(result.has("ls"), "should have ls");
+		assert.ok(result.has("find"), "should have find");
+		assert.ok(result.get("ls")?.startsWith("/"), "ls path should be absolute");
+		assert.ok(result.get("find")?.includes("find"), "find path should contain 'find'");
+	});
+
+	it("should return empty map for empty input", async () => {
+		const result = await resolveBinaries([]);
+		assert.equal(result.size, 0);
+	});
+
+	it("should skip shell builtins (no binary to mount)", async () => {
+		const result = await resolveBinaries(["echo", "printf", "ls"]);
+		// echo and printf are shell builtins — no binary mount needed
+		assert.ok(!result.has("echo"), "should skip shell builtins like echo");
+		assert.ok(!result.has("printf"), "should skip shell builtins like printf");
+		assert.ok(result.has("ls"), "should still resolve external binaries");
+	});
+
+	it("should not include unresolvable binary names", async () => {
+		const result = await resolveBinaries(["ls", "nonexistent_binary_xyz_123"]);
+		assert.ok(result.has("ls"), "should have ls");
+		assert.ok(!result.has("nonexistent_binary_xyz_123"), "should not have unresolvable binary");
+	});
+
+	it("should resolve 'git' to a path", async () => {
+		const result = await resolveBinaries(["git"]);
+		assert.ok(result.has("git"), "should have git");
+		assert.ok(result.get("git")?.includes("git"), "git path should contain 'git'");
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// buildBwrapArgs — per-binary mounting mode
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("buildBwrapArgs — per-binary mount mode", () => {
+	before(() => {
+		// Ensure writable paths exist
+		mkdirSync(TMP, { recursive: true });
+		mkdirSync(CWD, { recursive: true });
+	});
+	after(() => rmSync(TMP, { recursive: true, force: true }));
+
+	it("should mount specific binaries instead of full / when resolvedBinaries provided", () => {
+		const config: SandboxConfig = {
+			bash: {
+				commandWhitelist: ["find", "ls"],
+			},
+			filesystem: {
+				allowWrite: [TMP],
+			},
+		};
+		const resolved = new Map<string, string>([
+			["find", "/usr/bin/find"],
+			["ls", "/usr/bin/ls"],
+			["bash", "/bin/bash"],
+		]);
+		const result = buildBwrapArgs(CWD, config, resolved);
+
+		// Should NOT mount full root
+		assert.ok(!result.args.includes("--ro-bind") || !result.args.some((a, i) => a === "/" && result.args[i - 1] === "--ro-bind"),
+			"should not mount full root filesystem");
+
+		// Should mount individual binaries
+		const binds = result.args.filter((a) => a.startsWith("/"));
+		assert.ok(binds.some((b) => b.includes("/usr/bin/find")), "should mount find");
+		assert.ok(binds.some((b) => b.includes("/usr/bin/ls")), "should mount ls");
+		assert.ok(binds.some((b) => b.includes("/bin/bash")), "should mount bash");
+
+		// Should mount lib dirs
+		assert.ok(binds.some((b) => b === "/usr/lib"), "should mount /usr/lib");
+		assert.ok(binds.some((b) => b === "/lib" || b === "/lib64"), "should mount /lib or /lib64");
+
+		// Should include writable paths
+		assert.ok(binds.some((b) => b.includes(TMP)), "should mount writable path");
+	});
+
+	it("should still include standard bwrap boilerplate", () => {
+		const config: SandboxConfig = {};
+		const resolved = new Map([["bash", "/bin/bash"]]);
+		const result = buildBwrapArgs(CWD, config, resolved);
+
+		assert.ok(result.args.includes("--new-session"));
+		assert.ok(result.args.includes("--die-with-parent"));
+		assert.ok(result.args.includes("--unshare-pid"));
+		assert.ok(result.args.includes("--proc"));
+		assert.ok(result.args.includes("--dev"));
+	});
+
+	it("should fall back to full root mount when no resolved binaries provided", () => {
+		const config: SandboxConfig = {};
+		const result = buildBwrapArgs(CWD, config);
+
+		// Should still mount full root
+		assert.ok(result.args.includes("--ro-bind"));
+	});
+});
 
 describe("createSandboxedBashOps", () => {
 	it("should return BashOperations without throwing", () => {

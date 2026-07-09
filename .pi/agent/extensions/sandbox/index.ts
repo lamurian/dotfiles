@@ -1,24 +1,12 @@
 /**
- * Sandbox Extension - OS-level sandboxing for bash commands
+ * Sandbox Extension — OS-level sandboxing for bash commands
  *
  * Replaces the built-in bash tool with a bwrap-sandboxed version.
- * Uses direct bwrap invocation — no @anthropic-ai/sandbox-runtime dependency.
+ * Supports per-binary mounting for command whitelisting.
  *
  * Config files (merged, project takes precedence):
  * - ~/.pi/agent/extensions/sandbox.json (global)
  * - <cwd>/.pi/sandbox.json (project-local)
- *
- * Tool guardrail (glob patterns, applied before tool execution):
- *   denyRead → blocks ALL access (no read, no write)
- *   denyWrite → blocks write access only (read still allowed)
- *   Tools not configured have no restriction. Built-in defaults for
- *   standard tools (read, write, edit, grep, find, ls).
- *   Custom tools with non-standard path params:
- *     "my-tool": { "access": ["read"], "pathParams": ["targetFile"] }
- *
- * Network: `--unshare-net` isolates the sandbox completely.
- *   If allowedDomains is non-empty, host network is used directly (no --unshare-net).
- *   If empty or no network config, all network is blocked.
  *
  * Usage:
  *   pi --no-sandbox         disable sandboxing
@@ -27,457 +15,15 @@
  * Linux requires: bubblewrap (bwrap)
  */
 
-import { spawn, execSync } from "node:child_process";
-import { existsSync, readFileSync, statSync } from "node:fs";
-import { homedir } from "node:os";
-import { join, resolve } from "node:path";
-import { randomBytes } from "node:crypto";
+import { execSync } from "node:child_process";
 import type { ExtensionAPI, ToolCallEvent } from "@earendil-works/pi-coding-agent";
-import { type BashOperations, createBashTool, getAgentDir } from "@earendil-works/pi-coding-agent";
-import {
-	mergeToolConfigs,
-	evaluateToolCall,
-	normalizeDenyPattern,
-	type ToolsConfig,
-} from "./guardrail.ts";
-
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-export interface SandboxConfig {
-	enabled?: boolean;
-	network?: {
-		allowedDomains?: string[];
-		deniedDomains?: string[];
-	};
-	filesystem?: {
-		denyRead?: string[];
-		allowWrite?: string[];
-		denyWrite?: string[];
-	};
-	tools?: ToolsConfig;
-}
-
-// ─── Defaults & Constants ────────────────────────────────────────────────────
-
-const DEFAULT_CONFIG: SandboxConfig = {
-	enabled: true,
-	network: {
-		allowedDomains: [
-			"github.com",
-			"*.github.com",
-			"npmjs.org",
-			"*.npmjs.org",
-			"pypi.org",
-			"*.pypi.org",
-		],
-		deniedDomains: [],
-	},
-	filesystem: {
-		denyRead: ["~/.ssh", "~/.aws", "~/.gnupg"],
-		allowWrite: ["."],
-	},
-};
-
-// ─── Config loading ──────────────────────────────────────────────────────────
-
-function loadConfig(cwd: string): SandboxConfig {
-	const projectConfigPath = join(cwd, ".pi", "sandbox.json");
-	const globalConfigPath = join(getAgentDir(), "extensions", "sandbox.json");
-
-	let globalConfig: Partial<SandboxConfig> = {};
-	let projectConfig: Partial<SandboxConfig> = {};
-
-	if (existsSync(globalConfigPath)) {
-		try {
-			globalConfig = JSON.parse(readFileSync(globalConfigPath, "utf-8"));
-		} catch (e) {
-			console.error(`Warning: Could not parse ${globalConfigPath}: ${e}`);
-		}
-	}
-
-	if (existsSync(projectConfigPath)) {
-		try {
-			projectConfig = JSON.parse(readFileSync(projectConfigPath, "utf-8"));
-		} catch (e) {
-			console.error(`Warning: Could not parse ${projectConfigPath}: ${e}`);
-		}
-	}
-
-	return deepMerge(deepMerge(DEFAULT_CONFIG, globalConfig), projectConfig);
-}
-
-function deepMerge(base: SandboxConfig, overrides: Partial<SandboxConfig>): SandboxConfig {
-	const result: SandboxConfig = { ...base };
-	if (overrides.enabled !== undefined) result.enabled = overrides.enabled;
-	if (overrides.network) {
-		result.network = { ...base.network, ...overrides.network };
-	}
-	if (overrides.filesystem) {
-		result.filesystem = { ...base.filesystem, ...overrides.filesystem };
-	}
-	if (overrides.tools) {
-		result.tools = { ...base.tools, ...overrides.tools };
-	}
-	return result;
-}
-
-// ─── Lazy file discovery cache ───────────────────────────────────────────────
-
-interface DiscoveredCache {
-	timestamp: number;
-	files: string[];
-}
-
-let discoveredCache: DiscoveredCache | null = null;
-const CACHE_TTL = 30_000; // 30 seconds
-
-/**
- * Clear the lazy discovery cache. Used in tests and when a config change
- * or write operation makes the cache stale.
- */
-export function clearDiscoveredCache(): void {
-	discoveredCache = null;
-}
-
-/**
- * Discover files matching patterns like `**\/.env` by scanning
- * `$HOME` + allowed write paths. Uses `find` for speed.
- *
- * Results are cached for CACHE_TTL ms to avoid re-scanning on every bash call.
- * Call `clearDiscoveredCache()` to force a fresh scan.
- */
-export function getDiscoveredFiles(cwd: string, config: SandboxConfig): string[] {
-	if (discoveredCache && Date.now() - discoveredCache.timestamp < CACHE_TTL) {
-		return [...discoveredCache.files];
-	}
-
-	const searchDirs = new Set<string>();
-
-	// $HOME
-	searchDirs.add(homedir());
-
-	// Allowed write paths (config allows relative, absolute, or ~/ paths)
-	const allowWrite = config.filesystem?.allowWrite ?? [];
-	for (const raw of allowWrite) {
-		const absPath = resolvePath(cwd, raw);
-		if (existsSync(absPath)) searchDirs.add(absPath);
-	}
-
-	// cwd and its ancestors up to $HOME
-	let dir = resolve(cwd);
-	while (dir.startsWith(homedir()) || dir.startsWith("/")) {
-		searchDirs.add(dir);
-		const parent = resolve(dir, "..");
-		if (parent === dir) break;
-		dir = parent;
-	}
-
-	const files = new Set<string>();
-	for (const searchDir of searchDirs) {
-		try {
-			const result = execSync(
-				`find "${searchDir}" -maxdepth 8 -name '.env' -type f 2>/dev/null`,
-				{ timeout: 5000, encoding: "utf-8" },
-			);
-			for (const line of result.trim().split("\n").filter(Boolean)) {
-				files.add(line);
-			}
-		} catch {
-			// Ignore inaccessible or non-existent directories
-		}
-	}
-
-	discoveredCache = { timestamp: Date.now(), files: [...files] };
-	return [...files];
-}
-
-// ─── Path helpers ────────────────────────────────────────────────────────────
-
-function expandTilde(path: string): string {
-	if (path === "~") return homedir();
-	if (path.startsWith("~/")) return resolve(homedir(), path.slice(2));
-	return path;
-}
-
-/** Resolve a path from the config relative to cwd, expanding ~ first. */
-function resolvePath(cwd: string, raw: string): string {
-	if (raw.startsWith("~")) {
-		return expandTilde(raw);
-	}
-	return resolve(cwd, raw);
-}
-
-/**
- * Resolve a deny pattern to an existing filesystem path for OS-level enforcement.
- * Strips glob characters that would prevent existsSync from working.
- * Returns null if no path can be resolved.
- */
-function resolveDenyPath(cwd: string, pattern: string): string | null {
-	const base = normalizeDenyPattern(pattern);
-	if (base === null) return null;
-	const absPath = resolvePath(cwd, base);
-	if (existsSync(absPath)) return absPath;
-	return null;
-}
-
-// ─── Bwrap arg builder ───────────────────────────────────────────────────────
-
-export function buildBwrapArgs(
-	cwd: string,
-	config: SandboxConfig,
-): { args: string[]; needsSocat: boolean } {
-	const args: string[] = [];
-
-	// Bubblewrap boilerplate
-	args.push("--new-session", "--die-with-parent");
-	args.push("--unshare-pid");
-
-	// ── Filesystem ───────────────────────────────────────────────────────
-
-	// Start with read-only root, then override specific mount points
-	args.push("--ro-bind", "/", "/");
-
-	// Override /proc and /dev with writable kernel filesystems
-	args.push("--proc", "/proc");
-	args.push("--dev", "/dev");
-
-	// Bind-mount allowed write paths as writable
-	const allowWrite = config.filesystem?.allowWrite ?? [];
-	for (const raw of allowWrite) {
-		const absPath = resolvePath(cwd, raw);
-		if (!existsSync(absPath)) continue;
-		args.push("--bind", absPath, absPath);
-	}
-
-	// Deny-write within allowed paths: remount as read-only
-	const denyWrite = config.filesystem?.denyWrite ?? [];
-	for (const raw of denyWrite) {
-		const absPath = resolveDenyPath(cwd, raw);
-		if (!absPath) continue;
-		const st = statSync(absPath);
-		if (st.isDirectory()) {
-			args.push("--ro-bind", absPath, absPath);
-		} else if (st.isFile()) {
-			args.push("--ro-bind", "/dev/null", absPath);
-		}
-	}
-
-	// Deny-read: mount /dev/null over sensitive paths
-	const denyRead = config.filesystem?.denyRead ?? [];
-	for (const raw of denyRead) {
-		// Handle **/<filename> patterns via lazy discovery
-		if (raw.startsWith("**/")) {
-			const suffix = raw.slice(3); // e.g., ".env"
-			// Only handle patterns with a concrete filename (no glob chars in suffix)
-			if (!suffix.includes("*") && !suffix.includes("?") && !suffix.includes("/")) {
-				const discovered = getDiscoveredFiles(cwd, config);
-				for (const filePath of discovered) {
-					if (filePath.endsWith("/" + suffix) || filePath === suffix) {
-						args.push("--ro-bind", "/dev/null", filePath);
-					}
-				}
-				continue;
-			}
-		}
-
-		const absPath = resolveDenyPath(cwd, raw);
-		if (!absPath) continue;
-		const st = statSync(absPath);
-		if (st.isDirectory()) {
-			// Hide entire directory with an empty tmpfs
-			args.push("--tmpfs", absPath);
-		} else if (st.isFile()) {
-			args.push("--ro-bind", "/dev/null", absPath);
-		}
-	}
-
-	// ── Network ───────────────────────────────────────────────────────────
-
-	const allowedDomains = config.network?.allowedDomains;
-	const hasAllowed = allowedDomains !== undefined && allowedDomains.length > 0;
-
-	if (!hasAllowed) {
-		// No allowed domains configured — fully isolate network
-		args.push("--unshare-net");
-	}
-	// When allowedDomains are configured, use host network directly.
-	// Domain filtering is advisory (documented in config but not enforced at OS level).
-	return { args, needsSocat: false };
-}
-
-// ─── Socat bridge (for filtered network) — deprecated ───────────────────────
-// Socat-based proxy bridging was removed in favor of direct host network access
-// when allowedDomains is configured. This interface and the startSocatBridge(),
-// buildWrappedCommand() functions are kept for reference but no longer used.
-
-interface SocatBridge {
-	httpSocketPath: string;
-	socksSocketPath: string;
-	cleanup: () => void;
-}
-
-function startSocatBridge(): SocatBridge {
-	const socketId = randomBytes(8).toString("hex");
-	const tmpDir = "/tmp";
-	const httpSocketPath = join(tmpDir, `pi-sandbox-http-${socketId}.sock`);
-	const socksSocketPath = join(tmpDir, `pi-sandbox-socks-${socketId}.sock`);
-
-	// Find local proxy ports (or use defaults)
-	let httpProxyPort = 0;
-	let socksProxyPort = 0;
-	try {
-		const env = process.env;
-		httpProxyPort = parseInt(env.HTTP_PROXY?.split(":").pop() ?? "0", 10);
-		socksProxyPort = parseInt(env.SOCKS_PROXY?.split(":").pop() ?? "0", 10);
-	} catch {
-		// Ignore
-	}
-
-	// Start socat listeners on Unix sockets that forward to the host
-	// These act as bridges from the sandbox namespace to the host network
-	const httpSocat = spawn("socat", [
-		`UNIX-LISTEN:${httpSocketPath},fork,reuseaddr`,
-		httpProxyPort > 0
-			? `TCP:localhost:${httpProxyPort}`
-			: "TCP:localhost:3128",
-	], { stdio: "ignore" });
-
-	const socksSocat = spawn("socat", [
-		`UNIX-LISTEN:${socksSocketPath},fork,reuseaddr`,
-		socksProxyPort > 0
-			? `TCP:localhost:${socksProxyPort}`
-			: "TCP:localhost:1080",
-	], { stdio: "ignore" });
-
-	const cleanup = () => {
-		try { httpSocat.kill("SIGTERM"); } catch { /* ok */ }
-		try { socksSocat.kill("SIGTERM"); } catch { /* ok */ }
-		try { execSync(`rm -f ${httpSocketPath} ${socksSocketPath}`, { timeout: 1000 }); } catch { /* ok */ }
-	};
-
-	return { httpSocketPath, socksSocketPath, cleanup };
-}
-
-// ─── Build full bwrap command with socat bridge ──────────────────────────────
-
-function buildWrappedCommand(
-	command: string,
-	cwd: string,
-	config: SandboxConfig,
-	bridge: SocatBridge | null,
-): string {
-	const { args } = buildBwrapArgs(cwd, config);
-	const shell = "bash";
-
-	if (bridge) {
-		// Inject socat listeners inside the sandbox to proxy through the bridge
-		const socatSetup = [
-			`socat TCP-LISTEN:3128,fork,reuseaddr UNIX-CONNECT:${bridge.httpSocketPath} >/dev/null 2>&1 &`,
-			`socat TCP-LISTEN:1080,fork,reuseaddr UNIX-CONNECT:${bridge.socksSocketPath} >/dev/null 2>&1 &`,
-			"trap \"kill %1 %2 2>/dev/null; exit\" EXIT",
-		].join("\n");
-
-		const innerScript = `${socatSetup}\n${command}`;
-
-		// Bind the Unix sockets into the sandbox
-		args.push("--bind", bridge.httpSocketPath, bridge.httpSocketPath);
-		args.push("--bind", bridge.socksSocketPath, bridge.socksSocketPath);
-		args.push("--setenv", "HTTP_PROXY", "http://localhost:3128");
-		args.push("--setenv", "HTTPS_PROXY", "http://localhost:3128");
-		args.push("--setenv", "SOCKS_PROXY", "http://localhost:1080");
-
-		args.push("--", shell, "-c", innerScript);
-	} else {
-		args.push("--", shell, "-c", command);
-	}
-
-	const quoted = args.map((a) => {
-		if (a.includes(" ") || a.includes("'") || a.includes('"')) {
-			return `'${a.replace(/'/g, "'\\''")}'`;
-		}
-		return a;
-	}).join(" ");
-
-	return `bwrap ${quoted}`;
-}
-
-// ─── Sandboxed bash operations ───────────────────────────────────────────────
-
-export function createSandboxedBashOps(config: SandboxConfig): BashOperations {
-	// Socat bridge was removed. When allowedDomains is configured, host network is used
-	// directly (bwrap omits --unshare-net). The socat bridge code is kept in the file for
-	// reference but createSandboxedBashOps no longer starts it.
-	const bridge: SocatBridge | null = null;
-
-	return {
-		async exec(command, cwd, { onData, signal, timeout }) {
-			if (!existsSync(cwd)) {
-				throw new Error(`Working directory does not exist: ${cwd}`);
-			}
-
-			const wrappedCommand = buildWrappedCommand(command, cwd, config, bridge);
-
-			return new Promise((resolve, reject) => {
-				const child = spawn("bash", ["-c", wrappedCommand], {
-					cwd,
-					detached: true,
-					stdio: ["ignore", "pipe", "pipe"],
-				});
-
-				let timedOut = false;
-				let timeoutHandle: NodeJS.Timeout | undefined;
-
-				if (timeout !== undefined && timeout > 0) {
-					timeoutHandle = setTimeout(() => {
-						timedOut = true;
-						if (child.pid) {
-							try {
-								process.kill(-child.pid, "SIGKILL");
-							} catch {
-								child.kill("SIGKILL");
-							}
-						}
-					}, timeout * 1000);
-				}
-
-				child.stdout?.on("data", onData);
-				child.stderr?.on("data", onData);
-
-				child.on("error", (err) => {
-					if (timeoutHandle) clearTimeout(timeoutHandle);
-					reject(err);
-				});
-
-				const onAbort = () => {
-					if (child.pid) {
-						try {
-							process.kill(-child.pid, "SIGKILL");
-						} catch {
-							child.kill("SIGKILL");
-						}
-					}
-				};
-
-				signal?.addEventListener("abort", onAbort, { once: true });
-
-				child.on("close", (code) => {
-					if (timeoutHandle) clearTimeout(timeoutHandle);
-					signal?.removeEventListener("abort", onAbort);
-
-					if (signal?.aborted) {
-						reject(new Error("aborted"));
-					} else if (timedOut) {
-						reject(new Error(`timeout:${timeout}`));
-					} else {
-						resolve({ exitCode: code });
-					}
-				});
-			});
-		},
-	};
-}
-
-// ─── Extension entry point ───────────────────────────────────────────────────
+import { createBashTool } from "@earendil-works/pi-coding-agent";
+import { mergeToolConfigs, evaluateToolCall } from "./guardrail.ts";
+import { loadConfig } from "./config.ts";
+import { resolveBinaries, createSandboxedBashOps, type SocatBridge } from "./sandbox.ts";
+
+export { buildBwrapArgs, createSandboxedBashOps, resolveBinaries, buildWrappedCommand } from "./sandbox.ts";
+export { getDiscoveredFiles, clearDiscoveredCache, type SandboxConfig } from "./config.ts";
 
 export default function (pi: ExtensionAPI) {
 	pi.registerFlag("no-sandbox", {
@@ -490,6 +36,7 @@ export default function (pi: ExtensionAPI) {
 	const localBash = createBashTool(localCwd);
 	let sandboxEnabled = false;
 	let currentBridge: SocatBridge | null = null;
+	let resolvedBinaries: Map<string, string> | null = null;
 
 	function disableSandbox() {
 		sandboxEnabled = false;
@@ -504,9 +51,8 @@ export default function (pi: ExtensionAPI) {
 			if (!sandboxEnabled) {
 				return localBash.execute(id, params, signal, onUpdate);
 			}
-
 			const config = loadConfig(localCwd);
-			const ops = createSandboxedBashOps(config);
+			const ops = createSandboxedBashOps(config, resolvedBinaries ?? undefined);
 			const tool = createBashTool(localCwd, { operations: ops });
 			return tool.execute(id, params, signal, onUpdate);
 		},
@@ -515,13 +61,12 @@ export default function (pi: ExtensionAPI) {
 	pi.on("user_bash", () => {
 		if (!sandboxEnabled) return;
 		const config = loadConfig(localCwd);
-		return { operations: createSandboxedBashOps(config) };
+		return { operations: createSandboxedBashOps(config, resolvedBinaries ?? undefined) };
 	});
 
 	// ── Tool guardrail: block read/write/edit on denied paths ────────────
 	pi.on("tool_call", async (event: ToolCallEvent, ctx) => {
 		if (!sandboxEnabled) return;
-		// bash is already sandboxed by bwrap at the OS level
 		if (event.toolName === "bash") return;
 
 		const config = loadConfig(ctx.cwd);
@@ -533,7 +78,6 @@ export default function (pi: ExtensionAPI) {
 			config.filesystem ?? {},
 			ctx.cwd,
 		);
-
 		if (result) {
 			return { block: true, reason: result.reason };
 		}
@@ -541,7 +85,6 @@ export default function (pi: ExtensionAPI) {
 
 	pi.on("session_start", async (_event, ctx) => {
 		disableSandbox();
-
 		if (pi.getFlag("no-sandbox") as boolean) {
 			ctx.ui.notify("Sandbox disabled via --no-sandbox", "warning");
 			return;
@@ -552,13 +95,11 @@ export default function (pi: ExtensionAPI) {
 			ctx.ui.notify("Sandbox disabled via config", "info");
 			return;
 		}
-
 		if (process.platform !== "linux") {
 			ctx.ui.notify(`Sandbox not supported on ${process.platform}`, "warning");
 			return;
 		}
 
-		// Verify bwrap and socat are available
 		try {
 			execSync("bwrap --version", { stdio: "ignore", timeout: 3000 });
 		} catch {
@@ -569,6 +110,15 @@ export default function (pi: ExtensionAPI) {
 
 		sandboxEnabled = true;
 
+		const bashConfig = config.bash;
+		const whitelist = bashConfig?.commandWhitelist;
+		if (whitelist && whitelist.length > 0) {
+			const allNames = [...new Set([...whitelist, "bash"])];
+			resolvedBinaries = await resolveBinaries(allNames);
+		} else {
+			resolvedBinaries = null;
+		}
+
 		const writeCount = config.filesystem?.allowWrite?.length ?? 0;
 		const denyCount = config.filesystem?.denyRead?.length ?? 0;
 		const hasNetwork = (config.network?.allowedDomains?.length ?? 0) > 0;
@@ -577,7 +127,7 @@ export default function (pi: ExtensionAPI) {
 			"sandbox",
 			ctx.ui.theme.fg("accent", `✚ bwrap: ${writeCount} writable, ${denyCount} denied, net=${netMode}`),
 		);
-		ctx.ui.notify("Sandbox active (direct bwrap, no anthropic-ai dependency)", "info");
+		ctx.ui.notify("Sandbox active", "info");
 	});
 
 	pi.on("session_shutdown", () => {
@@ -591,12 +141,16 @@ export default function (pi: ExtensionAPI) {
 				ctx.ui.notify("Sandbox is disabled", "info");
 				return;
 			}
-
 			const config = loadConfig(ctx.cwd);
 			const toolAccess = mergeToolConfigs(config.tools);
 			const guardedTools = Object.entries(toolAccess)
 				.filter(([_, cfg]) => cfg.access.length > 0)
 				.map(([name, cfg]) => `  ${name}: [${cfg.access.join(", ")}]`);
+
+			const bashConfig = config.bash;
+			const whitelist = bashConfig?.commandWhitelist;
+			const blocklist = bashConfig?.blockedCommands;
+			const gitAllow = bashConfig?.git?.allow;
 
 			const lines = [
 				"Sandbox (direct bwrap):",
@@ -610,6 +164,12 @@ export default function (pi: ExtensionAPI) {
 				`  Allow Write: ${config.filesystem?.allowWrite?.join(", ") || "(read-only)"}`,
 				`  Deny Write: ${config.filesystem?.denyWrite?.join(", ") || "(none)"}`,
 				`  Deny Read: ${config.filesystem?.denyRead?.join(", ") || "(none)"}`,
+				"",
+				"Bash Whitelist:",
+				`  Mode: ${whitelist && whitelist.length > 0 ? "per-binary" : "full-root"}`,
+				`  Allowed commands: ${whitelist?.join(", ") || "(all)"}`,
+				`  Blocked commands: ${blocklist?.join(", ") || "(none)"}`,
+				`  Git allowed: ${gitAllow?.join(", ") || "(none)"}`,
 				"",
 				"Tool Guardrail:",
 				...(guardedTools.length > 0 ? guardedTools : ["  (no tools configured)"]),
