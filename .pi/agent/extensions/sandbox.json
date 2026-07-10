@@ -8,7 +8,7 @@
       "touch", "date", "uname", "whoami", "id", "env", "tar", "gzip", "gunzip",
       "zip", "unzip", "curl", "wget", "python", "python3", "jq", "node", "npm",
       "cargo", "make", "go", "tsc", "eslint", "prettier", "jest", "pytest",
-      "ruff", "mypy", "git"
+      "ruff", "mypy", "git", "npx"
     ],
     "blockedCommands": [
       "rm", "mv", "cp", "dd", "truncate", "fallocate", "chmod", "chown",
