@@ -23,7 +23,7 @@ import { loadConfig } from "./config.ts";
 import { resolveBinaries, createSandboxedBashOps, type SocatBridge } from "./sandbox.ts";
 
 export { buildBwrapArgs, createSandboxedBashOps, resolveBinaries, buildWrappedCommand } from "./sandbox.ts";
-export { getDiscoveredFiles, clearDiscoveredCache, type SandboxConfig } from "./config.ts";
+export { getDiscoveredFiles, clearDiscoveredCache, discoverPaths, type SandboxConfig } from "./config.ts";
 
 export default function (pi: ExtensionAPI) {
 	pi.registerFlag("no-sandbox", {

@@ -209,6 +209,20 @@ Examples:
 			onUpdate: ((update: { content: { type: string; text: string }[] }) => void) | undefined,
 			ctx: { cwd: string; ui: { notify: (msg: string, type: string) => void } },
 		): Promise<CommitResult> {
+			onUpdate?.({ content: [{ type: "text", text: "Checking staged changes..." }] });
+
+			// Auto-stage only if nothing is staged yet.
+			// git diff --cached --quiet exits 0 when index matches HEAD (clean).
+			// Runs via pi.exec which bypasses sandbox bwrap, so denyWrite: ["**/.git"]
+			// doesn't interfere.
+			const { code: stagedCode } = await execGit(
+				pi, ["diff", "--cached", "--quiet"], signal,
+			);
+			if (stagedCode === 0) {
+				onUpdate?.({ content: [{ type: "text", text: "No staged changes. Staging all..." }] });
+				await execGit(pi, ["add", "--all"], signal);
+			}
+
 			onUpdate?.({ content: [{ type: "text", text: "Running git commit..." }] });
 
 			// Capture HEAD before commit to verify the commit actually happens.

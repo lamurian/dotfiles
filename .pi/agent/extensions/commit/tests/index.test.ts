@@ -2,7 +2,7 @@
  * Tests for the commit extension entry point.
  * Verifies command and tool registration.
  */
-import { expect, test, mock, beforeAll } from "bun:test";
+import { expect, test, mock, beforeAll, describe } from "bun:test";
 import { EventEmitter } from "node:events";
 
 // ─── Mock helpers ───────────────────────────────────────────────────────────
@@ -611,6 +611,175 @@ test("allows git log with 'commit' in the output", async () => {
 		const result = await toolCallHandlers[0](event, ctx);
 		expect(result).toBeUndefined();
 	}
+});
+
+// ─── Auto-staging tests ────────────────────────────────────────────────────
+
+test("commit_changes auto-stages when nothing is staged", async () => {
+	spawnFactory = createMockSpawn({
+		stdout: "[main def5678] feat: add test\n 1 file changed",
+		code: 0,
+	});
+
+	const gitCommands: string[][] = [];
+	let revParseCount = 0;
+	const localMockPi = {
+		...mockPi,
+		exec: async (cmd: string, args: string[]) => {
+			if (cmd === "git") {
+				gitCommands.push(args);
+				if (args[0] === "rev-parse") {
+					revParseCount++;
+					if (revParseCount === 1) return { stdout: "abc1234\n", stderr: "", code: 0 };
+					return { stdout: "def5678\n", stderr: "", code: 0 };
+				}
+				if (args[0] === "diff" && args[1] === "--cached" && args[2] === "--quiet") {
+					// Nothing staged — exit 0 means index matches HEAD (clean)
+					return { stdout: "", stderr: "", code: 0 };
+				}
+				if (args[0] === "add" && args[1] === "--all") {
+					return { stdout: "", stderr: "", code: 0 };
+				}
+			}
+			return { stdout: "", stderr: "", code: 0 };
+		},
+	};
+
+	registeredCommand = null;
+	registeredTool = null;
+	commitExtension(localMockPi);
+
+	expect(registeredTool).not.toBeNull();
+
+	const ctx = { cwd: "/tmp", ui: { notify: () => {} } };
+	const result = await registeredTool!.execute(
+		"call-1",
+		{ message: "feat: add test" },
+		undefined,
+		undefined,
+		ctx,
+	);
+
+	// Should have called git add --all before committing
+	const addCmd = gitCommands.find(cmd => cmd[0] === "add" && cmd[1] === "--all");
+	expect(addCmd).toBeDefined();
+	expect(result.details.success).toBe(true);
+	expect(result.details.hash).toBe("def5678");
+
+	// add should come before rev-parse call #2 (the HEAD verification after commit)
+	const addIndex = gitCommands.findIndex(cmd => cmd[0] === "add" && cmd[1] === "--all");
+	const revParse2Index = gitCommands.findIndex((cmd, i) =>
+		cmd[0] === "rev-parse" && i > 0
+	);
+	expect(addIndex).toBeLessThan(revParse2Index);
+});
+
+test("commit_changes skips staging when files are already staged", async () => {
+	spawnFactory = createMockSpawn({
+		stdout: "[main bcdef9] feat: staged only\n 1 file changed",
+		code: 0,
+	});
+
+	const gitCommands: string[][] = [];
+	let revParseCount = 0;
+	const localMockPi = {
+		...mockPi,
+		exec: async (cmd: string, args: string[]) => {
+			if (cmd === "git") {
+				gitCommands.push(args);
+				if (args[0] === "rev-parse") {
+					revParseCount++;
+					if (revParseCount === 1) return { stdout: "abc1234\n", stderr: "", code: 0 };
+					return { stdout: "bcdef9\n", stderr: "", code: 0 };
+				}
+				if (args[0] === "diff" && args[1] === "--cached" && args[2] === "--quiet") {
+					// Staged changes exist — exit 1 means index differs from HEAD
+					return { stdout: "", stderr: "", code: 1 };
+				}
+			}
+			return { stdout: "", stderr: "", code: 0 };
+		},
+	};
+
+	registeredCommand = null;
+	registeredTool = null;
+	commitExtension(localMockPi);
+
+	expect(registeredTool).not.toBeNull();
+
+	const ctx = { cwd: "/tmp", ui: { notify: () => {} } };
+	const result = await registeredTool!.execute(
+		"call-2",
+		{ message: "feat: staged only" },
+		undefined,
+		undefined,
+		ctx,
+	);
+
+	// Should NOT have called git add --all
+	const addCmd = gitCommands.find(cmd => cmd[0] === "add" && cmd[1] === "--all");
+	expect(addCmd).toBeUndefined();
+	expect(result.details.success).toBe(true);
+	expect(result.details.hash).toBe("bcdef9");
+});
+
+test("commit_changes updates progress when auto-staging", async () => {
+	spawnFactory = createMockSpawn({
+		stdout: "[main feed00] feat: progress\n 1 file changed",
+		code: 0,
+	});
+
+	const gitCommands: string[][] = [];
+	let revParseCount = 0;
+	const localMockPi = {
+		...mockPi,
+		exec: async (cmd: string, args: string[]) => {
+			if (cmd === "git") {
+				gitCommands.push(args);
+				if (args[0] === "rev-parse") {
+					revParseCount++;
+					if (revParseCount === 1) return { stdout: "abc1234\n", stderr: "", code: 0 };
+					return { stdout: "feed00\n", stderr: "", code: 0 };
+				}
+				if (args[0] === "diff" && args[1] === "--cached" && args[2] === "--quiet") {
+					return { stdout: "", stderr: "", code: 0 };
+				}
+				if (args[0] === "add" && args[1] === "--all") {
+					return { stdout: "", stderr: "", code: 0 };
+				}
+			}
+			return { stdout: "", stderr: "", code: 0 };
+		},
+	};
+
+	registeredCommand = null;
+	registeredTool = null;
+	commitExtension(localMockPi);
+
+	expect(registeredTool).not.toBeNull();
+
+	const onUpdateCalls: unknown[] = [];
+	const onUpdate = (update: unknown) => {
+		onUpdateCalls.push(update);
+	};
+
+	const ctx = { cwd: "/tmp", ui: { notify: () => {} } };
+	await registeredTool!.execute(
+		"call-3",
+		{ message: "feat: progress" },
+		undefined,
+		onUpdate,
+		ctx,
+	);
+
+	// Should have at least 2 updates: one for auto-staging, one for commit output
+	expect(onUpdateCalls.length).toBeGreaterThanOrEqual(2);
+	// First update should mention staging
+	const firstUpdate = onUpdateCalls[0] as { content: { text: string }[] };
+	expect(firstUpdate.content[0].text).toContain("staging");
+	// Last update should mention the commit message
+	const lastUpdate = onUpdateCalls[onUpdateCalls.length - 1] as { content: { text: string }[] };
+	expect(lastUpdate.content[0].text).toContain("feat: progress");
 });
 
 // ─── onUpdate streaming tests ───────────────────────────────────────────────

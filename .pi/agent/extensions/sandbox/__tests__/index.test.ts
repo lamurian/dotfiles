@@ -7,6 +7,7 @@ import {
 	createSandboxedBashOps,
 	getDiscoveredFiles,
 	clearDiscoveredCache,
+	discoverPaths,
 	resolveBinaries,
 	type SandboxConfig,
 } from "../index.ts";
@@ -310,6 +311,190 @@ describe("buildBwrapArgs — per-binary mount mode", () => {
 
 		// Should still mount full root
 		assert.ok(result.args.includes("--ro-bind"));
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// buildBwrapArgs — denyWrite with **/ patterns (e.g., **/.git)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const GIT_TMP = join("/tmp", "sandbox-git-test-" + Date.now());
+const GIT_CWD = join(GIT_TMP, "project");
+
+function createGitEnv(): void {
+	rmSync(GIT_TMP, { recursive: true, force: true });
+	// project with .git dir
+	mkdirSync(join(GIT_TMP, "project", ".git"), { recursive: true });
+	mkdirSync(join(GIT_TMP, "project", "src", ".git"), { recursive: true });
+	// writable external path with .git
+	mkdirSync(join(GIT_TMP, "external", ".git"), { recursive: true });
+	// non-.git dir (should NOT get --ro-bind)
+	mkdirSync(join(GIT_TMP, "project", "node_modules"), { recursive: true });
+}
+
+describe("buildBwrapArgs — denyWrite with **/.git patterns", () => {
+	before(() => createGitEnv());
+	after(() => rmSync(GIT_TMP, { recursive: true, force: true }));
+
+	it("should add --ro-bind for each discovered .git directory", () => {
+		clearDiscoveredCache();
+		const config: SandboxConfig = {
+			filesystem: {
+				denyWrite: ["**/.git"],
+				allowWrite: [GIT_TMP],
+			},
+		};
+		const result = buildBwrapArgs(GIT_CWD, config);
+
+		// Count --ro-bind entries for .git dirs (not /dev/null binds)
+		const gitDirBinds = result.args.filter((_, i) => {
+			return result.args[i] === "--ro-bind"
+				&& result.args[i + 1]?.endsWith("/.git")
+				&& result.args[i + 2]?.endsWith("/.git");
+		});
+
+		assert.ok(
+			gitDirBinds.length >= 3,
+			`expected ≥3 .git --ro-bind entries, got ${gitDirBinds.length}: ${result.args.join(" ")}`,
+		);
+	});
+
+	it("should NOT add --ro-bind for non-.git directories", () => {
+		clearDiscoveredCache();
+		const config: SandboxConfig = {
+			filesystem: {
+				denyWrite: ["**/.git"],
+				allowWrite: [GIT_TMP],
+			},
+		};
+		const result = buildBwrapArgs(GIT_CWD, config);
+
+		// Check that node_modules is NOT mounted --ro-bind
+		const nodeModulesBinds = result.args.filter((_, i) => {
+			return result.args[i] === "--ro-bind"
+				&& result.args[i + 1]?.includes("node_modules");
+		});
+		assert.equal(nodeModulesBinds.length, 0, "should not mount node_modules read-only");
+	});
+
+	it("should not add .git binds when **/.git is NOT in denyWrite", () => {
+		clearDiscoveredCache();
+		const config: SandboxConfig = {
+			filesystem: {
+				denyWrite: ["**/.env"],
+				allowWrite: [GIT_TMP],
+			},
+		};
+		const result = buildBwrapArgs(GIT_CWD, config);
+
+		const gitDirBinds = result.args.filter((_, i) => {
+			return result.args[i] === "--ro-bind"
+				&& result.args[i + 1]?.endsWith("/.git")
+				&& result.args[i + 2]?.endsWith("/.git");
+		});
+		assert.equal(gitDirBinds.length, 0, "should not bind .git dirs when pattern not present");
+	});
+
+	it("should still allow reads on .git directories (not null-bind)", () => {
+		clearDiscoveredCache();
+		const config: SandboxConfig = {
+			filesystem: {
+				denyWrite: ["**/.git"],
+				allowWrite: [GIT_TMP],
+			},
+		};
+		const result = buildBwrapArgs(GIT_CWD, config);
+
+		// .git dirs should have --ro-bind DIR DIR (readable), not /dev/null
+		const nullBindGit = result.args.filter((_, i) => {
+			return result.args[i] === "/dev/null"
+				&& i > 1
+				&& result.args[i - 1] === "--ro-bind"
+				&& (result.args[i + 1]?.endsWith("/.git") || result.args[i - 2]?.endsWith("/.git"));
+		});
+		assert.equal(nullBindGit.length, 0, "should NOT nullify .git dirs — they should be readable");
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// buildBwrapArgs — allowRead
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const READ_TMP = join("/tmp", "sandbox-read-test-" + Date.now());
+
+describe("buildBwrapArgs — allowRead", () => {
+	before(() => {
+		rmSync(READ_TMP, { recursive: true, force: true });
+		mkdirSync(join(READ_TMP, "config"), { recursive: true });
+		writeFileSync(join(READ_TMP, "config", "settings.conf"), "key=value");
+		writeFileSync(join(READ_TMP, "data.txt"), "hello");
+	});
+	after(() => rmSync(READ_TMP, { recursive: true, force: true }));
+
+	it("should add --ro-bind for allowRead directories", () => {
+		const configDir = join(READ_TMP, "config");
+		const config: SandboxConfig = {
+			filesystem: {
+				allowRead: [configDir],
+			},
+		};
+		const result = buildBwrapArgs(CWD, config);
+
+		const binds = result.args.filter((_, i) =>
+			result.args[i] === "--ro-bind"
+			&& result.args[i + 1] === configDir
+			&& result.args[i + 2] === configDir,
+		);
+		assert.equal(binds.length, 1, "should bind the allowRead directory read-only");
+	});
+
+	it("should add --ro-bind for allowRead files", () => {
+		const dataFile = join(READ_TMP, "data.txt");
+		const config: SandboxConfig = {
+			filesystem: {
+				allowRead: [dataFile],
+			},
+		};
+		const result = buildBwrapArgs(CWD, config);
+
+		const binds = result.args.filter((_, i) =>
+			result.args[i] === "--ro-bind"
+			&& result.args[i + 1] === dataFile
+			&& result.args[i + 2] === dataFile,
+		);
+		assert.equal(binds.length, 1, "should bind the allowRead file read-only");
+	});
+
+	it("should skip non-existent paths in allowRead", () => {
+		const config: SandboxConfig = {
+			filesystem: {
+				allowRead: ["/nonexistent/path"],
+			},
+		};
+		const result = buildBwrapArgs(CWD, config);
+
+		const noneBinds = result.args.filter((_, i) =>
+			result.args[i] === "--ro-bind"
+			&& result.args[i + 1] === "/nonexistent/path",
+		);
+		assert.equal(noneBinds.length, 0, "should not bind non-existent paths");
+	});
+
+	it("should have no effect when allowRead is undefined", () => {
+		const config: SandboxConfig = {
+			filesystem: {},
+		};
+		const result = buildBwrapArgs(CWD, config);
+		assert.ok(result.args.includes("--proc"), "should still include standard args");
+	});
+
+	it("should skip non-existent tilde paths in allowRead", () => {
+		const result = buildBwrapArgs(CWD, { filesystem: { allowRead: ["~/.nonexistent_xyz_test_dir"] } });
+		const binds = result.args.filter((_, i) =>
+			result.args[i] === "--ro-bind"
+			&& result.args[i + 1]?.includes("nonexistent_xyz_test_dir"),
+		);
+		assert.equal(binds.length, 0, "should not bind non-existent tilde paths");
 	});
 });
 
