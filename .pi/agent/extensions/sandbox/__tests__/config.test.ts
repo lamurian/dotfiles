@@ -1,6 +1,8 @@
-import { describe, it } from "node:test";
+import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { deepMerge } from "../config.ts";
+import { mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { join } from "node:path";
+import { deepMerge, discoverPaths, clearDiscoveredCache, type SandboxConfig } from "../config.ts";
 
 // ─── deepMerge: additive array merging ───────────────────────────────────────
 
@@ -146,5 +148,89 @@ describe("deepMerge — network deniedDomains", () => {
 			"bad-site.com",
 			"worse-site.com",
 		]);
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// discoverPaths — generic path discovery for denylist patterns
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const TMP = join("/tmp", "sandbox-discover-test-" + Date.now());
+const CWD = join(TMP, "project");
+
+function createDiscoverEnv(): void {
+	rmSync(TMP, { recursive: true, force: true });
+	// project root with .git
+	mkdirSync(join(TMP, "project", ".git"), { recursive: true });
+	mkdirSync(join(TMP, "project", "src"), { recursive: true });
+	mkdirSync(join(TMP, "project", "src", ".git"), { recursive: true });
+	// nested other dirs (no .git)
+	mkdirSync(join(TMP, "project", "node_modules"), { recursive: true });
+	mkdirSync(join(TMP, "external"), { recursive: true });
+	mkdirSync(join(TMP, "external", ".git"), { recursive: true });
+	// .env files for type "f" test
+	writeFileSync(join(TMP, "project", ".env"), "SECRET=x");
+	writeFileSync(join(TMP, "project", "src", ".env"), "DB=prod");
+	// non-matching files
+	writeFileSync(join(TMP, "project", "readme.md"), "hello");
+}
+
+describe("discoverPaths", () => {
+	before(() => createDiscoverEnv());
+	after(() => rmSync(TMP, { recursive: true, force: true }));
+
+	it("should find all .git directories under writable paths", () => {
+		clearDiscoveredCache();
+		const config: SandboxConfig = {
+			filesystem: { allowWrite: [TMP] },
+		};
+		const dirs = discoverPaths(CWD, config, ".git", "d");
+		assert.ok(dirs.length >= 3, `expected ≥3 .git dirs, got ${dirs.length}: ${dirs.join(", ")}`);
+		assert.ok(dirs.some((d) => d.includes("project/.git")), "should find project/.git");
+		assert.ok(dirs.some((d) => d.includes("src/.git")), "should find src/.git");
+		assert.ok(dirs.some((d) => d.includes("external/.git")), "should find external/.git");
+	});
+
+	it("should find .env files when searching with type 'f'", () => {
+		clearDiscoveredCache();
+		const config: SandboxConfig = {
+			filesystem: { allowWrite: [TMP] },
+		};
+		const files = discoverPaths(CWD, config, ".env", "f");
+		assert.ok(files.length >= 2, `expected ≥2 .env files, got ${files.length}: ${files.join(", ")}`);
+		assert.ok(files.some((f) => f.includes("project/.env")), "should find project/.env");
+		assert.ok(files.some((f) => f.includes("src/.env")), "should find src/.env");
+	});
+
+	it("should NOT include non-matching names", () => {
+		clearDiscoveredCache();
+		const config: SandboxConfig = {
+			filesystem: { allowWrite: [TMP] },
+		};
+		const dirs = discoverPaths(CWD, config, ".git", "d");
+		assert.ok(!dirs.some((d) => d.includes("node_modules")), "should not find node_modules");
+
+		const files = discoverPaths(CWD, config, ".git", "f");
+		assert.equal(files.length, 0, "should find zero .git files (they are dirs)");
+	});
+
+	it("should return empty array when no paths match", () => {
+		clearDiscoveredCache();
+		const config: SandboxConfig = {
+			filesystem: { allowWrite: [TMP] },
+		};
+		const result = discoverPaths(CWD, config, "nonexistent_file_xyz", "f");
+		assert.deepEqual(result, []);
+	});
+
+	it("should search homedir in addition to allowWrite paths", () => {
+		clearDiscoveredCache();
+		const config: SandboxConfig = {
+			filesystem: { allowWrite: [TMP] },
+		};
+		// homedir is always searched, but we shouldn't find .git dirs outside writable paths
+		const dirs = discoverPaths(CWD, config, ".git", "d");
+		// At minimum the 3 under TMP should be found
+		assert.ok(dirs.length >= 3, `expected ≥3 .git dirs, got ${dirs.length}`);
 	});
 });

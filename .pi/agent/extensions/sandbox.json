@@ -3,42 +3,29 @@
   "bash": {
     "allowShell": true,
     "commandWhitelist": [
-      "find", "grep", "rg", "ls", "cat", "head", "tail", "wc",
-      "diff", "stat", "file", "which", "du", "sort", "uniq",
-      "echo", "printf", "mkdir", "touch", "date",
-      "uname", "whoami", "id", "env",
-      "tar", "gzip", "gunzip", "zip", "unzip",
-      "curl", "wget",
-      "npm", "cargo", "make", "go", "tsc", "eslint", "prettier",
-      "jest", "pytest", "ruff", "mypy",
-      "git"
+      "find", "grep", "rg", "ls", "cat", "head", "tail", "wc", "diff", "stat",
+      "file", "which", "du", "sort", "uniq", "echo", "printf", "mkdir",
+      "touch", "date", "uname", "whoami", "id", "env", "tar", "gzip", "gunzip",
+      "zip", "unzip", "curl", "wget", "python", "python3", "jq", "node", "npm",
+      "cargo", "make", "go", "tsc", "eslint", "prettier", "jest", "pytest",
+      "ruff", "mypy", "git"
     ],
     "blockedCommands": [
-      "rm", "mv", "cp", "dd", "truncate", "fallocate",
-      "chmod", "chown", "chattr", "setfacl",
-      "python", "python3", "perl", "ruby", "node",
-      "gcc", "g++", "clang", "rustc",
-      "apt", "apt-get", "dpkg", "pacman", "dnf", "yum",
-      "systemctl", "service", "journalctl",
-      "kill", "pkill", "killall",
-      "sudo", "su", "passwd",
-      "sh", "dash", "zsh", "fish",
-      "mkfs", "fdisk", "parted", "mount", "umount",
+      "rm", "mv", "cp", "dd", "truncate", "fallocate", "chmod", "chown",
+      "chattr", "setfacl", "perl", "ruby", "gcc", "g++", "clang", "rustc",
+      "apt", "apt-get", "dpkg", "pacman", "dnf", "yum", "systemctl", "service",
+      "journalctl", "kill", "pkill", "killall", "sudo", "su", "passwd", "sh",
+      "dash", "zsh", "fish", "mkfs", "fdisk", "parted", "mount", "umount",
       "tee"
     ],
     "git": {
       "allow": [
-        "status", "add", "log", "diff", "show",
-        "blame", "annotate", "grep",
-        "ls-files", "ls-tree",
-        "rev-parse", "rev-list", "describe", "name-rev",
-        "for-each-ref", "show-ref",
-        "shortlog", "whatchanged",
-        "help", "version",
-        "check-ignore", "check-attr", "count-objects",
-        "var", "verify-commit", "verify-pack", "verify-tag",
-        "show-branch", "cherry", "range-diff", "merge-base",
-        "cat-file", "hash-object", "patch-id",
+        "status", "add", "log", "diff", "show", "blame", "annotate", "grep",
+        "ls-files", "ls-tree", "rev-parse", "rev-list", "describe", "name-rev",
+        "for-each-ref", "show-ref", "shortlog", "whatchanged", "help",
+        "version", "check-ignore", "check-attr", "count-objects", "var",
+        "verify-commit", "verify-pack", "verify-tag", "show-branch", "cherry",
+        "range-diff", "merge-base", "cat-file", "hash-object", "patch-id",
         "stash"
       ],
       "stash": {
@@ -52,34 +39,25 @@
         "remote": ["add", "remove", "rename", "set-url"]
       },
       "blocked": [
-        "commit", "push", "pull", "merge", "rebase",
-        "cherry-pick", "revert",
-        "reset", "clean", "rm", "mv",
-        "filter-branch", "gc", "prune",
-        "update-ref", "update-index", "symbolic-ref",
-        "worktree", "submodule", "replace", "notes",
-        "write-tree", "commit-tree", "commit-graph",
-        "checkout", "restore", "switch",
-        "archive", "bundle",
-        "sparse-checkout", "multi-pack-index",
-        "maintenance", "scalar", "rerere",
-        "send-pack", "receive-pack", "upload-pack",
-        "instaweb", "daemon", "http-backend",
-        "imap-send",
-        "format-patch", "request-pull",
-        "difftool", "mergetool",
-        "cvsimport", "svn", "p4",
-        "fast-export", "fast-import",
-        "bugreport", "diagnose",
-        "credential", "credential-cache", "credential-store",
-        "hook", "replay", "history"
+        "commit", "push", "pull", "merge", "rebase", "cherry-pick", "revert",
+        "reset", "clean", "rm", "mv", "filter-branch", "gc", "prune",
+        "update-ref", "update-index", "symbolic-ref", "worktree", "submodule",
+        "replace", "notes", "write-tree", "commit-tree", "commit-graph",
+        "checkout", "restore", "switch", "archive", "bundle",
+        "sparse-checkout", "multi-pack-index", "maintenance", "scalar",
+        "rerere", "send-pack", "receive-pack", "upload-pack", "instaweb",
+        "daemon", "http-backend", "imap-send", "format-patch", "request-pull",
+        "difftool", "mergetool", "cvsimport", "svn", "p4", "fast-export",
+        "fast-import", "bugreport", "diagnose", "credential",
+        "credential-cache", "credential-store", "hook", "replay", "history"
       ]
     }
   },
   "filesystem": {
-    "allowWrite": [".", "/tmp", "/home", "/var/tmp"],
+    "allowWrite": [".", "/tmp", "/home"],
     "denyRead": ["~/.ssh", "~/.aws", "**/.env"],
-    "denyWrite": ["**/.env"]
+    "allowRead": ["/etc"],
+    "denyWrite": ["**/.env", "**/.git"]
   },
   "network": {
     "allowedDomains": ["*"]

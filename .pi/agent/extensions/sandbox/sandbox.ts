@@ -15,6 +15,7 @@ import {
 } from "./bash-validator.ts";
 import {
 	getDiscoveredFiles,
+	discoverPaths,
 	resolveDenyPath,
 	resolvePath,
 	type SandboxConfig,
@@ -82,8 +83,33 @@ export function buildBwrapArgs(
 		args.push("--bind", absPath, absPath);
 	}
 
+	const allowRead = config.filesystem?.allowRead ?? [];
+	for (const raw of allowRead) {
+		const absPath = resolvePath(cwd, raw);
+		if (!existsSync(absPath)) continue;
+		const st = statSync(absPath);
+		if (st.isDirectory()) {
+			args.push("--ro-bind", absPath, absPath);
+		} else if (st.isFile()) {
+			args.push("--ro-bind", absPath, absPath);
+		}
+	}
+
 	const denyWrite = config.filesystem?.denyWrite ?? [];
 	for (const raw of denyWrite) {
+		// Handle **/name pattern — discover all matching dirs under writable paths
+		if (raw.startsWith("**/")) {
+			const name = raw.slice(3);
+			if (!name.includes("*") && !name.includes("?") && !name.includes("/")) {
+				const discovered = discoverPaths(cwd, config, name, "d");
+				for (const dirPath of discovered) {
+					args.push("--ro-bind", dirPath, dirPath);
+				}
+				continue;
+			}
+		}
+
+		// Single explicit path
 		const absPath = resolveDenyPath(cwd, raw);
 		if (!absPath) continue;
 		const st = statSync(absPath);

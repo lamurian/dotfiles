@@ -2,7 +2,7 @@
  * config.ts — Sandbox config types, loading, merging, and file discovery
  */
 
-import { execSync } from "node:child_process";
+import { execSync, spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
@@ -30,6 +30,7 @@ export interface SandboxConfig {
 	};
 	filesystem?: {
 		denyRead?: string[];
+		allowRead?: string[];
 		allowWrite?: string[];
 		denyWrite?: string[];
 	};
@@ -145,11 +146,22 @@ export function clearDiscoveredCache(): void {
 	discoveredCache = null;
 }
 
-export function getDiscoveredFiles(cwd: string, config: SandboxConfig): string[] {
-	if (discoveredCache && Date.now() - discoveredCache.timestamp < CACHE_TTL) {
-		return [...discoveredCache.files];
-	}
-
+/**
+ * Discover all files or directories matching a given name under searchable paths.
+ *
+ * Searches:
+ * 1. The user's home directory
+ * 2. All allowWrite paths from config
+ * 3. Each ancestor of cwd up to root
+ *
+ * Uses find with -maxdepth 8 and a 5-second timeout per search dir.
+ */
+export function discoverPaths(
+	cwd: string,
+	config: SandboxConfig,
+	name: string,
+	type: "f" | "d",
+): string[] {
 	const searchDirs = new Set<string>();
 	searchDirs.add(homedir());
 
@@ -159,6 +171,7 @@ export function getDiscoveredFiles(cwd: string, config: SandboxConfig): string[]
 		if (existsSync(absPath)) searchDirs.add(absPath);
 	}
 
+	// Walk up from cwd to root
 	let dir = resolve(cwd);
 	while (dir.startsWith(homedir()) || dir.startsWith("/")) {
 		searchDirs.add(dir);
@@ -167,21 +180,32 @@ export function getDiscoveredFiles(cwd: string, config: SandboxConfig): string[]
 		dir = parent;
 	}
 
-	const files = new Set<string>();
+	const results = new Set<string>();
 	for (const searchDir of searchDirs) {
 		try {
-			const result = execSync(
-				`find "${searchDir}" -maxdepth 8 -name '.env' -type f 2>/dev/null`,
-				{ timeout: 5000, encoding: "utf-8" },
-			);
-			for (const line of result.trim().split("\n").filter(Boolean)) {
-				files.add(line);
+			const result = spawnSync("find", [
+				searchDir,
+				"-maxdepth", "8",
+				"-name", name,
+				"-type", type,
+			], { timeout: 5000, encoding: "utf-8" });
+			if (result.status === 0 && result.stdout) {
+				for (const line of result.stdout.trim().split("\n").filter(Boolean)) {
+					results.add(line);
+				}
 			}
 		} catch {
-			// Ignore inaccessible or non-existent directories
+			// skip inaccessible dirs
 		}
 	}
+	return [...results];
+}
 
+export function getDiscoveredFiles(cwd: string, config: SandboxConfig): string[] {
+	if (discoveredCache && Date.now() - discoveredCache.timestamp < CACHE_TTL) {
+		return [...discoveredCache.files];
+	}
+	const files = discoverPaths(cwd, config, ".env", "f");
 	discoveredCache = { timestamp: Date.now(), files: [...files] };
 	return [...files];
 }
