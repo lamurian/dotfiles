@@ -20,7 +20,7 @@
     ],
     "git": {
       "allow": [
-        "status", "add", "log", "diff", "show", "blame", "annotate", "grep",
+        "status", "log", "diff", "show", "blame", "annotate", "grep",
         "ls-files", "ls-tree", "rev-parse", "rev-list", "describe", "name-rev",
         "for-each-ref", "show-ref", "shortlog", "whatchanged", "help",
         "version", "check-ignore", "check-attr", "count-objects", "var",
@@ -48,7 +48,7 @@
         "rerere", "send-pack", "receive-pack", "upload-pack", "instaweb",
         "daemon", "http-backend", "imap-send", "format-patch", "request-pull",
         "difftool", "mergetool", "cvsimport", "svn", "p4", "fast-export",
-        "fast-import", "bugreport", "diagnose", "credential",
+        "fast-import", "bugreport", "diagnose", "credential", "add",
         "credential-cache", "credential-store", "hook", "replay", "history"
       ]
     }
