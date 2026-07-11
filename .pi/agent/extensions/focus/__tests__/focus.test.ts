@@ -23,6 +23,10 @@ describe("isSandboxBlockedError", () => {
 		assert.ok(isSandboxBlockedError("bwrap: execvp: Permission denied"));
 	});
 
+	it("should detect 'read-only' in error text", () => {
+		assert.ok(isSandboxBlockedError("Unable to create '.git/index.lock': Read-only file system"));
+	});
+
 	it("should detect 'bwrap' in error text", () => {
 		assert.ok(isSandboxBlockedError("bwrap: execvp ...: No such file or directory"));
 	});

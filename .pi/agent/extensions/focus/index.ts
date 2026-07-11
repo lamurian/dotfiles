@@ -17,6 +17,7 @@ const BLOCK_PATTERNS = [
 	"not allowed",
 	"eacces",
 	"permission denied",
+	"read-only",
 	"bwrap",
 ];
 
