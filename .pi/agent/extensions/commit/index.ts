@@ -125,12 +125,12 @@ Examples:
 	pi.registerTool({
 		name: "commit_amend",
 		description:
-			"Perform git commit --amend --no-edit to include staged changes " +
-			"in the last commit without changing the commit message. " +
+			"Auto-stage all changes then perform git commit --amend --no-edit " +
+			"to include them in the last commit without changing the commit message. " +
 			"Use after archiving completed files to include them in the implementation commit.",
 		parameters: Type.Object({}),
 		promptSnippet:
-			"Stage changes and amend the last commit without changing its message.",
+			"Stage all changes and amend the last commit without changing its message.",
 		promptGuidelines: [
 			"Use commit_amend after archiving a completed plan file to " +
 				"include the archived file in the implementation commit.",
@@ -144,8 +144,9 @@ Examples:
 				| undefined,
 			ctx: { cwd: string; ui: { notify: (msg: string, type: string) => void } },
 		) {
-			onUpdate?.({ content: [{ type: "text", text: "Amending last commit..." }] });
+			onUpdate?.({ content: [{ type: "text", text: "Staging all changes and amending last commit..." }] });
 
+			await execGit(pi, ["add", "--all"], signal);
 			const result = await execGit(pi, ["commit", "--amend", "--no-edit"], signal);
 
 			if (result.code === 0) {

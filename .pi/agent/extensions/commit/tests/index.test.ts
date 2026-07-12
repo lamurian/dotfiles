@@ -876,3 +876,154 @@ test("commit_changes tool streams intermediate progress then final success", asy
 	expect(result.details.success).toBe(true);
 	expect(result.details.hash).toBe("def5678");
 });
+
+// ─── commit_amend tool tests ────────────────────────────────────────────
+
+test("commit_amend is registered as a tool", () => {
+	let capturedTool: any = null;
+	const localMockPi = {
+		...mockPi,
+		registerTool: (def: any) => {
+			if (def.name === "commit_amend") capturedTool = def;
+		},
+	};
+	commitExtension(localMockPi);
+	expect(capturedTool).not.toBeNull();
+	expect(capturedTool!.name).toBe("commit_amend");
+	expect(capturedTool!.description).toContain("amend");
+	expect(typeof capturedTool!.execute).toBe("function");
+});
+
+test("commit_amend runs git add --all before amend", async () => {
+	const gitCommands: string[][] = [];
+	let commitAmendTool: any = null;
+
+	const localMockPi = {
+		...mockPi,
+		registerTool: (def: any) => {
+			if (def.name === "commit_amend") commitAmendTool = def;
+		},
+		exec: async (cmd: string, args: string[]) => {
+			if (cmd === "git") gitCommands.push(args);
+			if (args[0] === "rev-parse") {
+				return { stdout: "abc1234\n", stderr: "", code: 0 };
+			}
+			// Simulate successful amend
+			if (args[0] === "commit" && args[1] === "--amend") {
+				return { stdout: "[main abc1234] feat: test", stderr: "", code: 0 };
+			}
+			return { stdout: "", stderr: "", code: 0 };
+		},
+	};
+
+	commitExtension(localMockPi);
+	expect(commitAmendTool).not.toBeNull();
+
+	const result = await commitAmendTool.execute(
+		"call-amend-1",
+		{},
+		undefined,
+		undefined,
+		{ cwd: "/tmp", ui: { notify: () => {} } },
+	);
+
+	// Should have called git add --all before git commit --amend --no-edit
+	const addIndex = gitCommands.findIndex(
+		cmd => cmd[0] === "add" && cmd[1] === "--all",
+	);
+	const amendIndex = gitCommands.findIndex(
+		cmd =>
+			cmd[0] === "commit" &&
+			cmd[1] === "--amend" &&
+			cmd[2] === "--no-edit",
+	);
+
+	expect(addIndex).toBeGreaterThanOrEqual(0);
+	expect(amendIndex).toBeGreaterThanOrEqual(0);
+	expect(addIndex).toBeLessThan(amendIndex);
+	expect(result.details.success).toBe(true);
+});
+
+test("commit_amend reports failure when amend fails", async () => {
+	let commitAmendTool: any = null;
+
+	const localMockPi = {
+		...mockPi,
+		registerTool: (def: any) => {
+			if (def.name === "commit_amend") commitAmendTool = def;
+		},
+		exec: async (cmd: string, args: string[]) => {
+			if (args[0] === "rev-parse") {
+				return { stdout: "abc1234\n", stderr: "", code: 0 };
+			}
+			// Amplify fails
+			if (args[0] === "commit" && args[1] === "--amend") {
+				return {
+					stdout: "",
+					stderr: "error: failed to commit",
+					code: 1,
+				};
+			}
+			return { stdout: "", stderr: "", code: 0 };
+		},
+	};
+
+	commitExtension(localMockPi);
+	expect(commitAmendTool).not.toBeNull();
+
+	const result = await commitAmendTool.execute(
+		"call-amend-2",
+		{},
+		undefined,
+		undefined,
+		{ cwd: "/tmp", ui: { notify: () => {} } },
+	);
+
+	expect(result.isError).toBe(true);
+	expect(result.content[0].text).toContain("failed to commit");
+});
+
+test("commit_amend calls onUpdate with staging message before amend", async () => {
+	const gitCommands: string[][] = [];
+	let commitAmendTool: any = null;
+
+	const localMockPi = {
+		...mockPi,
+		registerTool: (def: any) => {
+			if (def.name === "commit_amend") commitAmendTool = def;
+		},
+		exec: async (cmd: string, args: string[]) => {
+			if (cmd === "git") gitCommands.push(args);
+			if (args[0] === "rev-parse") {
+				return { stdout: "abc1234\n", stderr: "", code: 0 };
+			}
+			if (args[0] === "commit" && args[1] === "--amend") {
+				return { stdout: "[main abc1234] feat: test", stderr: "", code: 0 };
+			}
+			return { stdout: "", stderr: "", code: 0 };
+		},
+	};
+
+	commitExtension(localMockPi);
+	expect(commitAmendTool).not.toBeNull();
+
+	const onUpdateCalls: unknown[] = [];
+	const onUpdate = (update: unknown) => {
+		onUpdateCalls.push(update);
+	};
+
+	await commitAmendTool.execute(
+		"call-amend-3",
+		{},
+		undefined,
+		onUpdate,
+		{ cwd: "/tmp", ui: { notify: () => {} } },
+	);
+
+	// Should have at least one onUpdate call
+	expect(onUpdateCalls.length).toBeGreaterThanOrEqual(1);
+	// The first update should mention staging all changes
+	const firstUpdate = onUpdateCalls[0] as { content: { text: string }[] };
+	expect(firstUpdate.content[0].text).toContain("Staging");
+	expect(firstUpdate.content[0].text).toContain("amend");
+});
