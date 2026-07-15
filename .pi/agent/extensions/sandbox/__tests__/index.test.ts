@@ -7,6 +7,7 @@ import {
 	createSandboxedBashOps,
 	getDiscoveredFiles,
 	clearDiscoveredCache,
+	clearBwrapArgsCache,
 	discoverPaths,
 	resolveBinaries,
 	type SandboxConfig,
@@ -517,4 +518,54 @@ describe("createSandboxedBashOps", () => {
 		}
 	});
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// buildBwrapArgs — caching
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("buildBwrapArgs — caching", () => {
+	it("should return consistent results for same inputs", () => {
+		const config: SandboxConfig = {
+			network: { allowedDomains: ["npmjs.org"] },
+		};
+		const result1 = buildBwrapArgs("/tmp", config);
+		const result2 = buildBwrapArgs("/tmp", config);
+
+		assert.deepEqual(result1, result2);
+	});
+
+	it("should return valid args for different cwds", () => {
+		const config: SandboxConfig = {};
+		const result1 = buildBwrapArgs("/tmp", config);
+		const result2 = buildBwrapArgs("/var/tmp", config);
+
+		assert.ok(result1.args.includes("--new-session"));
+		assert.ok(result2.args.includes("--new-session"));
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// clearBwrapArgsCache
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("clearBwrapArgsCache", () => {
+	it("should be a function", () => {
+		assert.equal(typeof clearBwrapArgsCache, "function");
+	});
+
+	it("should not throw when called", () => {
+		clearBwrapArgsCache();
+	});
+
+	it("should still allow buildBwrapArgs to produce valid results after cache clear", () => {
+		clearBwrapArgsCache();
+		const config: SandboxConfig = {
+			network: { allowedDomains: [] },
+		};
+		const result = buildBwrapArgs("/tmp", config);
+		assert.ok(result.args.includes("--unshare-net"), "should produce valid bwrap args after cache clear");
+		assert.equal(result.needsSocat, false);
+	});
+});
+
 

@@ -7,6 +7,7 @@ import { existsSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { randomBytes } from "node:crypto";
 import type { BashOperations } from "@earendil-works/pi-coding-agent";
+import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import {
 	parseCommands,
 	validateCommands,
@@ -46,11 +47,30 @@ export async function resolveBinaries(names: string[]): Promise<Map<string, stri
 
 // ─── Bwrap arg builder ───────────────────────────────────────────────────────
 
+let bwrapArgsCache: { key: string; args: string[] } | null = null;
+
+export function clearBwrapArgsCache(): void {
+	bwrapArgsCache = null;
+}
+
 export function buildBwrapArgs(
 	cwd: string,
 	config: SandboxConfig,
 	resolvedBinaries?: Map<string, string>,
 ): { args: string[]; needsSocat: boolean } {
+	// Compute cache key from config file mtimes
+	const globalPath = join(getAgentDir(), "extensions", "sandbox.json");
+	const projectPath = join(cwd, ".pi", "sandbox.json");
+
+	const globalMtime = statSync(globalPath, { throwIfNoEntry: false })?.mtimeMs ?? 0;
+	const projectMtime = statSync(projectPath, { throwIfNoEntry: false })?.mtimeMs ?? 0;
+	const configHash = JSON.stringify(config);
+	const key = `${globalMtime}:${projectMtime}:${cwd}:${configHash}`;
+
+	if (bwrapArgsCache?.key === key) {
+		return { args: [...bwrapArgsCache.args], needsSocat: false };
+	}
+
 	const args: string[] = [];
 
 	args.push("--new-session", "--die-with-parent");
@@ -151,6 +171,8 @@ export function buildBwrapArgs(
 	if (!hasAllowed) {
 		args.push("--unshare-net");
 	}
+	// Store in cache
+	bwrapArgsCache = { key, args };
 	return { args, needsSocat: false };
 }
 
