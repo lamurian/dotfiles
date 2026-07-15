@@ -20,9 +20,9 @@ import type { ExtensionAPI, ToolCallEvent } from "@earendil-works/pi-coding-agen
 import { createBashTool } from "@earendil-works/pi-coding-agent";
 import { mergeToolConfigs, evaluateToolCall } from "./guardrail.ts";
 import { loadConfig } from "./config.ts";
-import { resolveBinaries, createSandboxedBashOps, type SocatBridge } from "./sandbox.ts";
+import { resolveBinaries, createSandboxedBashOps, clearBwrapArgsCache, type SocatBridge } from "./sandbox.ts";
 
-export { buildBwrapArgs, createSandboxedBashOps, resolveBinaries, buildWrappedCommand } from "./sandbox.ts";
+export { buildBwrapArgs, createSandboxedBashOps, resolveBinaries, buildWrappedCommand, clearBwrapArgsCache } from "./sandbox.ts";
 export { getDiscoveredFiles, clearDiscoveredCache, discoverPaths, type SandboxConfig } from "./config.ts";
 
 export default function (pi: ExtensionAPI) {
@@ -56,12 +56,6 @@ export default function (pi: ExtensionAPI) {
 			const tool = createBashTool(localCwd, { operations: ops });
 			return tool.execute(id, params, signal, onUpdate);
 		},
-	});
-
-	pi.on("user_bash", () => {
-		if (!sandboxEnabled) return;
-		const config = loadConfig(localCwd);
-		return { operations: createSandboxedBashOps(config, resolvedBinaries ?? undefined) };
 	});
 
 	// ── Tool guardrail: block read/write/edit on denied paths ────────────
@@ -132,6 +126,7 @@ export default function (pi: ExtensionAPI) {
 
 	pi.on("session_shutdown", () => {
 		disableSandbox();
+		clearBwrapArgsCache();
 	});
 
 	pi.registerCommand("sandbox", {
