@@ -55,7 +55,7 @@
   },
   "filesystem": {
     "allowWrite": [".", "/tmp", "/home"],
-    "denyRead": ["~/.ssh", "~/.aws", "**/.env"],
+    "denyRead": ["~/.ssh", "~/.aws", "**/.env", "**/auth*"],
     "allowRead": ["/etc"],
     "denyWrite": ["**/.env", "**/.git"]
   },

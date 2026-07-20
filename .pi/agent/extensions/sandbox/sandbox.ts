@@ -268,7 +268,7 @@ export function createSandboxedBashOps(
 	const bridge: SocatBridge | null = null;
 
 	return {
-		async exec(command, cwd, { onData, signal, timeout }) {
+		async exec(command, cwd, { onData, signal, timeout, env }) {
 			if (!existsSync(cwd)) {
 				throw new Error(`Working directory does not exist: ${cwd}`);
 			}
@@ -317,6 +317,7 @@ export function createSandboxedBashOps(
 					cwd,
 					detached: true,
 					stdio: ["ignore", "pipe", "pipe"],
+					env,
 				});
 
 				let timedOut = false;
@@ -335,8 +336,15 @@ export function createSandboxedBashOps(
 					}, timeout * 1000);
 				}
 
+				// Track stderr separately for diagnostics, while still forwarding
+				// combined output via onData (preserves bash tool's single-stream capture).
+				let stderrBuffer = Buffer.alloc(0);
+
 				child.stdout?.on("data", onData);
-				child.stderr?.on("data", onData);
+				child.stderr?.on("data", (data) => {
+					stderrBuffer = Buffer.concat([stderrBuffer, data]);
+					onData(data);
+				});
 
 				child.on("error", (err) => {
 					if (timeoutHandle) clearTimeout(timeoutHandle);
@@ -363,6 +371,22 @@ export function createSandboxedBashOps(
 						reject(new Error("aborted"));
 					} else if (timedOut) {
 						reject(new Error(`timeout:${timeout}`));
+					} else if (code !== 0 && wrappedCommand.startsWith("bwrap ")) {
+						// bwrap itself failed — provide actionable diagnostics
+						const stderrText = stderrBuffer.toString("utf-8").trim();
+						const lines: string[] = [];
+						if (stderrText) {
+							lines.push(stderrText);
+						}
+						lines.push(
+							"bwrap execution failed. Possible causes:",
+							"  - User namespaces disabled: sudo sysctl -w kernel.unprivileged_userns_clone=1",
+							"  - Missing capabilities: sudo setcap cap_sys_admin+ep $(which bwrap)",
+							"  - SELinux/AppArmor blocking: check dmesg for denials",
+							"",
+							"To disable sandbox: pass --no-sandbox flag",
+						);
+						reject(new Error(lines.join("\n")));
 					} else {
 						resolve({ exitCode: code });
 					}
