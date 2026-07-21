@@ -38,6 +38,58 @@ export async function execGit(
 }
 
 /**
+ * Get the git hooks directory path.
+ * Returns the path as reported by `git rev-parse --git-path hooks`.
+ *
+ * @param pi     - ExtensionAPI for executing commands.
+ * @param signal - Optional abort signal.
+ * @returns The hooks directory path.
+ */
+export async function getHooksDir(
+	pi: ExtensionAPI,
+	signal?: AbortSignal,
+): Promise<string> {
+	const { stdout } = await execGit(pi, ["rev-parse", "--git-path", "hooks"], signal);
+	return stdout.trim();
+}
+
+/**
+ * Run the pre-commit hook if it exists and is executable.
+ * Uses `pi.exec` to run the hook script directly (bypasses sandbox).
+ *
+ * @param pi     - ExtensionAPI for executing commands.
+ * @param signal - Optional abort signal.
+ * @returns Object with `ran` boolean, and if ran: `output` and `code`.
+ */
+export async function runPreCommitHook(
+	pi: ExtensionAPI,
+	signal?: AbortSignal,
+): Promise<{ ran: boolean; output?: string; code?: number }> {
+	const hooksDir = await getHooksDir(pi, signal);
+	const hookPath = `${hooksDir}/pre-commit`;
+
+	// Check if hook exists and is executable
+	const checkResult = await pi.exec(
+		"sh", ["-c", `test -x "${hookPath}"`], { signal },
+	) as unknown as GitResult;
+
+	if (checkResult.code !== 0) {
+		return { ran: false }; // Hook doesn't exist or isn't executable
+	}
+
+	// Run the hook and capture output
+	const result = await pi.exec(
+		"sh", ["-c", `"${hookPath}" 2>&1`], { signal },
+	) as unknown as GitResult;
+
+	return {
+		ran: true,
+		output: (result.stdout || result.stderr).trim(),
+		code: result.code,
+	};
+}
+
+/**
  * Trim a commit subject to fit within 75 characters.
  * Ensures lowercase after colon and no trailing period.
  */

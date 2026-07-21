@@ -16,6 +16,7 @@ import type { ExtensionAPI, ToolCallEvent } from "@earendil-works/pi-coding-agen
 import { Type } from "typebox";
 import { execGit, trimSubject } from "./git.ts";
 import { runCommit, runCommitStreaming, type CommitResult } from "./commit.ts";
+import { executeAmend } from "./amend.ts";
 
 export default function commitExtension(pi: ExtensionAPI): void {
 	// ── Guardrail: block git commit via bash ──────────────────────────────
@@ -109,7 +110,7 @@ ${statText}
 
 - Prefer a one-line subject (≤75 chars) in conventional format: \`type(scope): description\`
 - Use a body only if the change needs additional explanation; otherwise commit must be single-line
-- If pre-commit hooks fail, fix the reported issues, stage with \`git add\`, and call \`commit_changes\` again with the same message
+- If pre-commit hooks fail, fix the reported issues and call \`commit_changes\` again with the same message
 
 Examples:
   feat(auth): add JWT token validation
@@ -127,6 +128,7 @@ Examples:
 		description:
 			"Auto-stage all changes then perform git commit --amend --no-edit " +
 			"to include them in the last commit without changing the commit message. " +
+			"Also runs pre-commit hooks before amending (git's --amend skips hooks by default). " +
 			"Use after archiving completed files to include them in the implementation commit.",
 		parameters: Type.Object({}),
 		promptSnippet:
@@ -135,48 +137,7 @@ Examples:
 			"Use commit_amend after archiving a completed plan file to " +
 				"include the archived file in the implementation commit.",
 		],
-		async execute(
-			_toolCallId: string,
-			_params: Record<string, never>,
-			signal: AbortSignal | undefined,
-			onUpdate:
-				| ((update: { content: { type: string; text: string }[] }) => void)
-				| undefined,
-			ctx: { cwd: string; ui: { notify: (msg: string, type: string) => void } },
-		) {
-			onUpdate?.({ content: [{ type: "text", text: "Staging all changes and amending last commit..." }] });
-
-			await execGit(pi, ["add", "--all"], signal);
-			const result = await execGit(pi, ["commit", "--amend", "--no-edit"], signal);
-
-			if (result.code === 0) {
-				ctx.ui.notify("✓ Amended last commit", "info");
-				// Get the new hash after amend
-				const { stdout: hash } = await execGit(
-					pi, ["rev-parse", "--short", "HEAD"], signal,
-				);
-				return {
-					content: [
-						{
-							type: "text",
-							text: `Commit amended successfully. Hash: ${hash.trim()}`,
-						},
-					],
-					details: { success: true },
-				};
-			}
-
-			ctx.ui.notify("✗ Amend failed", "error");
-			return {
-				content: [
-					{
-						type: "text",
-						text: `Failed to amend commit:\n${result.stderr || result.stdout}`,
-					},
-				],
-				isError: true,
-			};
-		},
+		execute: (_id, _params, signal, onUpdate, ctx) => executeAmend(pi, signal, onUpdate, ctx),
 	});
 
 	// ── commit_changes tool ──────────────────────────────────────────────
@@ -201,7 +162,7 @@ Examples:
 			"Run git commit with staged changes using a conventional commit message. If pre-commit hooks fail, fix and retry.",
 		promptGuidelines: [
 			"Use commit_changes to finalize a commit after generating the message. " +
-				"If pre-commit hooks fail, fix the issues, re-stage with git add, then call commit_changes again.",
+				"If pre-commit hooks fail, fix the issues and call commit_changes again.",
 		],
 		async execute(
 			toolCallId: string,
@@ -210,19 +171,12 @@ Examples:
 			onUpdate: ((update: { content: { type: string; text: string }[] }) => void) | undefined,
 			ctx: { cwd: string; ui: { notify: (msg: string, type: string) => void } },
 		): Promise<CommitResult> {
-			onUpdate?.({ content: [{ type: "text", text: "Checking staged changes..." }] });
+			onUpdate?.({ content: [{ type: "text", text: "Staging all changes..." }] });
 
-			// Auto-stage only if nothing is staged yet.
-			// git diff --cached --quiet exits 0 when index matches HEAD (clean).
-			// Runs via pi.exec which bypasses sandbox bwrap, so denyWrite: ["**/.git"]
-			// doesn't interfere.
-			const { code: stagedCode } = await execGit(
-				pi, ["diff", "--cached", "--quiet"], signal,
-			);
-			if (stagedCode === 0) {
-				onUpdate?.({ content: [{ type: "text", text: "No staged changes. Staging all..." }] });
-				await execGit(pi, ["add", "--all"], signal);
-			}
+			// Always run git add --all before commit.
+			// This ensures retries after hook failures pick up any file fixes
+			// without requiring manual re-stage (which is blocked by sandbox).
+			await execGit(pi, ["add", "--all"], signal);
 
 			onUpdate?.({ content: [{ type: "text", text: "Running git commit..." }] });
 
@@ -262,8 +216,8 @@ Examples:
 				if (hasPreCommitOutput) {
 					throw new Error(
 						`Commit was blocked by pre-commit hooks.\n\n${result.output}\n\n` +
-							`Fix the reported issues, re-stage with \`git add\`, ` +
-							`then call \`commit_changes\` again with the same message.`,
+							`Fix the reported issues, then call \`commit_changes\` again ` +
+							`with the same message.`,
 					);
 				}
 
@@ -283,7 +237,8 @@ Examples:
 				ctx.ui.notify(`✗ Commit failed due to pre-commit hooks: ${params.message}`, "error");
 				throw new Error(
 					`Commit failed due to pre-commit hooks:\n\n${result.output}\n\n` +
-						`Fix the reported issues, stage fixes with \`git add\`, then call \`commit_changes\` again with the same message.`,
+						`Fix the reported issues, then call \`commit_changes\` again ` +
+						`with the same message.`,
 				);
 			}
 
