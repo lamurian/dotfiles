@@ -437,12 +437,13 @@ test("commit_changes tool extracts hash from rev-parse HEAD", async () => {
 		...mockPi,
 		exec: async (cmd: string, args: string[]) => {
 			callCount++;
-			// First rev-parse before commit
-			if (args[0] === "rev-parse" && callCount === 1) {
+			// First exec call: git add --all (always runs)
+			// Second exec call: rev-parse before commit
+			if (args[0] === "rev-parse" && callCount === 2) {
 				return { stdout: "abc1234\n", stderr: "", code: 0 };
 			}
-			// Second rev-parse after commit
-			if (args[0] === "rev-parse" && callCount === 2) {
+			// Third exec call: rev-parse after commit
+			if (args[0] === "rev-parse" && callCount === 3) {
 				return { stdout: "def5678\n", stderr: "", code: 0 };
 			}
 			return { stdout: "", stderr: "", code: 0 };
@@ -615,7 +616,7 @@ test("allows git log with 'commit' in the output", async () => {
 
 // ─── Auto-staging tests ────────────────────────────────────────────────────
 
-test("commit_changes auto-stages when nothing is staged", async () => {
+test("commit_changes always stages all changes", async () => {
 	spawnFactory = createMockSpawn({
 		stdout: "[main def5678] feat: add test\n 1 file changed",
 		code: 0,
@@ -632,10 +633,6 @@ test("commit_changes auto-stages when nothing is staged", async () => {
 					revParseCount++;
 					if (revParseCount === 1) return { stdout: "abc1234\n", stderr: "", code: 0 };
 					return { stdout: "def5678\n", stderr: "", code: 0 };
-				}
-				if (args[0] === "diff" && args[1] === "--cached" && args[2] === "--quiet") {
-					// Nothing staged — exit 0 means index matches HEAD (clean)
-					return { stdout: "", stderr: "", code: 0 };
 				}
 				if (args[0] === "add" && args[1] === "--all") {
 					return { stdout: "", stderr: "", code: 0 };
@@ -674,7 +671,7 @@ test("commit_changes auto-stages when nothing is staged", async () => {
 	expect(addIndex).toBeLessThan(revParse2Index);
 });
 
-test("commit_changes skips staging when files are already staged", async () => {
+test("commit_changes always stages even when already staged", async () => {
 	spawnFactory = createMockSpawn({
 		stdout: "[main bcdef9] feat: staged only\n 1 file changed",
 		code: 0,
@@ -692,9 +689,8 @@ test("commit_changes skips staging when files are already staged", async () => {
 					if (revParseCount === 1) return { stdout: "abc1234\n", stderr: "", code: 0 };
 					return { stdout: "bcdef9\n", stderr: "", code: 0 };
 				}
-				if (args[0] === "diff" && args[1] === "--cached" && args[2] === "--quiet") {
-					// Staged changes exist — exit 1 means index differs from HEAD
-					return { stdout: "", stderr: "", code: 1 };
+				if (args[0] === "add" && args[1] === "--all") {
+					return { stdout: "", stderr: "", code: 0 };
 				}
 			}
 			return { stdout: "", stderr: "", code: 0 };
@@ -716,14 +712,63 @@ test("commit_changes skips staging when files are already staged", async () => {
 		ctx,
 	);
 
-	// Should NOT have called git add --all
+	// Should have called git add --all (always-stage behavior)
 	const addCmd = gitCommands.find(cmd => cmd[0] === "add" && cmd[1] === "--all");
-	expect(addCmd).toBeUndefined();
+	expect(addCmd).toBeDefined();
 	expect(result.details.success).toBe(true);
 	expect(result.details.hash).toBe("bcdef9");
 });
 
-test("commit_changes updates progress when auto-staging", async () => {
+test("commit_changes auto-stages on retry after hook failure", async () => {
+	// Simulate retry: first call had hook failure, files were fixed, retry now
+	spawnFactory = createMockSpawn({
+		stdout: "[main def5678] feat: fix after retry\n 1 file changed",
+		code: 0,
+	});
+
+	const gitCommands: string[][] = [];
+	let revParseCount = 0;
+	const localMockPi = {
+		...mockPi,
+		exec: async (cmd: string, args: string[]) => {
+			if (cmd === "git") {
+				gitCommands.push(args);
+				if (args[0] === "rev-parse") {
+					revParseCount++;
+					if (revParseCount === 1) return { stdout: "abc1234\n", stderr: "", code: 0 };
+					return { stdout: "def5678\n", stderr: "", code: 0 };
+				}
+				if (args[0] === "add" && args[1] === "--all") {
+					return { stdout: "", stderr: "", code: 0 };
+				}
+			}
+			return { stdout: "", stderr: "", code: 0 };
+		},
+	};
+
+	registeredCommand = null;
+	registeredTool = null;
+	commitExtension(localMockPi);
+
+	expect(registeredTool).not.toBeNull();
+
+	const ctx = { cwd: "/tmp", ui: { notify: () => {} } };
+	const result = await registeredTool!.execute(
+		"call-3",
+		{ message: "feat: fix after retry" },
+		undefined,
+		undefined,
+		ctx,
+	);
+
+	// Should always call git add --all, even on retry
+	const addCalls = gitCommands.filter(cmd => cmd[0] === "add" && cmd[1] === "--all");
+	expect(addCalls.length).toBe(1);
+	expect(result.details.success).toBe(true);
+	expect(result.details.hash).toBe("def5678");
+});
+
+test("commit_changes updates progress when staging", async () => {
 	spawnFactory = createMockSpawn({
 		stdout: "[main feed00] feat: progress\n 1 file changed",
 		code: 0,
@@ -740,9 +785,6 @@ test("commit_changes updates progress when auto-staging", async () => {
 					revParseCount++;
 					if (revParseCount === 1) return { stdout: "abc1234\n", stderr: "", code: 0 };
 					return { stdout: "feed00\n", stderr: "", code: 0 };
-				}
-				if (args[0] === "diff" && args[1] === "--cached" && args[2] === "--quiet") {
-					return { stdout: "", stderr: "", code: 0 };
 				}
 				if (args[0] === "add" && args[1] === "--all") {
 					return { stdout: "", stderr: "", code: 0 };
@@ -772,11 +814,11 @@ test("commit_changes updates progress when auto-staging", async () => {
 		ctx,
 	);
 
-	// Should have at least 2 updates: one for auto-staging, one for commit output
+	// Should have at least 2 updates: one for staging, one for commit output
 	expect(onUpdateCalls.length).toBeGreaterThanOrEqual(2);
 	// First update should mention staging
 	const firstUpdate = onUpdateCalls[0] as { content: { text: string }[] };
-	expect(firstUpdate.content[0].text).toContain("staging");
+	expect(firstUpdate.content[0].text).toContain("Staging");
 	// Last update should mention the commit message
 	const lastUpdate = onUpdateCalls[onUpdateCalls.length - 1] as { content: { text: string }[] };
 	expect(lastUpdate.content[0].text).toContain("feat: progress");
@@ -894,7 +936,7 @@ test("commit_amend is registered as a tool", () => {
 	expect(typeof capturedTool!.execute).toBe("function");
 });
 
-test("commit_amend runs git add --all before amend", async () => {
+test("commit_amend runs git add --all and pre-commit hooks before amend", async () => {
 	const gitCommands: string[][] = [];
 	let commitAmendTool: any = null;
 
@@ -905,7 +947,11 @@ test("commit_amend runs git add --all before amend", async () => {
 		},
 		exec: async (cmd: string, args: string[]) => {
 			if (cmd === "git") gitCommands.push(args);
-			if (args[0] === "rev-parse") {
+			// Return hooks dir path for hook detection
+			if (args[0] === "rev-parse" && args[1] === "--git-path" && args[2] === "hooks") {
+				return { stdout: "/tmp/.git/hooks\n", stderr: "", code: 0 };
+			}
+			if (args[0] === "rev-parse" && args[1] === "--short" && args[2] === "HEAD") {
 				return { stdout: "abc1234\n", stderr: "", code: 0 };
 			}
 			// Simulate successful amend
@@ -937,11 +983,60 @@ test("commit_amend runs git add --all before amend", async () => {
 			cmd[1] === "--amend" &&
 			cmd[2] === "--no-edit",
 	);
+	// Should have called rev-parse with --git-path hooks (for hook detection)
+	const hooksDirIndex = gitCommands.findIndex(
+		cmd => cmd[0] === "rev-parse" && cmd[1] === "--git-path" && cmd[2] === "hooks",
+	);
 
+	expect(hooksDirIndex).toBeGreaterThanOrEqual(0);
 	expect(addIndex).toBeGreaterThanOrEqual(0);
 	expect(amendIndex).toBeGreaterThanOrEqual(0);
 	expect(addIndex).toBeLessThan(amendIndex);
 	expect(result.details.success).toBe(true);
+});
+
+test("commit_amend throws on pre-commit hook failure", async () => {
+	let commitAmendTool: any = null;
+
+	const localMockPi = {
+		...mockPi,
+		registerTool: (def: any) => {
+			if (def.name === "commit_amend") commitAmendTool = def;
+		},
+		exec: async (cmd: string, args: string[]) => {
+			// Return hooks dir path
+			if (args[0] === "rev-parse" && args[1] === "--git-path" && args[2] === "hooks") {
+				return { stdout: "/tmp/.git/hooks\n", stderr: "", code: 0 };
+			}
+			// Simulate hook check — hook exists
+			if (cmd === "sh" && args[0] === "-c" && args[1]?.includes("test -x")) {
+				return { stdout: "", stderr: "", code: 0 };
+			}
+			// Simulate hook execution — hook FAILS
+			if (cmd === "sh" && args[0] === "-c" && args[1]?.includes("/pre-commit")) {
+				return {
+					stdout: "",
+					stderr: "eslint --fix found errors",
+					code: 1,
+				};
+			}
+			return { stdout: "", stderr: "", code: 0 };
+		},
+	};
+
+	commitExtension(localMockPi);
+	expect(commitAmendTool).not.toBeNull();
+
+	const ctx = { cwd: "/tmp", ui: { notify: () => {} } };
+	await expect(
+		commitAmendTool.execute(
+			"call-amend-2",
+			{},
+			undefined,
+			undefined,
+			ctx,
+		),
+	).rejects.toThrow(/pre-commit hook/i);
 });
 
 test("commit_amend reports failure when amend fails", async () => {
@@ -953,6 +1048,10 @@ test("commit_amend reports failure when amend fails", async () => {
 			if (def.name === "commit_amend") commitAmendTool = def;
 		},
 		exec: async (cmd: string, args: string[]) => {
+			// Return hooks dir path
+			if (args[0] === "rev-parse" && args[1] === "--git-path" && args[2] === "hooks") {
+				return { stdout: "/tmp/.git/hooks\n", stderr: "", code: 0 };
+			}
 			if (args[0] === "rev-parse") {
 				return { stdout: "abc1234\n", stderr: "", code: 0 };
 			}
@@ -972,7 +1071,7 @@ test("commit_amend reports failure when amend fails", async () => {
 	expect(commitAmendTool).not.toBeNull();
 
 	const result = await commitAmendTool.execute(
-		"call-amend-2",
+		"call-amend-3",
 		{},
 		undefined,
 		undefined,
@@ -983,7 +1082,7 @@ test("commit_amend reports failure when amend fails", async () => {
 	expect(result.content[0].text).toContain("failed to commit");
 });
 
-test("commit_amend calls onUpdate with staging message before amend", async () => {
+test("commit_amend calls onUpdate with progress messages", async () => {
 	const gitCommands: string[][] = [];
 	let commitAmendTool: any = null;
 
@@ -994,6 +1093,10 @@ test("commit_amend calls onUpdate with staging message before amend", async () =
 		},
 		exec: async (cmd: string, args: string[]) => {
 			if (cmd === "git") gitCommands.push(args);
+			// Return hooks dir path
+			if (args[0] === "rev-parse" && args[1] === "--git-path" && args[2] === "hooks") {
+				return { stdout: "/tmp/.git/hooks\n", stderr: "", code: 0 };
+			}
 			if (args[0] === "rev-parse") {
 				return { stdout: "abc1234\n", stderr: "", code: 0 };
 			}
@@ -1013,17 +1116,19 @@ test("commit_amend calls onUpdate with staging message before amend", async () =
 	};
 
 	await commitAmendTool.execute(
-		"call-amend-3",
+		"call-amend-4",
 		{},
 		undefined,
 		onUpdate,
 		{ cwd: "/tmp", ui: { notify: () => {} } },
 	);
 
-	// Should have at least one onUpdate call
-	expect(onUpdateCalls.length).toBeGreaterThanOrEqual(1);
-	// The first update should mention staging all changes
+	// Should have multiple onUpdate calls: staging, hooks, amend
+	expect(onUpdateCalls.length).toBeGreaterThanOrEqual(3);
+	// The first update should mention staging
 	const firstUpdate = onUpdateCalls[0] as { content: { text: string }[] };
 	expect(firstUpdate.content[0].text).toContain("Staging");
-	expect(firstUpdate.content[0].text).toContain("amend");
+	// The second update should mention hooks
+	const secondUpdate = onUpdateCalls[1] as { content: { text: string }[] };
+	expect(secondUpdate.content[0].text).toContain("pre-commit");
 });
