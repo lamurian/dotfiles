@@ -289,6 +289,7 @@ describe("buildBwrapArgs — per-binary mount mode", () => {
 		// Should mount lib dirs
 		assert.ok(binds.some((b) => b === "/usr/lib"), "should mount /usr/lib");
 		assert.ok(binds.some((b) => b === "/lib" || b === "/lib64"), "should mount /lib or /lib64");
+		assert.ok(binds.some((b) => b === "/usr/share"), "should mount /usr/share for file magic database");
 
 		// Should include writable paths
 		assert.ok(binds.some((b) => b.includes(TMP)), "should mount writable path");

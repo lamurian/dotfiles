@@ -84,7 +84,7 @@ export function buildBwrapArgs(
 		for (const [, absPath] of resolvedBinaries) {
 			args.push("--ro-bind", absPath, absPath);
 		}
-		for (const libDir of ["/usr/lib", "/lib", "/lib64", "/usr/lib64"]) {
+		for (const libDir of ["/usr/lib", "/lib", "/lib64", "/usr/lib64", "/usr/share"]) {
 			if (existsSync(libDir)) {
 				args.push("--ro-bind", libDir, libDir);
 			}
