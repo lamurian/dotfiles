@@ -8,13 +8,13 @@
       "touch", "date", "uname", "whoami", "id", "env", "tar", "gzip", "gunzip",
       "zip", "unzip", "curl", "wget", "python", "python3", "jq", "node", "npm",
       "cargo", "make", "go", "tsc", "eslint", "prettier", "jest", "pytest",
-      "ruff", "mypy", "git", "npx", "cp"
+      "ruff", "mypy", "git", "npx", "cp", "dirname", "basename", "sh"
     ],
     "blockedCommands": [
       "rm", "mv", "dd", "truncate", "fallocate", "chmod", "chown",
       "chattr", "setfacl", "perl", "ruby", "gcc", "g++", "clang", "rustc",
       "apt", "apt-get", "dpkg", "pacman", "dnf", "yum", "systemctl", "service",
-      "journalctl", "kill", "pkill", "killall", "sudo", "su", "passwd", "sh",
+      "journalctl", "kill", "pkill", "killall", "sudo", "su", "passwd",
       "dash", "zsh", "fish", "mkfs", "fdisk", "parted", "mount", "umount",
       "tee"
     ],
