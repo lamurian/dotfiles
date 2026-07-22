@@ -3,7 +3,7 @@
  */
 
 import { spawn, execSync } from "node:child_process";
-import { existsSync, statSync } from "node:fs";
+import { existsSync, realpathSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { randomBytes } from "node:crypto";
 import type { BashOperations } from "@earendil-works/pi-coding-agent";
@@ -88,6 +88,16 @@ export function buildBwrapArgs(
 			if (existsSync(libDir)) {
 				args.push("--ro-bind", libDir, libDir);
 			}
+		}
+
+		// On merged-/usr systems (where /bin -> /usr/bin), mount /usr/bin at /bin
+		// so hardcoded paths like /bin/sh (used by Node.js execSync) resolve correctly.
+		try {
+			if (realpathSync("/bin") !== "/bin" && realpathSync("/bin") === realpathSync("/usr/bin")) {
+				args.push("--ro-bind", "/usr/bin", "/bin");
+			}
+		} catch {
+			// If realpath fails, skip the mount
 		}
 	} else {
 		args.push("--ro-bind", "/", "/");
