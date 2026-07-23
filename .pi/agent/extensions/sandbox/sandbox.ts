@@ -7,7 +7,13 @@ import { existsSync, realpathSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { randomBytes } from "node:crypto";
 import type { BashOperations } from "@earendil-works/pi-coding-agent";
-import { getAgentDir } from "@earendil-works/pi-coding-agent";
+import {
+	getAgentDir,
+	killProcessTree,
+	trackDetachedChildPid,
+	untrackDetachedChildPid,
+	waitForChildProcess,
+} from "@earendil-works/pi-coding-agent";
 import {
 	parseCommands,
 	validateCommands,
@@ -238,6 +244,7 @@ export function buildWrappedCommand(
 	bridge: SocatBridge | null,
 	resolvedBinaries?: Map<string, string>,
 ): string {
+	clearBwrapArgsCache();
 	const { args } = buildBwrapArgs(cwd, config, resolvedBinaries);
 	const shell = "bash";
 
@@ -322,86 +329,69 @@ export function createSandboxedBashOps(
 
 			const wrappedCommand = buildWrappedCommand(validatedCommand, cwd, config, bridge, resolvedBinaries);
 
-			return new Promise((resolve, reject) => {
-				const child = spawn("bash", ["-c", wrappedCommand], {
-					cwd,
-					detached: true,
-					stdio: ["ignore", "pipe", "pipe"],
-					env,
-				});
+			const child = spawn("bash", ["-c", wrappedCommand], {
+				cwd,
+				detached: true,
+				stdio: ["ignore", "pipe", "pipe"],
+				env,
+			});
 
-				let timedOut = false;
-				let timeoutHandle: NodeJS.Timeout | undefined;
+			if (child.pid) trackDetachedChildPid(child.pid);
 
-				if (timeout !== undefined && timeout > 0) {
-					timeoutHandle = setTimeout(() => {
-						timedOut = true;
-						if (child.pid) {
-							try {
-								process.kill(-child.pid, "SIGKILL");
-							} catch {
-								child.kill("SIGKILL");
-							}
-						}
-					}, timeout * 1000);
+			let timedOut = false;
+			let timeoutHandle: NodeJS.Timeout | undefined;
+
+			if (timeout !== undefined && timeout > 0) {
+				timeoutHandle = setTimeout(() => {
+					timedOut = true;
+					if (child.pid) killProcessTree(child.pid);
+				}, timeout * 1000);
+			}
+
+			// Track stderr separately for diagnostics, while still forwarding
+			// combined output via onData (preserves bash tool's single-stream capture).
+			let stderrBuffer = Buffer.alloc(0);
+
+			child.stdout?.on("data", onData);
+			child.stderr?.on("data", (data) => {
+				stderrBuffer = Buffer.concat([stderrBuffer, data]);
+				onData(data);
+			});
+
+			const onAbort = () => {
+				if (child.pid) killProcessTree(child.pid);
+			};
+
+			signal?.addEventListener("abort", onAbort, { once: true });
+
+			try {
+				const exitCode = await waitForChildProcess(child);
+
+				if (signal?.aborted) throw new Error("aborted");
+				if (timedOut) throw new Error(`timeout:${timeout}`);
+
+				if (exitCode !== 0 && wrappedCommand.startsWith("bwrap ")) {
+					// bwrap itself failed — provide actionable diagnostics
+					const stderrText = stderrBuffer.toString("utf-8").trim();
+					const lines: string[] = [];
+					if (stderrText) lines.push(stderrText);
+					lines.push(
+						"bwrap execution failed. Possible causes:",
+						"  - User namespaces disabled: sudo sysctl -w kernel.unprivileged_userns_clone=1",
+						"  - Missing capabilities: sudo setcap cap_sys_admin+ep $(which bwrap)",
+						"  - SELinux/AppArmor blocking: check dmesg for denials",
+						"",
+						"To disable sandbox: pass --no-sandbox flag",
+					);
+					throw new Error(lines.join("\n"));
 				}
 
-				// Track stderr separately for diagnostics, while still forwarding
-				// combined output via onData (preserves bash tool's single-stream capture).
-				let stderrBuffer = Buffer.alloc(0);
-
-				child.stdout?.on("data", onData);
-				child.stderr?.on("data", (data) => {
-					stderrBuffer = Buffer.concat([stderrBuffer, data]);
-					onData(data);
-				});
-
-				child.on("error", (err) => {
-					if (timeoutHandle) clearTimeout(timeoutHandle);
-					reject(err);
-				});
-
-				const onAbort = () => {
-					if (child.pid) {
-						try {
-							process.kill(-child.pid, "SIGKILL");
-						} catch {
-							child.kill("SIGKILL");
-						}
-					}
-				};
-
-				signal?.addEventListener("abort", onAbort, { once: true });
-
-				child.on("close", (code) => {
-					if (timeoutHandle) clearTimeout(timeoutHandle);
-					signal?.removeEventListener("abort", onAbort);
-
-					if (signal?.aborted) {
-						reject(new Error("aborted"));
-					} else if (timedOut) {
-						reject(new Error(`timeout:${timeout}`));
-					} else if (code !== 0 && wrappedCommand.startsWith("bwrap ")) {
-						// bwrap itself failed — provide actionable diagnostics
-						const stderrText = stderrBuffer.toString("utf-8").trim();
-						const lines: string[] = [];
-						if (stderrText) {
-							lines.push(stderrText);
-						}
-						lines.push(
-							"bwrap execution failed. Possible causes:",
-							"  - User namespaces disabled: sudo sysctl -w kernel.unprivileged_userns_clone=1",
-							"  - Missing capabilities: sudo setcap cap_sys_admin+ep $(which bwrap)",
-							"  - SELinux/AppArmor blocking: check dmesg for denials",
-							"",
-							"To disable sandbox: pass --no-sandbox flag",
-						);
-						reject(new Error(lines.join("\n")));
-					} else {
-						resolve({ exitCode: code });
-					}
-				});
-			});
+				return { exitCode };
+			} finally {
+				if (child.pid) untrackDetachedChildPid(child.pid);
+				if (timeoutHandle) clearTimeout(timeoutHandle);
+				signal?.removeEventListener("abort", onAbort);
+			}
 		},
 	};
 }

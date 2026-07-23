@@ -44,8 +44,9 @@ export default function (pi: ExtensionAPI) {
 		currentBridge = null;
 	}
 
-	pi.registerTool({
+	const sandboxBashTool = {
 		...localBash,
+		name: "sandbox-bash",
 		label: "bash (sandboxed)",
 		async execute(id, params, signal, onUpdate, _ctx) {
 			if (!sandboxEnabled) {
@@ -56,12 +57,13 @@ export default function (pi: ExtensionAPI) {
 			const tool = createBashTool(localCwd, { operations: ops });
 			return tool.execute(id, params, signal, onUpdate);
 		},
-	});
+	};
+	pi.registerTool(sandboxBashTool);
 
 	// ── Tool guardrail: block read/write/edit on denied paths ────────────
 	pi.on("tool_call", async (event: ToolCallEvent, ctx) => {
 		if (!sandboxEnabled) return;
-		if (event.toolName === "bash") return;
+		if (event.toolName === "bash" || event.toolName === "sandbox-bash") return;
 
 		const config = loadConfig(ctx.cwd);
 		const toolAccess = mergeToolConfigs(config.tools);
@@ -96,13 +98,29 @@ export default function (pi: ExtensionAPI) {
 
 		try {
 			execSync("bwrap --version", { stdio: "ignore", timeout: 3000 });
+			// Verify bwrap can actually create user namespaces and run a trivial command
+			execSync("bwrap --ro-bind / / -- true", { stdio: "ignore", timeout: 5000 });
 		} catch {
 			sandboxEnabled = false;
-			ctx.ui.notify("bwrap not found. Install bubblewrap: sudo apt install bubblewrap", "error");
+			ctx.ui.notify(
+				"bwrap namespace creation failed. Try:\n" +
+					"  sudo sysctl -w kernel.unprivileged_userns_clone=1\n" +
+					"  or: sudo setcap cap_sys_admin+ep $(which bwrap)",
+				"error",
+			);
 			return;
 		}
 
 		sandboxEnabled = true;
+
+		// Replace built-in "bash" with "sandbox-bash" in active tools.
+		// Deduplicate via Set since "sandbox-bash" may already be active
+		// from the initial includeAllExtensionTools registration.
+		pi.setActiveTools(
+			[...new Set(
+				pi.getActiveTools().map((t: string) => (t === "bash" ? "sandbox-bash" : t)),
+			)],
+		);
 
 		const bashConfig = config.bash;
 		const whitelist = bashConfig?.commandWhitelist;
