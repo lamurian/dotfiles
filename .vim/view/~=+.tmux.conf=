@@ -48,7 +48,7 @@ setlocal foldcolumn=0
 setlocal foldenable
 setlocal foldexpr=0
 setlocal foldignore=#
-setlocal foldlevel=1
+setlocal foldlevel=0
 setlocal foldmarker={{{,}}}
 setlocal foldmethod=manual
 setlocal foldminlines=1
@@ -148,35 +148,20 @@ sil! 38,41fold
 sil! 42,44fold
 sil! 45,48fold
 sil! 49,52fold
-sil! 75,83fold
-sil! 84,90fold
+sil! 68,71fold
+sil! 72,74fold
+sil! 75,77fold
+sil! 78,86fold
+sil! 87,94fold
+sil! 95,97fold
+sil! 98,99fold
 let &fdl = &fdl
-7
-sil! normal! zc
-18
-sil! normal! zc
-29
-sil! normal! zc
-33
-sil! normal! zc
-38
-sil! normal! zc
-42
-sil! normal! zc
-45
-sil! normal! zc
-49
-sil! normal! zc
-75
-sil! normal! zc
-84
-sil! normal! zc
-let s:l = 33 - ((32 * winheight(0) + 28) / 57)
+let s:l = 66 - ((65 * winheight(0) + 35) / 71)
 if s:l < 1 | let s:l = 1 | endif
 keepjumps exe s:l
 normal! zt
-keepjumps 33
-normal! 0
+keepjumps 66
+normal! 022|
 let &g:so = s:so_save | let &g:siso = s:siso_save
 nohlsearch
 doautoall SessionLoadPost
