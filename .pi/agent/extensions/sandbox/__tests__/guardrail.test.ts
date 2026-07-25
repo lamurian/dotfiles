@@ -11,6 +11,12 @@ import {
 	evaluateToolCall,
 	normalizeDenyPattern,
 	pathMatchesGlob,
+	isShellBuiltin,
+	buildBashBlockMessage,
+	containsWorkaroundPattern,
+	suggestCdRemoval,
+	SUBAGENT_STEERING_KEYS,
+	SUBAGENT_SYSTEM_PROMPT,
 	type FilesystemConfig,
 	type ToolConfig,
 	type ToolAccess,
@@ -508,3 +514,215 @@ describe("evaluateToolCall", () => {
 		assert.ok(result.reason.includes("denyWrite"));
 	});
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// isShellBuiltin
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("isShellBuiltin", () => {
+	it("should return true for cd", () => {
+		assert.ok(isShellBuiltin("cd"));
+	});
+
+	it("should return true for sudo", () => {
+		assert.ok(isShellBuiltin("sudo"));
+	});
+
+	it("should return true for source", () => {
+		assert.ok(isShellBuiltin("source"));
+	});
+
+	it("should return true for dot (.)", () => {
+		assert.ok(isShellBuiltin("."));
+	});
+
+	it("should return true for exec", () => {
+		assert.ok(isShellBuiltin("exec"));
+	});
+
+	it("should return true for alias", () => {
+		assert.ok(isShellBuiltin("alias"));
+	});
+
+	it("should return false for ls", () => {
+		assert.ok(!isShellBuiltin("ls"));
+	});
+
+	it("should return false for find", () => {
+		assert.ok(!isShellBuiltin("find"));
+	});
+
+	it("should return false for git", () => {
+		assert.ok(!isShellBuiltin("git"));
+	});
+
+	it("should return false for npx", () => {
+		assert.ok(!isShellBuiltin("npx"));
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// containsWorkaroundPattern
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("containsWorkaroundPattern", () => {
+	it("should detect sh -c pattern", () => {
+		assert.ok(containsWorkaroundPattern(`sh -c "cd /path && npm test"`));
+	});
+
+	it("should detect bash -c pattern", () => {
+		assert.ok(containsWorkaroundPattern(`bash -c "cd /path && make"`));
+	});
+
+	it("should return false for plain command", () => {
+		assert.ok(!containsWorkaroundPattern("npm test"));
+	});
+
+	it("should return false for command with no shell wrapper", () => {
+		assert.ok(!containsWorkaroundPattern("ls -la | grep foo"));
+	});
+
+	it("should return false for empty string", () => {
+		assert.ok(!containsWorkaroundPattern(""));
+	});
+
+	it("may false-positive on sh -c inside strings (simple regex limitation — sub-agent filters these)", () => {
+		// The regex detection is intentionally simple. False positives are
+		// handled by the sub-agent which returns null for legitimate commands.
+		assert.ok(containsWorkaroundPattern("echo '# sh -c example'"));
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// suggestCdRemoval
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("suggestCdRemoval", () => {
+	it("should remove cd prefix from simple command", () => {
+		assert.equal(suggestCdRemoval("cd /path && ls"), "ls");
+	});
+
+	it("should remove first cd segment and keep the rest", () => {
+		assert.equal(
+			suggestCdRemoval("cd /home/user/project && npx vitest test"),
+			"npx vitest test",
+		);
+	});
+
+	it("should keep non-cd segments", () => {
+		assert.equal(
+			suggestCdRemoval("cd dir && npm install && npm test"),
+			"npm install && npm test",
+		);
+	});
+
+	it("should return empty string when only cd", () => {
+		assert.equal(suggestCdRemoval("cd /path"), "");
+	});
+
+	it("should return original command when no cd", () => {
+		assert.equal(suggestCdRemoval("npm test"), "npm test");
+	});
+
+	it("should handle command with no leading cd", () => {
+		assert.equal(suggestCdRemoval("echo hello"), "echo hello");
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// buildBashBlockMessage — instructive guardrail messages
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("buildBashBlockMessage", () => {
+	const WHITELIST = ["find", "grep", "ls", "npm", "npx", "node", "git", "sh"];
+
+	it("should produce cd message with removal suggestion", () => {
+		const msg = buildBashBlockMessage(
+			"cd /path && npx vitest test",
+			"cd",
+			"Command 'cd' is not in the whitelist",
+			WHITELIST,
+		);
+		assert.ok(msg.includes("cd"), "should mention the blocked command");
+		assert.ok(msg.includes("npx vitest test"), "should suggest fixed command");
+		assert.ok(msg.includes("Remove"), "should suggest removing cd");
+	});
+
+	it("should produce sudo message", () => {
+		const msg = buildBashBlockMessage(
+			"sudo apt install",
+			"sudo",
+			"Command 'sudo' is blocked",
+			WHITELIST,
+		);
+		assert.ok(msg.includes("sudo"), "should mention the blocked command");
+		assert.ok(msg.includes("without") || msg.includes("not"), "should suggest removing sudo");
+	});
+
+	it("should produce builtin message for source", () => {
+		const msg = buildBashBlockMessage(
+			"source .env",
+			"source",
+			"Command 'source' is not in the whitelist",
+			WHITELIST,
+		);
+		assert.ok(msg.includes("source"), "should mention the blocked command");
+		assert.ok(msg.includes("builtin"), "should mention it's a builtin");
+	});
+
+	it("should produce builtin message for exec", () => {
+		const msg = buildBashBlockMessage(
+			"exec node server.js",
+			"exec",
+			"Command 'exec' is not in the whitelist",
+			WHITELIST,
+		);
+		assert.ok(msg.includes("exec"), "should mention the blocked command");
+		assert.ok(msg.includes("builtin"), "should mention it's a builtin");
+	});
+
+	it("should produce generic message for non-builtin blocked command", () => {
+		const msg = buildBashBlockMessage(
+			"docker ps",
+			"docker",
+			"Command 'docker' is not in the whitelist",
+			WHITELIST,
+		);
+		assert.ok(msg.includes("docker"), "should mention the blocked command");
+		assert.ok(msg.includes("whitelist") || msg.includes("sandbox"), "should mention the sandbox");
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Subagent constants
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("SUBAGENT_STEERING_KEYS", () => {
+	it("should contain expected keys", () => {
+		assert.ok(SUBAGENT_STEERING_KEYS.includes("cd"));
+		assert.ok(SUBAGENT_STEERING_KEYS.includes("sudo"));
+		assert.ok(SUBAGENT_STEERING_KEYS.includes("builtin"));
+		assert.ok(SUBAGENT_STEERING_KEYS.includes("blocked"));
+	});
+
+	it("should be frozen", () => {
+		assert.ok(Object.isFrozen(SUBAGENT_STEERING_KEYS));
+	});
+});
+
+describe("SUBAGENT_SYSTEM_PROMPT", () => {
+	it("should be a non-empty string", () => {
+		assert.ok(typeof SUBAGENT_SYSTEM_PROMPT === "string");
+		assert.ok(SUBAGENT_SYSTEM_PROMPT.length > 50);
+	});
+
+	it("should mention steeringKey and confidence", () => {
+		assert.ok(SUBAGENT_SYSTEM_PROMPT.includes("steeringKey"));
+		assert.ok(SUBAGENT_SYSTEM_PROMPT.includes("confidence"));
+	});
+
+	it("should forbid suggesting workarounds", () => {
+		assert.ok(SUBAGENT_SYSTEM_PROMPT.includes("workaround"));
+	});
+});
+

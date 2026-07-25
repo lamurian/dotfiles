@@ -265,7 +265,11 @@ export function createSandboxedBashOps(
 					new Set(blocklist ?? []),
 				);
 				if (!result.allowed) {
-					throw new Error(result.reason ?? "Command blocked");
+					throw new Error(
+						`[Sandbox Blocked] ${result.reason ?? "Command blocked"}\n` +
+						`The sandbox configuration does not permit this command.\n` +
+						`Allowed commands: ${[...whitelist].join(", ")}`
+					);
 				}
 
 				if (bashConfig?.git && commands.includes("git")) {
@@ -278,7 +282,10 @@ export function createSandboxedBashOps(
 						const args = afterSub ? afterSub.split(/\s+/) : [];
 						const gitResult = validateGitSubcommand(subcommand, args, bashConfig.git);
 						if (!gitResult.allowed) {
-							throw new Error(gitResult.reason ?? "Git subcommand blocked");
+							throw new Error(
+								`[Sandbox Blocked] ${gitResult.reason ?? "Git subcommand blocked"}\n` +
+								`The sandbox configuration does not permit this git subcommand.`
+							);
 						}
 					}
 				}

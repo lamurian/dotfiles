@@ -366,3 +366,200 @@ export function evaluateToolCall(
 
 	return null;
 }
+
+// ─── Bash guardrail ──────────────────────────────────────────────────────────
+
+/**
+ * Known shell builtins that cannot be whitelisted as binaries.
+ */
+export const KNOWN_SHELL_BUILTINS = new Set([
+	"cd",
+	"sudo",
+	"source",
+	".",
+	"exec",
+	"alias",
+	"export",
+	"set",
+	"unset",
+	"trap",
+	"type",
+	"times",
+	"ulimit",
+	"umask",
+]);
+
+/**
+ * Check if a command is a known shell builtin.
+ */
+export function isShellBuiltin(cmd: string): boolean {
+	return KNOWN_SHELL_BUILTINS.has(cmd);
+}
+
+/**
+ * Regex patterns for detecting workaround attempts that wrap blocked
+ * operations inside whitelisted shell interpreters.
+ */
+export const WORKAROUND_PATTERNS: RegExp[] = [
+	/\bsh\s+-c\b/,
+	/\bbash\s+-c\b/,
+	/\bdash\s+-c\b/,
+	/\bzsh\s+-c\b/,
+];
+
+/**
+ * Check if a command string contains a workaround pattern.
+ */
+export function containsWorkaroundPattern(command: string): boolean {
+	if (!command) return false;
+	return WORKAROUND_PATTERNS.some((p) => p.test(command));
+}
+
+/**
+ * Remove `cd ... &&` segments from a command string.
+ * Returns the command without leading cd segments.
+ */
+export function suggestCdRemoval(command: string): string {
+	return command
+		.split(/\s*&&\s*/)
+		.filter((seg) => !seg.trim().startsWith("cd ") && seg.trim() !== "cd")
+		.join(" && ")
+		.trim();
+}
+
+/**
+ * Build an instructive guardrail message for a blocked bash command.
+ * Uses hardcoded guidance for known cases (cd, sudo, builtins)
+ * and a generic template for other blocked commands.
+ */
+export function buildBashBlockMessage(
+	command: string,
+	blockedCmd: string,
+	reason: string,
+	whitelist: string[],
+): string {
+	if (blockedCmd === "cd") {
+		const fixed = suggestCdRemoval(command);
+		const lines: string[] = [
+			`Command 'cd' blocked by sandbox.`,
+			``,
+			`The 'cd' command is a shell builtin — the sandbox cannot whitelist it via binary mount.`,
+			`The working directory is already set to your project root; 'cd' is unnecessary.`,
+		];
+		if (fixed) {
+			lines.push(``, `Instead of: ${command}`, `Run:        ${fixed}`);
+		}
+		lines.push(
+			``,
+			`Fix: Remove 'cd ... &&' from your command and run it directly.`,
+			`Do not attempt to work around this restriction by wrapping it in 'sh -c' or similar.`,
+		);
+		return lines.join("\n");
+	}
+
+	if (blockedCmd === "sudo") {
+		return [
+			`Command 'sudo' blocked by sandbox.`,
+			``,
+			`Privilege escalation is not permitted inside the sandbox.`,
+			`The sandbox runs with your user permissions.`,
+			``,
+			`Fix: Run the command without 'sudo'.`,
+			`Do not attempt to work around this restriction.`,
+		].join("\n");
+	}
+
+	if (isShellBuiltin(blockedCmd)) {
+		return [
+			`Command '${blockedCmd}' is a shell builtin and cannot be whitelisted.`,
+			`Shell builtins are handled by the shell itself and are unnecessary inside the sandbox.`,
+			``,
+			`Allowed commands: ${whitelist.join(", ")}`,
+		].join("\n");
+	}
+
+	// Generic block message for non-builtin, non-whitelisted commands
+	return [
+		`${reason}`,
+		``,
+		`Do not attempt to work around this restriction — the sandbox enforces`,
+		`this policy at all execution layers. Temporary scripts and other`,
+		`indirections are subject to the same rules.`,
+		``,
+		`If you need this command, add it to the commandWhitelist in sandbox.json.`,
+	].join("\n");
+}
+
+// ─── Sub-agent types and constants ───────────────────────────────────────────
+
+/**
+ * Input to the sub-agent for workaround intent analysis.
+ */
+export interface SubagentInput {
+	command: string;
+	whitelist: string[];
+	cwd: string;
+}
+
+/**
+ * Response from the sub-agent after analyzing a command.
+ */
+export interface SubagentResponse {
+	steeringKey: SubagentSteeringKey;
+	confidence: number;
+	explanation?: string;
+}
+
+/**
+ * Known steering keys that map to hardcoded guardrail messages.
+ */
+export const SUBAGENT_STEERING_KEYS = Object.freeze([
+	"cd",
+	"sudo",
+	"builtin",
+	"blocked",
+] as const);
+
+export type SubagentSteeringKey = (typeof SUBAGENT_STEERING_KEYS)[number] | null;
+
+/**
+ * System prompt for the sub-agent LLM call.
+ * Instructs the model to analyze command intent and return structured JSON.
+ * No tool access, no workaround suggestions.
+ */
+export const SUBAGENT_SYSTEM_PROMPT = Object.freeze(
+	`You analyze shell commands for sandbox policy violations.
+
+The sandbox blocks shell builtins (cd, sudo, source, etc.) and non-whitelisted commands.
+Users sometimes wrap blocked operations in whitelisted shells: sh -c "cd /path && cmd"
+
+Your job: determine if the command is a workaround attempt for a blocked operation.
+
+Input: JSON { command, whitelist, cwd }
+Output: JSON { steeringKey: string | null, confidence: number }
+
+steeringKey must be one of: ["cd", "sudo", "builtin", "blocked", null]
+- "cd": command wraps a directory change
+- "sudo": command wraps privilege escalation
+- "builtin": command wraps another shell builtin
+- "blocked": command wraps a blocked operation not covered above
+- null: command is legitimate, no block needed
+
+confidence: 0.0 to 1.0
+
+Rules:
+- You have NO tools. You cannot execute commands.
+- Do NOT suggest workarounds. Only analyze intent.
+- If unsure, return low confidence and null key.`,
+);
+
+/**
+ * Build a steering message from a sub-agent analysis result.
+ */
+export function buildSteeringMessage(
+	steeringKey: NonNullable<SubagentSteeringKey>,
+	command: string,
+	whitelist: string[],
+): string {
+	return buildBashBlockMessage(command, steeringKey, "Workaround detected", whitelist);
+}
