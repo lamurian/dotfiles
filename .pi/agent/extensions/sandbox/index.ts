@@ -18,7 +18,14 @@
 import { execSync } from "node:child_process";
 import type { ExtensionAPI, ToolCallEvent } from "@earendil-works/pi-coding-agent";
 import { createBashTool } from "@earendil-works/pi-coding-agent";
-import { mergeToolConfigs, evaluateToolCall } from "./guardrail.ts";
+import {
+	mergeToolConfigs,
+	evaluateToolCall,
+	buildBashBlockMessage,
+	containsWorkaroundPattern,
+	type SubagentInput,
+} from "./guardrail.ts";
+import { parseCommands, validateCommands } from "./bash-validator.ts";
 import { loadConfig } from "./config.ts";
 import { resolveBinaries, createSandboxedBashOps, clearBwrapArgsCache, type SocatBridge } from "./sandbox.ts";
 
@@ -44,6 +51,67 @@ export default function (pi: ExtensionAPI) {
 		currentBridge = null;
 	}
 
+	/**
+	 * Handle a bash/sandbox-bash tool call through the guardrail tiers:
+	 * 1. Deterministic whitelist check (fast path) → hardcoded message
+	 * 2. Workaround pattern detection → sub-agent analysis
+	 * 3. Defense-in-depth: sandbox.ts also validates at execution time
+	 */
+	async function handleBashToolCall(
+		event: ToolCallEvent,
+		ctx: Parameters<typeof pi.on<'tool_call'>>[1],
+	): Promise<{ block: true; reason: string } | undefined> {
+		const config = loadConfig(ctx.cwd);
+		const bashConfig = config.bash;
+		const whitelist = bashConfig?.commandWhitelist;
+
+		if (!whitelist || whitelist.length === 0) return undefined;
+
+		const command = (event.input as Record<string, unknown>)?.command as string | undefined;
+		if (!command) return undefined;
+
+		// Tier 1: Deterministic whitelist check
+		const commands = parseCommands(command);
+		const result = validateCommands(
+			commands,
+			new Set(whitelist),
+			new Set(bashConfig?.blockedCommands ?? []),
+		);
+
+		if (!result.allowed) {
+			const blockedCmd = commands.find((c) => !whitelist.includes(c)) ?? "unknown";
+			return {
+				block: true,
+				reason: buildBashBlockMessage(command, blockedCmd, result.reason ?? "Command blocked", whitelist),
+			};
+		}
+
+		// Tier 2: Workaround pattern detection → sub-agent
+		if (containsWorkaroundPattern(command)) {
+			try {
+				const { analyzeWithSubagent } = await import("./subagent.ts");
+				const input: SubagentInput = { command, whitelist, cwd: ctx.cwd };
+				const analysis = await analyzeWithSubagent(input, ctx as any);
+
+				if (analysis && analysis.steeringKey && analysis.confidence >= 0.5) {
+					return {
+						block: true,
+						reason: buildBashBlockMessage(
+							command,
+							analysis.steeringKey,
+							"Workaround detected",
+							whitelist,
+						),
+					};
+				}
+			} catch {
+				// Sub-agent failed (auth, timeout, parse) — allow execution (fail-soft)
+			}
+		}
+
+		return undefined; // Allow execution
+	}
+
 	const sandboxBashTool = {
 		...localBash,
 		name: "sandbox-bash",
@@ -60,10 +128,14 @@ export default function (pi: ExtensionAPI) {
 	};
 	pi.registerTool(sandboxBashTool);
 
-	// ── Tool guardrail: block read/write/edit on denied paths ────────────
+	// ── Tool guardrail: block read/write/edit on denied paths
+	// ── Bash guardrail: block bash commands via whitelist + sub-agent ───
 	pi.on("tool_call", async (event: ToolCallEvent, ctx) => {
 		if (!sandboxEnabled) return;
-		if (event.toolName === "bash" || event.toolName === "sandbox-bash") return;
+
+		if (event.toolName === "bash" || event.toolName === "sandbox-bash") {
+			return handleBashToolCall(event, ctx);
+		}
 
 		const config = loadConfig(ctx.cwd);
 		const toolAccess = mergeToolConfigs(config.tools);

@@ -13,6 +13,7 @@ import {
 	clearBwrapArgsCache,
 } from "../sandbox.ts";
 import type { SandboxConfig } from "../config.ts";
+import type { SandboxConfig } from "../config.ts";
 
 /** Minimal config that works for unit testing. */
 const MINIMAL_CONFIG: SandboxConfig = {
@@ -54,6 +55,38 @@ describe("createSandboxedBashOps", () => {
 		const output = Buffer.concat(chunks).toString("utf-8").trim();
 		assert.equal(result.exitCode, 0);
 		assert.equal(output, "hello", "env.TEST_VAR should be visible inside sandbox");
+	});
+
+	it("throws improved error with [Sandbox Blocked] prefix for blocked commands", async () => {
+		const config: SandboxConfig = {
+			bash: { commandWhitelist: ["echo", "ls"] },
+		};
+		const ops = createSandboxedBashOps(config);
+		try {
+			await ops.exec("cd /tmp && echo hi", "/tmp", {});
+			assert.fail("Expected error was not thrown");
+		} catch (err) {
+			const msg = err instanceof Error ? err.message : String(err);
+			assert.ok(msg.includes("[Sandbox Blocked]"), `Expected [Sandbox Blocked] prefix in: ${msg}`);
+			assert.ok(msg.includes("echo") && msg.includes("ls"), `Expected allowed commands in: ${msg}`);
+		}
+	});
+
+	it("throws improved error with [Sandbox Blocked] for blocked git subcommand", async () => {
+		const config: SandboxConfig = {
+			bash: {
+				commandWhitelist: ["git", "echo"],
+				git: { allow: ["push"], blocked: ["push"] },
+			},
+		};
+		const ops = createSandboxedBashOps(config);
+		try {
+			await ops.exec("git pull", "/tmp", {});
+			assert.fail("Expected error was not thrown");
+		} catch (err) {
+			const msg = err instanceof Error ? err.message : String(err);
+			assert.ok(msg.includes("[Sandbox Blocked]"), `Expected [Sandbox Blocked] prefix in: ${msg}`);
+		}
 	});
 });
 
