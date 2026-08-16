@@ -1,0 +1,15 @@
+user:
+  always_allow:
+  - paseo__create_agent
+  - paseo__create_terminal
+  - paseo__send_terminal_keys
+  ask_before: []
+  never_allow: []
+smart_approve:
+  always_allow: []
+  ask_before:
+  - paseo__create_agent
+  - paseo__create_terminal
+  - paseo__send_terminal_keys
+  - paseo__send_agent_prompt
+  never_allow: []

@@ -55,9 +55,9 @@
   },
   "filesystem": {
     "allowWrite": [".", "/tmp", "/home"],
-    "denyRead": ["~/.ssh", "~/.aws", "**/.env", "**/auth*"],
+    "denyRead": ["~/.ssh", "~/.aws", "**/.env", "**/auth.json"],
     "allowRead": ["/etc"],
-    "denyWrite": ["**/.env", "**/.git"]
+    "denyWrite": ["**/.env", "**/.git", "~/.pi/agent/extensions/sandbox.json"]
   },
   "network": {
     "allowedDomains": ["*"]
