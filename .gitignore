@@ -43,3 +43,6 @@ R
 .vim/plugged
 .config/i3/start.log
 .config/ncmpcpp/error.log
+
+# Blacklist node modules and npm related artifact
+**/node_modules/**
