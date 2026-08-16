@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${PLUGIN_ROOT}/scripts/sandbox.sh\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
