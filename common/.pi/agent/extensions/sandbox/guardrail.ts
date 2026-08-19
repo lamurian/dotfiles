@@ -416,6 +416,20 @@ export function containsWorkaroundPattern(command: string): boolean {
 }
 
 /**
+ * Detect command syntax that may hide an indirect or mutating operation.
+ * @param command Shell command to inspect.
+ * @returns Whether the command warrants safety review.
+ */
+export function isSuspiciousCommand(command: string): boolean {
+	if (!command) return false;
+	const lower = command.toLowerCase();
+	const interpreter = /(?:^|[|;&\s])(python3?|node|npm|npx|sh|bash|dash|zsh)(?:\s|$)/.test(lower);
+	const indirect = /\||>>?|<<|\$\(|`|(?:-c|-e)\s/.test(command);
+	const mutation = /(?:unlink|remove|delete|truncate|write|append|rename|chmod|chown|kill|spawn|exec|eval|open\s*\([^)]*['\"](?:w|a)|fs\.|os\.)/.test(lower);
+	return (interpreter && mutation) || (indirect && mutation) || containsWorkaroundPattern(command);
+}
+
+/**
  * Remove `cd ... &&` segments from a command string.
  * Returns the command without leading cd segments.
  */

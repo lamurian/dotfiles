@@ -14,6 +14,7 @@ import {
 	isShellBuiltin,
 	buildBashBlockMessage,
 	containsWorkaroundPattern,
+	isSuspiciousCommand,
 	suggestCdRemoval,
 	SUBAGENT_STEERING_KEYS,
 	SUBAGENT_SYSTEM_PROMPT,
@@ -564,6 +565,20 @@ describe("isShellBuiltin", () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 // containsWorkaroundPattern
 // ═══════════════════════════════════════════════════════════════════════════════
+
+describe("isSuspiciousCommand", () => {
+	it("detects interpreter-based file mutation", () => {
+		assert.ok(isSuspiciousCommand("python3 -c \"import os; os.unlink('x')\""));
+		assert.ok(isSuspiciousCommand("node -e \"require('fs').unlinkSync('x')\""));
+	});
+
+	it("detects indirect shell mutation and allows safe interpreter use", () => {
+		assert.ok(isSuspiciousCommand("printf '%s' abc | sh"));
+		assert.ok(isSuspiciousCommand("echo $(touch x)"));
+		assert.ok(!isSuspiciousCommand("python3 -c \"print(1)\""));
+		assert.ok(!isSuspiciousCommand("node -e \"console.log(1)\""));
+	});
+});
 
 describe("containsWorkaroundPattern", () => {
 	it("should detect sh -c pattern", () => {
