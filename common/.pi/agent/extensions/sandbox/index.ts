@@ -22,8 +22,8 @@ import {
 	mergeToolConfigs,
 	evaluateToolCall,
 	buildBashBlockMessage,
+	buildSafetyBlockMessage,
 	isSuspiciousCommand,
-	buildSteeringMessage,
 	type SubagentInput,
 } from "./guardrail.ts";
 import { parseCommands, validateCommands } from "./bash-validator.ts";
@@ -97,11 +97,7 @@ export default function (pi: ExtensionAPI) {
 				if (analysis?.decision === "block" && analysis.confidence >= 0.5) {
 					return {
 						block: true,
-						reason: [
-							`Command blocked: ${analysis.explanation}`,
-							`Exact command: ${command}`,
-							"Hand this command to the user for manual execution.",
-						].join("\\n"),
+						reason: buildSafetyBlockMessage(command, analysis.explanation, "potentially unsafe command mutation"),
 					};
 				}
 			} catch {

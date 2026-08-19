@@ -13,6 +13,7 @@ import {
 	pathMatchesGlob,
 	isShellBuiltin,
 	buildBashBlockMessage,
+	buildSafetyBlockMessage,
 	containsWorkaroundPattern,
 	isSuspiciousCommand,
 	suggestCdRemoval,
@@ -565,6 +566,16 @@ describe("isShellBuiltin", () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 // containsWorkaroundPattern
 // ═══════════════════════════════════════════════════════════════════════════════
+
+describe("buildSafetyBlockMessage", () => {
+	it("includes intent, safety reason, exact command, and handover", () => {
+		const message = buildSafetyBlockMessage("python3 -c \"os.unlink('x')\"", "deletes a file", "unsafe mutation");
+		assert.match(message, /deletes a file/);
+		assert.match(message, /unsafe mutation/);
+		assert.match(message, /python3 -c/);
+		assert.match(message, /hand.*user.*manual/i);
+	});
+});
 
 describe("isSuspiciousCommand", () => {
 	it("detects interpreter-based file mutation", () => {

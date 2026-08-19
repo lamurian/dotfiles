@@ -560,3 +560,19 @@ export function buildSteeringMessage(
 ): string {
 	return buildBashBlockMessage(command, steeringKey, "Workaround detected", whitelist);
 }
+
+/**
+ * Build user-handover guidance for a blocked safety review.
+ * @param command Exact command rejected.
+ * @param intent Brief command intent.
+ * @param reason Safety reason.
+ * @returns Concise blocking message.
+ */
+export function buildSafetyBlockMessage(command: string, intent: string, reason: string): string {
+	return [
+		`Command blocked: ${intent}`,
+		`Safety reason: ${reason}`,
+		`Exact command: ${command}`,
+		"Hand this command to the user for manual execution.",
+	].join("\\n");
+}
