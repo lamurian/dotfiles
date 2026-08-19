@@ -22,7 +22,8 @@ import {
 	mergeToolConfigs,
 	evaluateToolCall,
 	buildBashBlockMessage,
-	containsWorkaroundPattern,
+	isSuspiciousCommand,
+	buildSteeringMessage,
 	type SubagentInput,
 } from "./guardrail.ts";
 import { parseCommands, validateCommands } from "./bash-validator.ts";
@@ -86,22 +87,21 @@ export default function (pi: ExtensionAPI) {
 			};
 		}
 
-		// Tier 2: Workaround pattern detection → sub-agent
-		if (containsWorkaroundPattern(command)) {
+		// Tier 2: suspicious-command detection → sub-agent
+		if (isSuspiciousCommand(command)) {
 			try {
 				const { analyzeWithSubagent } = await import("./subagent.ts");
 				const input: SubagentInput = { command, whitelist, cwd: ctx.cwd };
 				const analysis = await analyzeWithSubagent(input, ctx as any);
 
-				if (analysis && analysis.steeringKey && analysis.confidence >= 0.5) {
+				if (analysis?.decision === "block" && analysis.confidence >= 0.5) {
 					return {
 						block: true,
-						reason: buildBashBlockMessage(
-							command,
-							analysis.steeringKey,
-							"Workaround detected",
-							whitelist,
-						),
+						reason: [
+							`Command blocked: ${analysis.explanation}`,
+							`Exact command: ${command}`,
+							"Hand this command to the user for manual execution.",
+						].join("\\n"),
 					};
 				}
 			} catch {

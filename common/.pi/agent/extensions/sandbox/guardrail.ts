@@ -425,8 +425,9 @@ export function isSuspiciousCommand(command: string): boolean {
 	const lower = command.toLowerCase();
 	const interpreter = /(?:^|[|;&\s])(python3?|node|npm|npx|sh|bash|dash|zsh)(?:\s|$)/.test(lower);
 	const indirect = /\||>>?|<<|\$\(|`|(?:-c|-e)\s/.test(command);
-	const mutation = /(?:unlink|remove|delete|truncate|write|append|rename|chmod|chown|kill|spawn|exec|eval|open\s*\([^)]*['\"](?:w|a)|fs\.|os\.)/.test(lower);
-	return (interpreter && mutation) || (indirect && mutation) || containsWorkaroundPattern(command);
+	const mutation = /(?:unlink|remove|delete|truncate|write|append|rename|chmod|chown|kill|spawn|exec|eval|touch|open\s*\([^)]*['\"](?:w|a)|fs\.|os\.)/.test(lower);
+	const pipedInterpreter = /\|\s*(?:sh|bash|python3?|node|npm|npx)\b/.test(lower);
+	return pipedInterpreter || (interpreter && mutation) || (indirect && mutation) || containsWorkaroundPattern(command);
 }
 
 /**
@@ -519,9 +520,9 @@ export interface SubagentInput {
  * Response from the sub-agent after analyzing a command.
  */
 export interface SubagentResponse {
-	steeringKey: SubagentSteeringKey;
+	decision: "allow" | "block";
 	confidence: number;
-	explanation?: string;
+	explanation: string;
 }
 
 /**
@@ -542,29 +543,11 @@ export type SubagentSteeringKey = (typeof SUBAGENT_STEERING_KEYS)[number] | null
  * No tool access, no workaround suggestions.
  */
 export const SUBAGENT_SYSTEM_PROMPT = Object.freeze(
-	`You analyze shell commands for sandbox policy violations.
-
-The sandbox blocks shell builtins (cd, sudo, source, etc.) and non-whitelisted commands.
-Users sometimes wrap blocked operations in whitelisted shells: sh -c "cd /path && cmd"
-
-Your job: determine if the command is a workaround attempt for a blocked operation.
-
+	`Evaluate whether a shell command is safe to execute in a sandbox.
 Input: JSON { command, whitelist, cwd }
-Output: JSON { steeringKey: string | null, confidence: number }
-
-steeringKey must be one of: ["cd", "sudo", "builtin", "blocked", null]
-- "cd": command wraps a directory change
-- "sudo": command wraps privilege escalation
-- "builtin": command wraps another shell builtin
-- "blocked": command wraps a blocked operation not covered above
-- null: command is legitimate, no block needed
-
-confidence: 0.0 to 1.0
-
-Rules:
-- You have NO tools. You cannot execute commands.
-- Do NOT suggest workarounds. Only analyze intent.
-- If unsure, return low confidence and null key.`,
+Output only JSON: { decision: "allow" | "block", confidence: 0.0-1.0, explanation: string } (replaces the legacy steeringKey response)
+Block commands that mutate files, processes, permissions, or bypass the whitelist indirectly.
+Allow read-only commands and safe tests. Do not suggest workarounds. Be terse.`,
 );
 
 /**

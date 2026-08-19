@@ -1,6 +1,6 @@
 import { describe, it, mock } from "node:test";
 import assert from "node:assert/strict";
-import { analyzeWithSubagent } from "../subagent.ts";
+import { analyzeWithSubagent, parseSubagentResponse } from "../subagent.ts";
 import type { SubagentInput, SubagentResponse } from "../guardrail.ts";
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -22,6 +22,20 @@ const sampleInput: SubagentInput = {
 	whitelist: ["npx", "node", "npm", "sh"],
 	cwd: "/home/user/project",
 };
+
+describe("parseSubagentResponse", () => {
+	it("accepts a valid decision response", () => {
+		assert.deepEqual(parseSubagentResponse('{"decision":"block","confidence":0.9,"explanation":"deletes a file"}'), {
+			decision: "block", confidence: 0.9, explanation: "deletes a file",
+		});
+	});
+
+	it("rejects malformed or low-confidence responses", () => {
+		assert.equal(parseSubagentResponse('{"decision":"maybe","confidence":1}'), null);
+		assert.equal(parseSubagentResponse('{"decision":"block","confidence":1.2}'), null);
+		assert.equal(parseSubagentResponse('{"decision":"block","confidence":0.4}'), null);
+	});
+});
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // analyzeWithSubagent
@@ -91,9 +105,8 @@ describe("SubagentResponse validation contract", () => {
 		}
 	});
 
-	it("should accept null steeringKey as valid (allow through)", () => {
-		// null means "no block needed" — valid response
-		const response: SubagentResponse = { steeringKey: null, confidence: 0.3 };
-		assert.equal(response.steeringKey, null);
+	it("should accept an allow decision", () => {
+		const response: SubagentResponse = { decision: "allow", confidence: 0.9, explanation: "read-only" };
+		assert.equal(response.decision, "allow");
 	});
 });

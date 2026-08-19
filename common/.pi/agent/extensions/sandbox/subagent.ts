@@ -10,8 +10,8 @@
  */
 
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
-import type { SubagentInput, SubagentResponse, SubagentSteeringKey } from "./guardrail.ts";
-import { SUBAGENT_STEERING_KEYS, SUBAGENT_SYSTEM_PROMPT } from "./guardrail.ts";
+import type { SubagentInput, SubagentResponse } from "./guardrail.ts";
+import { SUBAGENT_SYSTEM_PROMPT } from "./guardrail.ts";
 
 /**
  * Lazy-load completeSimple from pi-ai via pi-coding-agent's module resolution.
@@ -43,6 +43,23 @@ async function getCompleteSimple() {
  * Returns null (fail-soft) on any failure: auth failure, undefined model,
  * API error, parse failure, or validation rejection.
  */
+/**
+ * Parse and validate a safety-review response.
+ * @param text Raw model output.
+ * @returns Valid response, or null when malformed or low confidence.
+ */
+export function parseSubagentResponse(text: string): SubagentResponse | null {
+	try {
+		const parsed = JSON.parse(text) as Record<string, unknown>;
+		if ((parsed.decision !== "allow" && parsed.decision !== "block") ||
+			typeof parsed.confidence !== "number" || !Number.isFinite(parsed.confidence) ||
+			parsed.confidence < 0.5 || parsed.confidence > 1 || typeof parsed.explanation !== "string") return null;
+		return { decision: parsed.decision, confidence: parsed.confidence, explanation: parsed.explanation };
+	} catch {
+		return null;
+	}
+}
+
 export async function analyzeWithSubagent(
 	input: SubagentInput,
 	ctx: ExtensionContext,
@@ -94,24 +111,7 @@ export async function analyzeWithSubagent(
 		// Validate structure
 		if (!parsed || typeof parsed !== "object") return null;
 
-		const steeringKey = parsed.steeringKey as SubagentSteeringKey;
-		const confidence = parsed.confidence as number;
-
-		// Validate steeringKey: must be null or one of the known keys
-		if (steeringKey !== null && !SUBAGENT_STEERING_KEYS.includes(steeringKey as any)) {
-			return null;
-		}
-
-		// Validate confidence: must be a number between 0 and 1
-		if (typeof confidence !== "number" || confidence < 0 || confidence > 1) {
-			return null;
-		}
-
-		return {
-			steeringKey,
-			confidence,
-			explanation: typeof parsed.explanation === "string" ? parsed.explanation : undefined,
-		};
+		return parseSubagentResponse(textContent);
 	} catch {
 		return null;
 	}
