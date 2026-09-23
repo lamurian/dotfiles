@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Shim: route `pytest` to the project's qda conda env (has pytest 9.x).
+# Needed because pre-commit's pytest hook uses `language: system`.
+exec /Users/lam/.local/share/mamba/envs/qda/bin/python -m pytest "$@"

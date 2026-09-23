@@ -21,15 +21,8 @@ extensions:
     description: Load files/directories and get an LLM summary in a single call
     display_name: Summarize
     bundled: true
-  orchestrator:
-    enabled: false
-    type: platform
-    name: orchestrator
-    description: 'Manage agent sessions: list, view, start, send messages, interrupt, and stop agents'
-    display_name: Orchestrator
-    bundled: true
   summon:
-    enabled: true
+    enabled: false
     type: platform
     name: summon
     description: Load knowledge and delegate tasks to subagents
@@ -79,7 +72,7 @@ extensions:
     display_name: Skills
     bundled: true
   autovisualiser:
-    enabled: true
+    enabled: false
     type: builtin
     name: autovisualiser
     description: Data visualisation and UI generation tools
@@ -94,7 +87,7 @@ extensions:
     display_name: Scheduler
     bundled: true
   councilofmine:
-    enabled: true
+    enabled: false
     type: stdio
     name: Council of Mine
     description: Spawn an LLM council to debate on given topic
@@ -109,37 +102,44 @@ extensions:
     cwd: null
     bundled: null
   tom:
-    enabled: true
+    enabled: false
     type: platform
     name: tom
     description: Inject custom context into every turn via GOOSE_MOIM_MESSAGE_TEXT and GOOSE_MOIM_MESSAGE_FILE environment variables
     display_name: Top Of Mind
     bundled: true
-  goosedocs:
-    enabled: true
-    type: stdio
-    name: Goose Docs
-    description: Documentation of Goose AI agent to let the agent answers questions about itself
-    cmd: npx
-    args:
-    - mcp-remote
-    - https://block.gitmcp.io/goose/
-    envs: {}
-    env_keys: []
+  computercontroller:
+    enabled: false
+    type: builtin
+    name: computercontroller
+    description: General computer control tools that don't require you to be a developer or engineer.
+    display_name: Computer Controller
     timeout: 300
-    cwd: null
-    bundled: null
+    bundled: true
+  memory:
+    enabled: false
+    type: builtin
+    name: memory
+    description: Teach goose your preferences as you go.
+    display_name: Memory
+    timeout: 300
+    bundled: true
 GOOSE_THINKING_EFFORT: high
-active_provider: opencode_go
 providers:
   opencode_go:
     enabled: true
-    model: deepseek-v4-flash
+    model: mimo-v2.5
+    configured: true
+  custom_omniroute:
+    enabled: true
+    model: combo/free
     configured: true
 GOOSE_MODE: auto
 GOOSE_DISABLE_KEYRING: ''
 plugins:
   /home/lam/.agents/plugins/sandbox:
     enabled: true
-  /home/lam/git-repo/dotfiles/.agents/plugins/sandbox:
+  /Users/lam/.agents/plugins/sandbox:
     enabled: true
+active_provider: opencode_go
+SECURITY_PROMPT_ENABLED: true
