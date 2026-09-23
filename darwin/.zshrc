@@ -102,4 +102,4 @@ else
 fi
 unset __mamba_setup
 # <<< mamba initialize <<<
-eval "$(~/.local/bin/mise activate zsh)"
+eval "$(mise activate zsh)"
