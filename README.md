@@ -19,15 +19,23 @@ The bootstrap script uses [GNU Stow](https://www.gnu.org/software/stow/) to
 symlink the right packages into your home directory.
 
 ```bash
-# Common + auto-detected OS (darwin or linux)
+# Common + auto-detected OS (darwin or linux) + work profile
 ./bootstrap.sh
 
-# Common + OS + work profile
+# Common + OS + work profile (explicit)
 ./bootstrap.sh work
 
 # Explicit packages
 ./bootstrap.sh darwin work
+
+# Pull your existing ~/ configs into the repo (then review with git, commit)
+./bootstrap.sh --adopt
+
+# Remove the symlinks again
+./bootstrap.sh --undo
 ```
+
+`--adopt` and `--undo` are mutually exclusive.
 
 To add a new machine, create a directory at the repo root (e.g. `personal/`),
 put its stow-compatible tree inside, whitelist the paths in `.gitignore`,
