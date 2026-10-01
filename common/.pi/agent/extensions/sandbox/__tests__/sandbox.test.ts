@@ -2,10 +2,12 @@
  * Tests for sandbox.ts — bwrap runtime, binary resolution, command wrapping
  */
 
-import { describe, it, before } from "node:test";
+import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { execSync } from "node:child_process";
-import { realpathSync } from "node:fs";
+import { mkdtempSync, mkdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 import {
 	createSandboxedBashOps,
 	buildBwrapArgs,
@@ -154,5 +156,80 @@ describe("buildWrappedCommand", () => {
 		const quoted = result.match(/'[^']+'/g);
 		const lastQuote = quoted ? quoted[quoted.length - 1] : null;
 		assert.equal(lastQuote, "'echo hi'");
+	});
+});
+
+describe("buildBwrapArgs — symlinked mount destinations (stow layout)", () => {
+	let realRoot: string;
+	let realDir: string;
+	let realFile: string;
+	let linkDir: string;
+	let linkFile: string;
+
+	before(() => {
+		const root = mkdtempSync(join(tmpdir(), "pi-sandbox-symlink-"));
+		realRoot = realpathSync(root);
+		realDir = join(realRoot, "real-dir");
+		mkdirSync(realDir, { recursive: true });
+		realFile = join(realDir, "file.txt");
+		writeFileSync(realFile, "x");
+		linkDir = join(realRoot, "link-dir");
+		symlinkSync(realDir, linkDir, "dir");
+		linkFile = join(realRoot, "link-file.txt");
+		symlinkSync(realFile, linkFile, "file");
+	});
+
+	after(() => {
+		rmSync(realRoot, { recursive: true, force: true });
+	});
+
+	it("canonicalizes allowWrite/allowRead symlink destinations", () => {
+		clearBwrapArgsCache();
+		const config: SandboxConfig = {
+			filesystem: { allowWrite: [linkDir], allowRead: [linkFile] },
+		};
+		const { args } = buildBwrapArgs(realRoot, config);
+		const joined = args.join(" ");
+
+		assert.ok(!joined.includes(linkDir), `allowWrite destination must be canonicalized. args: ${joined}`);
+		assert.ok(!joined.includes(linkFile), `allowRead destination must be canonicalized. args: ${joined}`);
+		assert.ok(joined.includes(`--bind ${realDir} ${realDir}`), `expected --bind on real dir. args: ${joined}`);
+		assert.ok(joined.includes(`--ro-bind ${realFile} ${realFile}`), `expected --ro-bind on real file. args: ${joined}`);
+	});
+
+	it("canonicalizes denyWrite file symlink destination (mounts /dev/null on real file)", () => {
+		clearBwrapArgsCache();
+		const config: SandboxConfig = { filesystem: { denyWrite: [linkFile] } };
+		const { args } = buildBwrapArgs(realRoot, config);
+		const joined = args.join(" ");
+
+		assert.ok(!joined.includes(linkFile), `denyWrite must not target the symlink path. args: ${joined}`);
+		assert.ok(joined.includes(`--ro-bind /dev/null ${realFile}`), `expected /dev/null bind on real file. args: ${joined}`);
+	});
+
+	it("canonicalizes denyRead directory symlink destination (tmpfs on real dir)", () => {
+		clearBwrapArgsCache();
+		const config: SandboxConfig = { filesystem: { denyRead: [linkDir] } };
+		const { args } = buildBwrapArgs(realRoot, config);
+		const joined = args.join(" ");
+
+		assert.ok(!joined.includes(linkDir), `denyRead must not target the symlink path. args: ${joined}`);
+		assert.ok(joined.includes(`--tmpfs ${realDir}`), `expected tmpfs on real dir. args: ${joined}`);
+	});
+
+	it("leaves non-symlink destinations unchanged", () => {
+		clearBwrapArgsCache();
+		const plainDir = join(realRoot, "plain-dir");
+		mkdirSync(plainDir, { recursive: true });
+		const plainFile = join(plainDir, "plain.txt");
+		writeFileSync(plainFile, "y");
+		const config: SandboxConfig = {
+			filesystem: { allowWrite: [plainDir], denyWrite: [plainFile] },
+		};
+		const { args } = buildBwrapArgs(realRoot, config);
+		const joined = args.join(" ");
+
+		assert.ok(joined.includes(`--bind ${plainDir} ${plainDir}`), `expected --bind on plain dir. args: ${joined}`);
+		assert.ok(joined.includes(`--ro-bind /dev/null ${plainFile}`), `expected /dev/null bind on plain file. args: ${joined}`);
 	});
 });

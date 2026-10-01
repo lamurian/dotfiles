@@ -47,6 +47,24 @@ export async function resolveBinaries(names: string[]): Promise<Map<string, stri
 	return result;
 }
 
+/**
+ * Canonicalize a mount destination for bwrap args.
+ * bwrap refuses to mount onto symlink destinations (e.g. stow-managed
+ * ~/.pi paths), which aborts every sandboxed command with
+ * "Can't mount on symlink destination".
+ *
+ * @param absPath Absolute path intended as a mount destination.
+ * @returns The realpath when the path exists and resolves; otherwise absPath.
+ */
+function canonicalMountPath(absPath: string): string {
+	if (!existsSync(absPath)) return absPath;
+	try {
+		return realpathSync(absPath);
+	} catch {
+		return absPath;
+	}
+}
+
 // ─── Bwrap arg builder ───────────────────────────────────────────────────────
 
 let bwrapArgsCache: { key: string; args: string[] } | null = null;
@@ -112,18 +130,20 @@ export function buildBwrapArgs(
 	for (const raw of allowWrite) {
 		const absPath = resolvePath(cwd, raw);
 		if (!existsSync(absPath)) continue;
-		args.push("--bind", absPath, absPath);
+		const mountPath = canonicalMountPath(absPath);
+		args.push("--bind", mountPath, mountPath);
 	}
 
 	const allowRead = config.filesystem?.allowRead ?? [];
 	for (const raw of allowRead) {
 		const absPath = resolvePath(cwd, raw);
 		if (!existsSync(absPath)) continue;
+		const mountPath = canonicalMountPath(absPath);
 		const st = statSync(absPath);
 		if (st.isDirectory()) {
-			args.push("--ro-bind", absPath, absPath);
+			args.push("--ro-bind", mountPath, mountPath);
 		} else if (st.isFile()) {
-			args.push("--ro-bind", absPath, absPath);
+			args.push("--ro-bind", mountPath, mountPath);
 		}
 	}
 
@@ -135,7 +155,8 @@ export function buildBwrapArgs(
 			if (!name.includes("*") && !name.includes("?") && !name.includes("/")) {
 				const discovered = discoverPaths(cwd, config, name, "d");
 				for (const dirPath of discovered) {
-					args.push("--ro-bind", dirPath, dirPath);
+					const mountPath = canonicalMountPath(dirPath);
+					args.push("--ro-bind", mountPath, mountPath);
 				}
 				continue;
 			}
@@ -144,11 +165,12 @@ export function buildBwrapArgs(
 		// Single explicit path
 		const absPath = resolveDenyPath(cwd, raw);
 		if (!absPath) continue;
+		const mountPath = canonicalMountPath(absPath);
 		const st = statSync(absPath);
 		if (st.isDirectory()) {
-			args.push("--ro-bind", absPath, absPath);
+			args.push("--ro-bind", mountPath, mountPath);
 		} else if (st.isFile()) {
-			args.push("--ro-bind", "/dev/null", absPath);
+			args.push("--ro-bind", "/dev/null", mountPath);
 		}
 	}
 
@@ -160,7 +182,7 @@ export function buildBwrapArgs(
 				const discovered = getDiscoveredFiles(cwd, config);
 				for (const filePath of discovered) {
 					if (filePath.endsWith("/" + suffix) || filePath === suffix) {
-						args.push("--ro-bind", "/dev/null", filePath);
+						args.push("--ro-bind", "/dev/null", canonicalMountPath(filePath));
 					}
 				}
 				continue;
@@ -168,11 +190,12 @@ export function buildBwrapArgs(
 		}
 		const absPath = resolveDenyPath(cwd, raw);
 		if (!absPath) continue;
+		const mountPath = canonicalMountPath(absPath);
 		const st = statSync(absPath);
 		if (st.isDirectory()) {
-			args.push("--tmpfs", absPath);
+			args.push("--tmpfs", mountPath);
 		} else if (st.isFile()) {
-			args.push("--ro-bind", "/dev/null", absPath);
+			args.push("--ro-bind", "/dev/null", mountPath);
 		}
 	}
 
