@@ -53,7 +53,7 @@ export default function (pi: ExtensionAPI) {
 	}
 
 	/**
-	 * Handle a bash/sandbox-bash tool call through the guardrail tiers:
+	 * Handle a bash tool call through the guardrail tiers:
 	 * 1. Deterministic whitelist check (fast path) → hardcoded message
 	 * 2. Workaround pattern detection → sub-agent analysis
 	 * 3. Defense-in-depth: sandbox.ts also validates at execution time
@@ -108,9 +108,8 @@ export default function (pi: ExtensionAPI) {
 		return undefined; // Allow execution
 	}
 
-	const sandboxBashTool = {
+	const sandboxedBashTool = {
 		...localBash,
-		name: "sandbox-bash",
 		label: "bash (sandboxed)",
 		async execute(id, params, signal, onUpdate, _ctx) {
 			if (!sandboxEnabled) {
@@ -122,14 +121,14 @@ export default function (pi: ExtensionAPI) {
 			return tool.execute(id, params, signal, onUpdate);
 		},
 	};
-	pi.registerTool(sandboxBashTool);
+	pi.registerTool(sandboxedBashTool);
 
 	// ── Tool guardrail: block read/write/edit on denied paths
 	// ── Bash guardrail: block bash commands via whitelist + sub-agent ───
 	pi.on("tool_call", async (event: ToolCallEvent, ctx) => {
 		if (!sandboxEnabled) return;
 
-		if (event.toolName === "bash" || event.toolName === "sandbox-bash") {
+		if (event.toolName === "bash") {
 			return handleBashToolCall(event, ctx);
 		}
 
@@ -180,15 +179,6 @@ export default function (pi: ExtensionAPI) {
 		}
 
 		sandboxEnabled = true;
-
-		// Replace built-in "bash" with "sandbox-bash" in active tools.
-		// Deduplicate via Set since "sandbox-bash" may already be active
-		// from the initial includeAllExtensionTools registration.
-		pi.setActiveTools(
-			[...new Set(
-				pi.getActiveTools().map((t: string) => (t === "bash" ? "sandbox-bash" : t)),
-			)],
-		);
 
 		const bashConfig = config.bash;
 		const whitelist = bashConfig?.commandWhitelist;
