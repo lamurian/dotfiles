@@ -15,7 +15,6 @@
 !common/.irssi/**
 !common/.newsboat/**
 !common/.w3m/**
-!common/.gnupg/**
 !common/.agents/**
 !common/.pi/**
 !common/bin/**
@@ -23,11 +22,13 @@
 # darwin
 !darwin/.zshrc
 !darwin/.zprofile
+!darwin/.gnupg/**
 
 # linux
 !linux/.bashrc
 !linux/.Xresources
 !linux/.xinitrc
+!linux/.gnupg/**
 
 # work
 !work/.tmux.conf
