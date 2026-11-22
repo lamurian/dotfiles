@@ -3,3 +3,6 @@
 !*.js
 !extensions/**/*.json
 **/node_*/**
+**/sessions/**
+bin/**
+auth.json

@@ -1,0 +1,10 @@
+{
+  "brainstorm": {
+    "skipQuestionnaire": false,
+    "skipTopics": []
+  },
+  "implement": {
+    "enforceTdd": true,
+    "testCommand": "npm run test:ci"
+  }
+}

@@ -1,0 +1,35 @@
+# Custom button:
+# Ctrl  : C-, ^
+# Escape: ESC-, M-, ^[
+# Space : SPC, ' '
+# Tab   : TAB, ^i, ^I
+# Delete: DEL, ^?
+# Up    : UP, ^[[A
+# Down  : DOWN, ^[[B
+# Right : RIGHT, ^[[C
+# Left  : LEFT, ^[[D
+
+# Navigation
+keymap h	MOVE_LEFT
+keymap j	MOVE_DOWN
+keymap k	MOVE_UP
+keymap l	MOVE_RIGHT
+keymap C-d	NEXT_PAGE
+keymap C-u	PREV_PAGE
+keymap C-e	UP
+keymap C-y	DOWN
+
+# Tab handling
+keymap J	NEXT_TAB
+keymap K	PREV_TAB
+keymap x	CLOSE_TAB
+
+# Link handling
+keymap ]	NEXT_LINK
+keymap [	PREV_LINK
+keymap f	GOTO_LINK
+keymap F	TAB_LINK
+
+# Highlighted search
+keymap /	ISEARCH
+keymap ?	ISEARCH_BACK

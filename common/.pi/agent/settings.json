@@ -1,6 +1,13 @@
 {
-  "lastChangelogVersion": "0.79.2",
+  "lastChangelogVersion": "1.0.0",
   "defaultProvider": "opencode-go",
-  "defaultModel": "deepseek-v4-flash",
-  "defaultThinkingLevel": "high"
+  "defaultModel": "mimo-v2.6-flash",
+  "defaultThinkingLevel": "high",
+  "defaultProjectTrust": "always",
+  "theme": "dark",
+  "hideThinkingBlock": true,
+  "packages": [
+    "../../git-repo/paradocs",
+    "../../git-repo/pi-workflow"
+  ]
 }
