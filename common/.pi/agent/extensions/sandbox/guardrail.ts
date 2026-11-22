@@ -468,6 +468,8 @@ export function buildBashBlockMessage(
 			``,
 			`Fix: Remove 'cd ... &&' from your command and run it directly.`,
 			`Do not attempt to work around this restriction by wrapping it in 'sh -c' or similar.`,
+			``,
+			`Hand this command to the user for manual execution outside the sandbox.`,
 		);
 		return lines.join("\n");
 	}
@@ -479,8 +481,7 @@ export function buildBashBlockMessage(
 			`Privilege escalation is not permitted inside the sandbox.`,
 			`The sandbox runs with your user permissions.`,
 			``,
-			`Fix: Run the command without 'sudo'.`,
-			`Do not attempt to work around this restriction.`,
+			`Hand this command to the user for manual execution outside the sandbox.`,
 		].join("\n");
 	}
 
@@ -490,18 +491,20 @@ export function buildBashBlockMessage(
 			`Shell builtins are handled by the shell itself and are unnecessary inside the sandbox.`,
 			``,
 			`Allowed commands: ${whitelist.join(", ")}`,
+			``,
+			`Hand this command to the user for manual execution outside the sandbox.`,
 		].join("\n");
 	}
 
 	// Generic block message for non-builtin, non-whitelisted commands
 	return [
+		`Command '${blockedCmd}' is blocked by the sandbox.`,
 		`${reason}`,
 		``,
-		`Do not attempt to work around this restriction — the sandbox enforces`,
-		`this policy at all execution layers. Temporary scripts and other`,
-		`indirections are subject to the same rules.`,
+		`Do not substitute an alternative command to achieve the same effect.`,
+		`Do not wrap the command in an interpreter to bypass the block.`,
 		``,
-		`If you need this command, add it to the commandWhitelist in sandbox.json.`,
+		`Hand this command to the user for manual execution outside the sandbox.`,
 	].join("\n");
 }
 
@@ -547,6 +550,7 @@ export const SUBAGENT_SYSTEM_PROMPT = Object.freeze(
 Input: JSON { command, whitelist, cwd }
 Output only JSON: { decision: "allow" | "block", confidence: 0.0-1.0, explanation: string } (replaces the legacy steeringKey response)
 Block commands that mutate files, processes, permissions, or bypass the whitelist indirectly.
+Do not approve commands that use whitelisted alternatives to achieve the same effect as a blocked command.
 Allow read-only commands and safe tests. Do not suggest workarounds. Be terse.`,
 );
 
@@ -574,5 +578,5 @@ export function buildSafetyBlockMessage(command: string, intent: string, reason:
 		`Safety reason: ${reason}`,
 		`Exact command: ${command}`,
 		"Hand this command to the user for manual execution.",
-	].join("\\n");
+	].join("\n");
 }

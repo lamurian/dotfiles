@@ -129,7 +129,9 @@ Examples:
 			"Auto-stage all changes then perform git commit --amend --no-edit " +
 			"to include them in the last commit without changing the commit message. " +
 			"Also runs pre-commit hooks before amending (git's --amend skips hooks by default). " +
-			"Use after archiving completed files to include them in the implementation commit.",
+			"WARNING: This rewrites the previous commit hash. Do NOT use as a fallback " +
+			"for commit_changes failures. Use only after archiving completed files " +
+			"to include them in the implementation commit.",
 		parameters: Type.Object({}),
 		promptSnippet:
 			"Stage all changes and amend the last commit without changing its message.",
@@ -144,7 +146,9 @@ Examples:
 	pi.registerTool({
 		name: "commit_changes",
 		description:
-			"Run git commit with staged changes. Call this after generating a commit message. " +
+			"Run git commit with staged changes. " +
+			"Auto-stages all changes before committing (like commit_amend). " +
+			"Call this after generating a commit message. " +
 			"If pre-commit hooks fail, fix issues and call this tool again with the same message.",
 		parameters: Type.Object({
 			message: Type.String({
@@ -163,6 +167,10 @@ Examples:
 		promptGuidelines: [
 			"Use commit_changes to finalize a commit after generating the message. " +
 				"If pre-commit hooks fail, fix the issues and call commit_changes again.",
+			"Do NOT use commit_amend as a fallback for commit_changes failures — " +
+				"commit_amend rewrites history and violates hash continuity.",
+			"If git commands are blocked by the sandbox, ask the user to run them " +
+				"outside the sandbox (e.g., 'Please run: git rm <file>'), then retry.",
 		],
 		async execute(
 			toolCallId: string,

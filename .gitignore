@@ -53,3 +53,4 @@ common/.config/ncmpcpp/error.log
 # root (leftover from old layout)
 .local
 R
+.newsboat/cache.db

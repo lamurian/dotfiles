@@ -682,7 +682,7 @@ describe("buildBashBlockMessage", () => {
 			WHITELIST,
 		);
 		assert.ok(msg.includes("sudo"), "should mention the blocked command");
-		assert.ok(msg.includes("without") || msg.includes("not"), "should suggest removing sudo");
+		assert.ok(msg.toLowerCase().includes("hand"), "should include handover instruction");
 	});
 
 	it("should produce builtin message for source", () => {
@@ -715,7 +715,8 @@ describe("buildBashBlockMessage", () => {
 			WHITELIST,
 		);
 		assert.ok(msg.includes("docker"), "should mention the blocked command");
-		assert.ok(msg.includes("whitelist") || msg.includes("sandbox"), "should mention the sandbox");
+		assert.ok(msg.includes("blocked by the sandbox"), "should mention the sandbox block");
+		assert.ok(msg.toLowerCase().includes("hand"), "should include handover instruction");
 	});
 });
 
@@ -749,6 +750,7 @@ describe("SUBAGENT_SYSTEM_PROMPT", () => {
 
 	it("should forbid suggesting workarounds", () => {
 		assert.ok(SUBAGENT_SYSTEM_PROMPT.includes("workaround"));
+		assert.ok(SUBAGENT_SYSTEM_PROMPT.includes("whitelisted alternatives"), "should forbid whitelisted alternatives for blocked intent");
 	});
 });
 

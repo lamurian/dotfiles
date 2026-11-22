@@ -128,11 +128,6 @@ GOOSE_THINKING_EFFORT: high
 providers:
   opencode_go:
     enabled: true
-    model: mimo-v2.5
-    configured: true
-  custom_omniroute:
-    enabled: true
-    model: combo/free
     configured: true
 GOOSE_MODE: auto
 GOOSE_DISABLE_KEYRING: ''
